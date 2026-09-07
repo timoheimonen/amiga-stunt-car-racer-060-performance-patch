@@ -59,7 +59,8 @@ class PatcherUnitTests(unittest.TestCase):
 
     def test_default_path_is_beside_source(self):
         source = Path('/some folder/original.adf')
-        self.assertEqual(patch.default_output_path(source), source.parent / patch.OUTPUT_NAME)
+        self.assertEqual(patch.default_output_path(source),
+                         source.parent / 'StuntCarRacer-060-50FPS.adf')
 
     def test_cli_version_and_help(self):
         for option in ('--version', '--help'):

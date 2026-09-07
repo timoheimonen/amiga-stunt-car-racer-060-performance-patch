@@ -35,6 +35,7 @@ The 118-byte boot extension starts at boot-relative `0x200`. It reserves
 original `0x9800`-byte Chip allocation for the initial load. The 2738-byte
 runtime is stored at ADF offset `0xb720` and copied to the reserved area.
 CacheClearU runs before the copied code is executed.
+This call requires Exec V37 or later.
 
 The initial load begins at ADF offset `0x2c00`. Its original copier moves
 relative bytes `0x78..0x8abb` to `0x4000`; the runtime starts beyond the copier
@@ -46,8 +47,9 @@ The runtime allocation lasts for the session.
 
 The source uses integer instructions, including 68020+ scaled index addressing
 for 68060 geometry processing, with no FPU or MMU requirement.
-The target is FS-UAE emulating PAL A1200/AGA with a 68060 and Kickstart 3.1; the fixed
-memory placement and 20 ms frame budget form part of that configuration.
+The target is FS-UAE with PAL timing and a 68060; the fixed memory placement
+and 20 ms frame budget form part of that configuration. See the
+[FS-UAE profile](FS-UAE.md) for the emulator settings.
 
 ## Address mapping and patches
 

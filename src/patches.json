@@ -2,7 +2,7 @@
   "format_version": 1,
   "release_version": "0.3.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
-  "target": "Emulator only: FS-UAE 3.2.35 / PAL A1200 / AGA / MC68060 / Kickstart 3.1 rev 40.68 / 2 MiB Chip / 8 MiB Fast",
+  "target": "Emulator only: FS-UAE 3.2.35 / PAL / MC68060 / 2 MiB Chip / 8 MiB Fast / profile in FS-UAE.md",
   "source": {
     "size": 901120,
     "sha256": "548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06",
@@ -15,7 +15,7 @@
     }
   },
   "output": {
-    "name": "StuntCarRacer-KS31-AGA-060-50FPS.adf",
+    "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
     "sha256": "a0f94e01a3162fc3649f81526f76aac02200833b119f7e888e816aa1645e45d2"
   },

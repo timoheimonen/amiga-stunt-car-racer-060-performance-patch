@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Timo Heimonen
 # SPDX-License-Identifier: MIT
 
-"""Patch a Stunt Car Racer ADF for KS3.1 / AGA / 68060, PAL 50 FPS.
+"""Patch a Stunt Car Racer ADF for 68060, PAL 50 FPS.
 
 Self-contained: Python 3.8+ and the supported original ADF are sufficient.
 Fixed 20 ms physics and 50 FPS rendering for Practice and computer-opponent races.
@@ -15,7 +15,7 @@ import struct
 import tempfile
 
 VERSION = '0.3.0'
-OUTPUT_NAME = 'StuntCarRacer-KS31-AGA-060-50FPS.adf'
+OUTPUT_NAME = 'StuntCarRacer-060-50FPS.adf'
 SOURCE_SHA256 = '548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06'
 DISK_SIZE = 901120
 PAYLOAD_OFFSET = 0xb720
@@ -119,7 +119,7 @@ def main(argv=None):
         parser.exit(1, 'Error: %s\n' % error)
     print('Stunt Car Racer 50 FPS patch ' + VERSION)
     print('Created %s\nSHA-256: %s' % (output, digest))
-    print('Practice and computer-opponent races: PAL A1200/AGA, 68060, 2 MiB Chip, 8 MiB Fast, KS3.1.')
+    print('Practice and computer-opponent races: PAL, 68060, 2 MiB Chip, 8 MiB Fast.')
 
 
 # BEGIN GENERATED PATCH DATA (scripts/build_patch.py)

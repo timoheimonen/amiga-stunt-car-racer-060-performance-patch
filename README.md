@@ -1,4 +1,4 @@
-# Stunt Car Racer 50 FPS — KS3.1 / AGA / 68060 patcher
+# Stunt Car Racer 50 FPS — 68060 patcher
 
 **Version 0.3.0 — emulator only.** This release is intended for FS-UAE,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
@@ -8,8 +8,8 @@ not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS
 ## Requirements
 
 - Python 3.8+; no additional packages or assembler needed to patch a disk.
-- FS-UAE 3.2.35 emulating PAL A1200/AGA, MC68060, Kickstart 3.1 A1200 rev 40.68,
-  2 MiB Chip RAM and 8 MiB Fast RAM.
+- FS-UAE 3.2.35 with PAL, MC68060, 2 MiB Chip RAM and 8 MiB Fast RAM,
+  using the [FS-UAE profile](FS-UAE.md).
 - Your own original Stunt Car Racer ADF matching the
   [supported checksum](FS-UAE.md#checksums), and your own Kickstart ROM.
 
@@ -19,7 +19,7 @@ not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS
 python3 patch.py "/path/to/Stunt Car Racer.adf"
 ```
 
-Creates `StuntCarRacer-KS31-AGA-060-50FPS.adf` beside the original.
+Creates `StuntCarRacer-060-50FPS.adf` beside the original.
 Use `--output /path/to/output.adf` to choose a location and `--force` to
 replace an existing output. The original disk is never overwritten.
 `python3 patch.py --version` prints the package version.

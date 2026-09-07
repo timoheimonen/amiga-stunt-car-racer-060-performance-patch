@@ -1,4 +1,4 @@
-; Bootblock extension, linked at boot-relative $200. KS 3.1 / 2 MiB Chip.
+; Bootblock extension, linked at boot-relative $200. Exec V37+ / 2 MiB Chip.
 ; Original boot $2c AllocMem is redirected to reserve_memory.
 ; Original boot $70 (motor-off DoIO) is redirected to install_runtime.
         org $200
