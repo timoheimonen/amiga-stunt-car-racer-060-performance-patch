@@ -41,7 +41,7 @@ support is limited to the exact checksum below.
 
 | File | SHA-256 |
 | --- | --- |
-| Supported original Stunt Car Racer ADF | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
+| Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
 | Patched ADF (0.3.0, 50 FPS Practice and computer-opponent races) | `a0f94e01a3162fc3649f81526f76aac02200833b119f7e888e816aa1645e45d2` |
 | Kickstart 3.1 A1200 rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 
