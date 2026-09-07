@@ -1,8 +1,7 @@
 # Stunt Car Racer 50 FPS — KS3.1 / AGA / 68060 patcher
 
 **Version 0.3.0 — emulator only.** This release is intended for FS-UAE,
-not physical Amiga hardware. It provides **50 Hz physics and 50 FPS rendering** in PAL
-Practice mode and races against computer drivers, with timing corrections.
+not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
 [Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
 
