@@ -1,4 +1,4 @@
-# Patch details — 0.3.0
+# Patch details — 0.4.0
 
 This is an **emulator-only release** for FS-UAE. Physical Amiga hardware
 is outside this version's scope.
@@ -25,25 +25,47 @@ state; there are no interpolated intermediate frames.
 - Rendering waits for Copper publication before reusing the previous
   display buffer. Graphics, Copper lists and DMA buffers remain in Chip RAM.
 
+## Rendering optimizations
+
+- Object and track points are transformed in batches using scaled index
+  addressing, reducing repeated setup and per-point calls.
+- Long polygon row interiors use aligned 32-bit writes, with the original
+  word loop handling short spans and trailing words.
+- Coefficient calculation uses unrolled loops with the original integer
+  arithmetic and operation order.
+- Two exact 65,536-entry angle tables use 256 KiB of Fast RAM. They are
+  initialized once from the original integer routines. Seven coefficient
+  calls use table lookups; the final call retains the original side results.
+  If Fast allocation fails, the original angle calculation remains available.
+- A 16-color mask table and fixed pixel routines replace instruction rewriting
+  in the color-selection and pixel/word drawing paths. Color selection is
+  stored in data pointers.
+
+The 20 ms physics step, race timing and display-buffer synchronization remain
+unchanged.
+
 ## Loader and memory
 
 The patcher edits fixed offsets in the original raw-loader ADF. It does not
 add an AmigaDOS executable or a startup-sequence.
 
-The 118-byte boot extension starts at boot-relative `0x200`. It reserves
+The 134-byte boot extension starts at boot-relative `0x200`. It reserves
 4096 bytes of Chip RAM at `0x181000` using Exec AllocAbs, then performs the
-original `0x9800`-byte Chip allocation for the initial load. The 2738-byte
+expanded `0x9c00`-byte Chip allocation for the initial load. The 4004-byte
 runtime is stored at ADF offset `0xb720` and copied to the reserved area.
+The boot extension also requests 256 KiB of Fast RAM for the angle tables.
 CacheClearU runs before the copied code is executed.
 This call requires Exec V37 or later.
 
-The initial load begins at ADF offset `0x2c00`. Its original copier moves
+The initial load begins at ADF offset `0x2c00`. The initial read and allocation
+are both `0x9c00` bytes. Its original copier moves
 relative bytes `0x78..0x8abb` to `0x4000`; the runtime starts beyond the copier
 at relative `0x8b20` and ends within the initial-load allocation.
 
-Allocation failure enters supervisor mode, disables DMA, displays a red
+Failure of either required Chip allocation enters supervisor mode, disables DMA, displays a red
 background and halts. Restart with the documented memory configuration.
-The runtime allocation lasts for the session.
+The runtime and optional Fast table allocations last for the session.
+The 4004-byte runtime leaves 92 bytes free in its 4096-byte reservation.
 
 The source uses integer instructions, including 68020+ scaled index addressing
 for 68060 geometry processing, with no FPU or MMU requirement.
@@ -60,7 +82,7 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) contains all 40 instruction patches,
+[src/patches.json](src/patches.json) contains all 75 instruction patches,
 expected and replacement bytes, address mappings, dispatch symbols and
 payload hashes. All instruction addresses are even-aligned; words and
 longwords use big-endian encoding. `BOOT_HEX` and `RUNTIME_HEX` in
@@ -68,8 +90,8 @@ longwords use big-endian encoding. `BOOT_HEX` and `RUNTIME_HEX` in
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 118 | `5914198f75b76891ad43cc5b60111971c6337b22de3f94257350b92a46d94703` |
-| Runtime | 2738 | `526c05b3894ec650f1529df7d9214c80caa81b7f46a7d48b70bdc1626bc70eb3` |
+| Boot | 134 | `daf5903700c519d8785257dca9574a05af4974308fcc436cb57833ceac828492` |
+| Runtime | 4004 | `ab92db5f86e2e7dcaf05fffc7ffcba5141ddf6affd750fc519011635397b4071` |
 
 Full disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
 
@@ -85,12 +107,15 @@ From this directory:
 python3 -B scripts/build_patch.py "/path/to/Stunt Car Racer.adf" --check
 ```
 
-The builder assembles `SCR_Boot.s` and `SCR_Runtime50Hz.s`, which includes
-`SCR_Player20ms.s`, `SCR_Opponent20ms.s`, `SCR_ObjectSetup060.s` and
-`SCR_TransformPoints060.s`. It checks source bytes, sizes,
-hashes and the boot-copy contract against the manifest. Build files are
-written under `work/adf-patch-build/`. The `--check` option compares the
-result with the embedded patch data without changing source files.
+The builder assembles `SCR_Boot.s` and `SCR_Runtime50Hz.s`, including the
+player, opponent, geometry, span-fill, coefficient, angle and color routines.
+It also assembles the five in-place replacements listed under
+`assembly_patches` in [src/patches.json](src/patches.json), checking their
+instruction bytes and preserved continuation against the original disk.
+
+The builder checks payload sizes, hashes and the boot-copy contract. Build
+files are written under `work/adf-patch-build/`. The `--check` option compares
+the result with the embedded patch data without changing source files.
 Use `--write` to regenerate that data after updating the manifest and
 package version.
 

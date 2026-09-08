@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "0.3.0",
+  "release_version": "0.4.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / MC68060 / 2 MiB Chip / 8 MiB Fast / profile in FS-UAE.md",
   "source": {
@@ -10,14 +10,13 @@
       "adf_offset": "0xdc00",
       "size": 412160,
       "runtime_base": "0xe700",
-      "ghidra_base": "0xe700",
       "sha256": "8b2e072197345617504ca328ccc452fcf6dd88137a51061a5584f73b653c085d"
     }
   },
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "a0f94e01a3162fc3649f81526f76aac02200833b119f7e888e816aa1645e45d2"
+    "sha256": "ef2fb22aa5789a6be96dd986babdb498772b0a8baf042e742dde092c1160c45a"
   },
   "payloads": [
     {
@@ -25,9 +24,9 @@
       "source": "SCR_Boot.s",
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
-      "size": 118,
-      "sha256": "5914198f75b76891ad43cc5b60111971c6337b22de3f94257350b92a46d94703",
-      "expected_hex": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      "size": 134,
+      "sha256": "daf5903700c519d8785257dca9574a05af4974308fcc436cb57833ceac828492",
+      "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
     },
     {
       "id": "runtime",
@@ -35,14 +34,19 @@
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
       "allocation_size": 4096,
-      "size": 2738,
-      "sha256": "526c05b3894ec650f1529df7d9214c80caa81b7f46a7d48b70bdc1626bc70eb3",
-      "expected_sha256": "30a842e3d36a385afcc46680e66f2d2826a2eb9aafe4adae5243998c3844429a",
+      "size": 4004,
+      "sha256": "ab92db5f86e2e7dcaf05fffc7ffcba5141ddf6affd750fc519011635397b4071",
+      "expected_sha256": "89fa534120f1732393834029dfb57e234e45a782a504524f3566f5e0e24c6057",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
         "SCR_ObjectSetup060.s",
-        "SCR_TransformPoints060.s"
+        "SCR_TransformPoints060.s",
+        "SCR_TrackPoints060.s",
+        "SCR_FillSpans060.s",
+        "SCR_CoefficientsTail060.s",
+        "SCR_Angles060.s",
+        "SCR_Colors060.s"
       ]
     }
   ],
@@ -60,9 +64,21 @@
       "description": "Install runtime after original DoIO"
     },
     {
+      "adf_offset": "0x1e",
+      "expected_hex": "00009800",
+      "replacement_hex": "00009c00",
+      "description": "Extend initial load and allocation to 0x9c00 bytes"
+    },
+    {
+      "adf_offset": "0x3a",
+      "expected_hex": "00009800",
+      "replacement_hex": "00009c00",
+      "description": "Extend initial load and allocation to 0x9c00 bytes"
+    },
+    {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "49daccde",
+      "replacement_hex": "5a06f588",
       "description": "Recalculate Amiga bootblock checksum"
     }
   ],
@@ -192,7 +208,34 @@
     "object_setup060": "0x181a00",
     "transform_points060": "0x181a60",
     "transform_points060_end": "0x181ab2",
-    "runtime_end": "0x181ab2"
+    "track_points060": "0x181ab2",
+    "track_points060_end": "0x181b40",
+    "fill_spans060": "0x181b40",
+    "fill_aligned060": "0x181b64",
+    "fill_pairs060": "0x181b7a",
+    "coefficients_tail060": "0x181ba4",
+    "angles_init060": "0x181c1e",
+    "angle08_lookup060": "0x181c70",
+    "angle10_lookup060": "0x181c88",
+    "angles_alloc060": "0x181ca6",
+    "angles_ready060": "0x181caa",
+    "colors_start060": "0x181cae",
+    "word_dispatch060": "0x181cae",
+    "word_pointer060": "0x181cba",
+    "pixel_odd_pointer060": "0x181cbe",
+    "pixel_previous060": "0x181cc2",
+    "word_routines060": "0x181cc4",
+    "color_masks060": "0x181d04",
+    "pixel_variants060": "0x181d84",
+    "runtime_end": "0x181fa4",
+    "word_dispatch_local060": "0x663b0",
+    "WORD_EDGE060": "0x663b0",
+    "span_row060": "0x66740",
+    "span_multiple060": "0x66774",
+    "span_dispatch060": "0x6678a",
+    "span_short060": "0x66796",
+    "span_word060": "0x6679e",
+    "span_end060": "0x667b0"
   },
   "patches": [
     {
@@ -200,400 +243,793 @@
       "target": "linear_entry",
       "adf_offset": "0x60fdc",
       "game_file_offset": "0x533dc",
-      "ghidra_address": "0x61adc",
       "runtime_address": "0x61adc",
       "expected_hex": "30390001bcf6",
-      "replacement_hex": "4ef900181336"
+      "replacement_hex": "4ef900181336",
+      "dispatch_address": "0x181336"
     },
     {
       "id": "angular_entry_61b26",
       "target": "angular_entry",
       "adf_offset": "0x61026",
       "game_file_offset": "0x53426",
-      "ghidra_address": "0x61b26",
       "runtime_address": "0x61b26",
       "expected_hex": "30390001bcfc",
-      "replacement_hex": "4ef900181358"
+      "replacement_hex": "4ef900181358",
+      "dispatch_address": "0x181358"
     },
     {
       "id": "pose_entry_61950",
       "target": "pose_entry",
       "adf_offset": "0x60e50",
       "game_file_offset": "0x53250",
-      "ghidra_address": "0x61950",
       "runtime_address": "0x61950",
       "expected_hex": "30390001bcea",
-      "replacement_hex": "4ef90018137a"
+      "replacement_hex": "4ef90018137a",
+      "dispatch_address": "0x18137a"
     },
     {
       "id": "spring_entry_61c30",
       "target": "spring_entry",
       "adf_offset": "0x61130",
       "game_file_offset": "0x53530",
-      "ghidra_address": "0x61c30",
       "runtime_address": "0x61c30",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "spring_entry_61d58",
       "target": "spring_entry",
       "adf_offset": "0x61258",
       "game_file_offset": "0x53658",
-      "ghidra_address": "0x61d58",
       "runtime_address": "0x61d58",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "spring_entry_61e80",
       "target": "spring_entry",
       "adf_offset": "0x61380",
       "game_file_offset": "0x53780",
-      "ghidra_address": "0x61e80",
       "runtime_address": "0x61e80",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "race_init_5d402",
       "target": "race_init",
       "adf_offset": "0x5c902",
       "game_file_offset": "0x4ed02",
-      "ghidra_address": "0x5d402",
       "runtime_address": "0x5d402",
       "expected_hex": "4eb9000605b6",
-      "replacement_hex": "4eb9001813ae"
+      "replacement_hex": "4eb9001813ae",
+      "dispatch_address": "0x1813ae"
     },
     {
       "id": "frame_begin_5d47e",
       "target": "frame_begin",
       "adf_offset": "0x5c97e",
       "game_file_offset": "0x4ed7e",
-      "ghidra_address": "0x5d47e",
       "runtime_address": "0x5d47e",
       "expected_hex": "53390001bbac",
-      "replacement_hex": "4eb9001813e4"
+      "replacement_hex": "4eb9001813e4",
+      "dispatch_address": "0x1813e4"
     },
     {
       "id": "event_clock_5db34",
       "target": "event_clock",
       "adf_offset": "0x5d034",
       "game_file_offset": "0x4f434",
-      "ghidra_address": "0x5db34",
       "runtime_address": "0x5db34",
       "expected_hex": "52390001bbc9",
-      "replacement_hex": "4ef900181466"
+      "replacement_hex": "4ef900181466",
+      "dispatch_address": "0x181466"
     },
     {
       "id": "reload_wait_5dadc",
       "target": "reload_wait",
       "adf_offset": "0x5cfdc",
       "game_file_offset": "0x4f3dc",
-      "ghidra_address": "0x5dadc",
       "runtime_address": "0x5dadc",
       "expected_hex": "13fc0006000616d8",
-      "replacement_hex": "4eb9001814ba4e71"
+      "replacement_hex": "4eb9001814ba4e71",
+      "dispatch_address": "0x1814ba"
     },
     {
       "id": "animation_step_6516c",
       "target": "animation_step",
       "adf_offset": "0x6466c",
       "game_file_offset": "0x56a6c",
-      "ghidra_address": "0x6516c",
       "runtime_address": "0x6516c",
       "expected_hex": "52000c000003",
-      "replacement_hex": "4eb9001814d6"
+      "replacement_hex": "4eb9001814d6",
+      "dispatch_address": "0x1814d6"
     },
     {
       "id": "decay_step_6187a",
       "target": "decay_step",
       "adf_offset": "0x60d7a",
       "game_file_offset": "0x5317a",
-      "ghidra_address": "0x6187a",
       "runtime_address": "0x6187a",
       "expected_hex": "4eb900060fbe",
-      "replacement_hex": "4eb9001814ee"
+      "replacement_hex": "4eb9001814ee",
+      "dispatch_address": "0x1814ee"
     },
     {
       "id": "lap_clock_5df2e",
       "target": "lap_clock",
       "adf_offset": "0x5d42e",
       "game_file_offset": "0x4f82e",
-      "ghidra_address": "0x5df2e",
       "runtime_address": "0x5df2e",
       "expected_hex": "103c0013207c0001c938",
-      "replacement_hex": "4ef90018154a4e714e71"
+      "replacement_hex": "4ef90018154a4e714e71",
+      "dispatch_address": "0x18154a"
     },
     {
       "id": "wheel_phase_651be",
       "target": "wheel_phase",
       "adf_offset": "0x646be",
       "game_file_offset": "0x56abe",
-      "ghidra_address": "0x651be",
       "runtime_address": "0x651be",
       "expected_hex": "d1390001bbe3",
-      "replacement_hex": "4eb90018156c"
+      "replacement_hex": "4eb90018156c",
+      "dispatch_address": "0x18156c"
     },
     {
       "id": "contact_reload_620ac",
       "target": "contact_reload",
       "adf_offset": "0x615ac",
       "game_file_offset": "0x539ac",
-      "ghidra_address": "0x620ac",
       "runtime_address": "0x620ac",
       "expected_hex": "13fc0005000620b6",
-      "replacement_hex": "4eb9001815744e71"
+      "replacement_hex": "4eb9001815744e71",
+      "dispatch_address": "0x181574"
     },
     {
       "id": "collision_reload_63ed4",
       "target": "collision_reload",
       "adf_offset": "0x633d4",
       "game_file_offset": "0x557d4",
-      "ghidra_address": "0x63ed4",
       "runtime_address": "0x63ed4",
       "expected_hex": "13fc000500063ee0",
-      "replacement_hex": "4eb90018158e4e71"
+      "replacement_hex": "4eb90018158e4e71",
+      "dispatch_address": "0x18158e"
     },
     {
       "id": "respawn_tick_5d5e2",
       "target": "respawn_tick",
       "adf_offset": "0x5cae2",
       "game_file_offset": "0x4eee2",
-      "ghidra_address": "0x5d5e2",
       "runtime_address": "0x5d5e2",
       "expected_hex": "53390001bb41",
-      "replacement_hex": "4eb9001815a8"
+      "replacement_hex": "4eb9001815a8",
+      "dispatch_address": "0x1815a8"
     },
     {
       "id": "race_exit_5d674",
       "target": "race_exit",
       "adf_offset": "0x5cb74",
       "game_file_offset": "0x4ef74",
-      "ghidra_address": "0x5d674",
       "runtime_address": "0x5d674",
       "expected_hex": "33fc002000069ede",
-      "replacement_hex": "4eb9001815c84e71"
+      "replacement_hex": "4eb9001815c84e71",
+      "dispatch_address": "0x1815c8"
     },
     {
       "id": "display_swap_5db2e",
       "target": "display_swap",
       "adf_offset": "0x5d02e",
       "game_file_offset": "0x4f42e",
-      "ghidra_address": "0x5db2e",
       "runtime_address": "0x5db2e",
       "expected_hex": "4ef90001b7b6",
-      "replacement_hex": "4ef900181720"
+      "replacement_hex": "4ef900181720",
+      "dispatch_address": "0x181720"
     },
     {
       "id": "lap_penalty_61854",
       "target": "lap_penalty",
       "adf_offset": "0x60d54",
       "game_file_offset": "0x53154",
-      "ghidra_address": "0x61854",
       "runtime_address": "0x61854",
       "expected_hex": "4eb90005df32",
-      "replacement_hex": "4eb9001819f4"
+      "replacement_hex": "4eb9001819f4",
+      "dispatch_address": "0x1819f4"
     },
     {
       "id": "op_v0_640f2",
       "target": "op_v0",
       "adf_offset": "0x635f2",
       "game_file_offset": "0x559f2",
-      "ghidra_address": "0x640f2",
       "runtime_address": "0x640f2",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef90018173c4e71"
+      "replacement_hex": "4ef90018173c4e71",
+      "dispatch_address": "0x18173c"
     },
     {
       "id": "op_y0_6410a",
       "target": "op_y0",
       "adf_offset": "0x6360a",
       "game_file_offset": "0x55a0a",
-      "ghidra_address": "0x6410a",
       "runtime_address": "0x6410a",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef90018175a4e71"
+      "replacement_hex": "4ef90018175a4e71",
+      "dispatch_address": "0x18175a"
     },
     {
       "id": "op_v1_64124",
       "target": "op_v1",
       "adf_offset": "0x63624",
       "game_file_offset": "0x55a24",
-      "ghidra_address": "0x64124",
       "runtime_address": "0x64124",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef9001817784e71"
+      "replacement_hex": "4ef9001817784e71",
+      "dispatch_address": "0x181778"
     },
     {
       "id": "op_y1_6413c",
       "target": "op_y1",
       "adf_offset": "0x6363c",
       "game_file_offset": "0x55a3c",
-      "ghidra_address": "0x6413c",
       "runtime_address": "0x6413c",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef9001817964e71"
+      "replacement_hex": "4ef9001817964e71",
+      "dispatch_address": "0x181796"
     },
     {
       "id": "op_v2_64156",
       "target": "op_v2",
       "adf_offset": "0x63656",
       "game_file_offset": "0x55a56",
-      "ghidra_address": "0x64156",
       "runtime_address": "0x64156",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef9001817b44e71"
+      "replacement_hex": "4ef9001817b44e71",
+      "dispatch_address": "0x1817b4"
     },
     {
       "id": "op_y2_6416e",
       "target": "op_y2",
       "adf_offset": "0x6366e",
       "game_file_offset": "0x55a6e",
-      "ghidra_address": "0x6416e",
       "runtime_address": "0x6416e",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef9001817d24e71"
+      "replacement_hex": "4ef9001817d24e71",
+      "dispatch_address": "0x1817d2"
     },
     {
       "id": "op_speed_63be4",
       "target": "op_speed",
       "adf_offset": "0x630e4",
       "game_file_offset": "0x554e4",
-      "ghidra_address": "0x63be4",
       "runtime_address": "0x63be4",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef9001817f04e71"
+      "replacement_hex": "4ef9001817f04e71",
+      "dispatch_address": "0x1817f0"
     },
     {
       "id": "op_progress_639f8",
       "target": "op_progress",
       "adf_offset": "0x62ef8",
       "game_file_offset": "0x552f8",
-      "ghidra_address": "0x639f8",
       "runtime_address": "0x639f8",
       "expected_hex": "143c00ee67000006",
-      "replacement_hex": "4ef90018180e4e71"
+      "replacement_hex": "4ef90018180e4e71",
+      "dispatch_address": "0x18180e"
     },
     {
       "id": "spring_entry_63f40",
       "target": "spring_entry",
       "adf_offset": "0x63440",
       "game_file_offset": "0x55840",
-      "ghidra_address": "0x63f40",
       "runtime_address": "0x63f40",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "spring_entry_63fa8",
       "target": "spring_entry",
       "adf_offset": "0x634a8",
       "game_file_offset": "0x558a8",
-      "ghidra_address": "0x63fa8",
       "runtime_address": "0x63fa8",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "spring_entry_64010",
       "target": "spring_entry",
       "adf_offset": "0x63510",
       "game_file_offset": "0x55910",
-      "ghidra_address": "0x64010",
       "runtime_address": "0x64010",
       "expected_hex": "4eb90006180e",
-      "replacement_hex": "4eb90018139c"
+      "replacement_hex": "4eb90018139c",
+      "dispatch_address": "0x18139c"
     },
     {
       "id": "op_steer_638f4",
       "target": "op_steer",
       "adf_offset": "0x62df4",
       "game_file_offset": "0x551f4",
-      "ghidra_address": "0x638f4",
       "runtime_address": "0x638f4",
       "expected_hex": "d0390001bbed",
-      "replacement_hex": "4eb9001818b0"
+      "replacement_hex": "4eb9001818b0",
+      "dispatch_address": "0x1818b0"
     },
     {
       "id": "op_air_tilt_642de",
       "target": "op_air_tilt",
       "adf_offset": "0x637de",
       "game_file_offset": "0x55bde",
-      "ghidra_address": "0x642de",
       "runtime_address": "0x642de",
       "expected_hex": "d17410005501",
-      "replacement_hex": "4eb9001818c6"
+      "replacement_hex": "4eb9001818c6",
+      "dispatch_address": "0x1818c6"
     },
     {
       "id": "op_collision_speed_63e56",
       "target": "op_collision_speed",
       "adf_offset": "0x63356",
       "game_file_offset": "0x55756",
-      "ghidra_address": "0x63e56",
       "runtime_address": "0x63e56",
       "expected_hex": "90790001bd58",
-      "replacement_hex": "4eb9001818de"
+      "replacement_hex": "4eb9001818de",
+      "dispatch_address": "0x1818de"
     },
     {
       "id": "op_collision_vertical_63e6a",
       "target": "op_collision_vertical",
       "adf_offset": "0x6336a",
       "game_file_offset": "0x5576a",
-      "ghidra_address": "0x63e6a",
       "runtime_address": "0x63e6a",
       "expected_hex": "30390001bd56",
-      "replacement_hex": "4ef9001818fc"
+      "replacement_hex": "4ef9001818fc",
+      "dispatch_address": "0x1818fc"
     },
     {
       "id": "op_damage_63e02",
       "target": "op_damage",
       "adf_offset": "0x63302",
       "game_file_offset": "0x55702",
-      "ghidra_address": "0x63e02",
       "runtime_address": "0x63e02",
       "expected_hex": "207c0001bb4f",
-      "replacement_hex": "4eb900181914"
+      "replacement_hex": "4eb900181914",
+      "dispatch_address": "0x181914"
     },
     {
       "id": "op_contact_tick_63d38",
       "target": "op_contact_tick",
       "adf_offset": "0x63238",
       "game_file_offset": "0x55638",
-      "ghidra_address": "0x63d38",
       "runtime_address": "0x63d38",
       "expected_hex": "53390001bbc3",
-      "replacement_hex": "4eb900181930"
+      "replacement_hex": "4eb900181930",
+      "dispatch_address": "0x181930"
     },
     {
       "id": "op_ai_639bc",
       "target": "op_ai",
       "adf_offset": "0x62ebc",
       "game_file_offset": "0x552bc",
-      "ghidra_address": "0x639bc",
       "runtime_address": "0x639bc",
       "expected_hex": "4eb90005bd1e",
-      "replacement_hex": "4eb900181948"
+      "replacement_hex": "4eb900181948",
+      "dispatch_address": "0x181948"
     },
     {
       "id": "op_random_640aa",
       "target": "op_random",
       "adf_offset": "0x635aa",
       "game_file_offset": "0x559aa",
-      "ghidra_address": "0x640aa",
       "runtime_address": "0x640aa",
       "expected_hex": "12390001ca29",
-      "replacement_hex": "4ef900181960"
+      "replacement_hex": "4ef900181960",
+      "dispatch_address": "0x181960"
     },
     {
       "id": "object_setup060_695a2",
       "target": "object_setup060",
       "adf_offset": "0x68aa2",
       "game_file_offset": "0x5aea2",
-      "ghidra_address": "0x695a2",
       "runtime_address": "0x695a2",
       "expected_hex": "e740207c000699b8",
-      "replacement_hex": "4ef900181a004e71"
+      "replacement_hex": "4ef900181a004e71",
+      "dispatch_address": "0x181a00"
+    },
+    {
+      "id": "track_points060_65494",
+      "target": "track_points060",
+      "adf_offset": "0x64994",
+      "game_file_offset": "0x56d94",
+      "runtime_address": "0x65494",
+      "expected_hex": "12390001bbc5",
+      "replacement_hex": "4ef900181ab2",
+      "dispatch_address": "0x181ab2"
+    },
+    {
+      "id": "span_row060_66740",
+      "target": "span_row060",
+      "adf_offset": "0x65c40",
+      "game_file_offset": "0x58040",
+      "runtime_address": "0x66740",
+      "expected_hex": "3204024100f0e64949f6100036043205e84be8499243660000220244000fe544383540000245000fe5453a355040c8454eb90006646e6000004c53010244000f67000014e544383540004eb90006646e53416b00001c",
+      "replacement_hex": "3204024100f0e64949f6100036043205e84be8499243661c0244000fe544383540000245000fe5453a355040c8456100fc40605053010244000f670ee544383540006100fc2c53416b260c41000d65064ef900181b40"
+    },
+    {
+      "id": "coefficients_head060_6142a",
+      "target": "coefficients_head060",
+      "adf_offset": "0x6092a",
+      "game_file_offset": "0x52d2a",
+      "runtime_address": "0x6142a",
+      "expected_hex": "3a2d0008363c000c38353000c9c5e38448443b843000064300020c4300126f00ffe83a2d0008363c003438353000c9c5e38448443b843000064300040c4300386f00ffe83aad000c3b6d001000023a2d000a363c000438353000c9c5e38448443b843000064300020c4300066f00ffe83a2d000a363c004438353000c9c5e38448443b843000064300020c4300466f00ffe83a2d0020363c000c38353000c9c5e38448443b843000064300040c43001c6f00ffe83a2d0020363c003438353000c9c5e38448443b843000064300040c4300386f00ffe83a2d0022363c000e38353000c9c5e38448443b843000064300040c43001e6f00ffe83a2d0022363c003e38353000c9c5e38448443b843000064300040c4300426f00ffe8",
+      "replacement_hex": "3a2d0008382d000cc9c5d88448443b44000c382d000ec9c5d88448443b44000e382d0010c9c5d88448443b440010382d0012c9c5d88448443b4400123a2d0008382d0034c9c5d88448443b440034382d0038c9c5d88448443b4400383aad000c3b6d001000023a2d000a382d0004c9c5d88448443b440004382d0006c9c5d88448443b4400063a2d000a382d0044c9c5d88448443b440044382d0046c9c5d88448443b4400463a2d0020382d000cc9c5d88448443b44000c382d0010c9c5d88448443b440010382d0014c9c5d88448443b440014382d0018c9c5d88448443b440018382d001cc9c5d88448443b44001c3a2d0020382d0034c9c5d88448443b440034382d0038c9c5d88448443b4400384ef900181ba400000000"
+    },
+    {
+      "id": "angles_init060_61368",
+      "target": "angles_init060",
+      "adf_offset": "0x60868",
+      "game_file_offset": "0x52c68",
+      "runtime_address": "0x61368",
+      "expected_hex": "2a7c0001c230",
+      "replacement_hex": "4ef900181c1e",
+      "dispatch_address": "0x181c1e"
+    },
+    {
+      "id": "angle08_lookup060_61374",
+      "target": "angle08_lookup060",
+      "adf_offset": "0x60874",
+      "game_file_offset": "0x52c74",
+      "runtime_address": "0x61374",
+      "expected_hex": "4eb900064d08",
+      "replacement_hex": "4eb900181c70",
+      "dispatch_address": "0x181c70"
+    },
+    {
+      "id": "angle10_lookup060_61394",
+      "target": "angle10_lookup060",
+      "adf_offset": "0x60894",
+      "game_file_offset": "0x52c94",
+      "runtime_address": "0x61394",
+      "expected_hex": "4eb900064d10",
+      "replacement_hex": "4eb900181c88",
+      "dispatch_address": "0x181c88"
+    },
+    {
+      "id": "angle08_lookup060_613bc",
+      "target": "angle08_lookup060",
+      "adf_offset": "0x608bc",
+      "game_file_offset": "0x52cbc",
+      "runtime_address": "0x613bc",
+      "expected_hex": "4eb900064d08",
+      "replacement_hex": "4eb900181c70",
+      "dispatch_address": "0x181c70"
+    },
+    {
+      "id": "angle10_lookup060_613d0",
+      "target": "angle10_lookup060",
+      "adf_offset": "0x608d0",
+      "game_file_offset": "0x52cd0",
+      "runtime_address": "0x613d0",
+      "expected_hex": "4eb900064d10",
+      "replacement_hex": "4eb900181c88",
+      "dispatch_address": "0x181c88"
+    },
+    {
+      "id": "angle08_lookup060_613e8",
+      "target": "angle08_lookup060",
+      "adf_offset": "0x608e8",
+      "game_file_offset": "0x52ce8",
+      "runtime_address": "0x613e8",
+      "expected_hex": "4eb900064d08",
+      "replacement_hex": "4eb900181c70",
+      "dispatch_address": "0x181c70"
+    },
+    {
+      "id": "angle10_lookup060_613f8",
+      "target": "angle10_lookup060",
+      "adf_offset": "0x608f8",
+      "game_file_offset": "0x52cf8",
+      "runtime_address": "0x613f8",
+      "expected_hex": "4eb900064d10",
+      "replacement_hex": "4eb900181c88",
+      "dispatch_address": "0x181c88"
+    },
+    {
+      "id": "angle10_lookup060_61410",
+      "target": "angle10_lookup060",
+      "adf_offset": "0x60910",
+      "game_file_offset": "0x52d10",
+      "runtime_address": "0x61410",
+      "expected_hex": "4eb900064d10",
+      "replacement_hex": "4eb900181c88",
+      "dispatch_address": "0x181c88"
+    },
+    {
+      "id": "color_masks060_6770a",
+      "target": "color_masks060",
+      "adf_offset": "0x66c0a",
+      "game_file_offset": "0x5900a",
+      "runtime_address": "0x6770a",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e2086400000446474e75",
+      "replacement_hex": "7c001c000246000f23f065b000181cc400181cba2e3067b000181d082c3067b000181d04e80864024a474e7500000000000000000000"
+    },
+    {
+      "id": "pixel_select060_66348",
+      "target": "pixel_select060",
+      "adf_offset": "0x65848",
+      "game_file_offset": "0x57c48",
+      "runtime_address": "0x66348",
+      "expected_hex": "e2086500001608b900060006640508b900060006641b6000001208f900060006640508f900060006641be2086500001608b900060006640908b900060006641d6000001208f900060006640908f900060006641de2086500001608b900060006640d08b90006000664216000001208f900060006640d08f9000600066421e2086500001608b900060006641108b90006000664256000001208f900060006641108f90006000664254e75",
+      "replacement_hex": "3f000240000f23fb042000181cbe301fe808650a08b9000300181cc24e7508f9000300181cc24e7500181d8400181da600181dc800181dea00181e0c00181e2e00181e5000181e7200181e9400181eb600181ed800181efa00181f1c00181f3e00181f6000181f82340446424ef001f100181cba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "id": "pixel060_663f2",
+      "target": "pixel060",
+      "adf_offset": "0x658f2",
+      "game_file_offset": "0x57cf2",
+      "runtime_address": "0x663f2",
+      "expected_hex": "10040240000f0a40000f0c4000086c00001401e8000101e81f4101e83e8101e85dc14e750240000701d001e81f4001e83e8001e85dc04e75",
+      "replacement_hex": "10040240000f0a40000f0c4000086c084ef001f100181cbe024000074ef001f200181cbe0012000000000000000000000000000000000000"
+    },
+    {
+      "id": "inline_color_masks060_67b76",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x67076",
+      "game_file_offset": "0x59476",
+      "runtime_address": "0x67b76",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67c1a",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x6711a",
+      "game_file_offset": "0x5951a",
+      "runtime_address": "0x67c1a",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67cb6",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x671b6",
+      "game_file_offset": "0x595b6",
+      "runtime_address": "0x67cb6",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67d52",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x67252",
+      "game_file_offset": "0x59652",
+      "runtime_address": "0x67d52",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67dee",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x672ee",
+      "game_file_offset": "0x596ee",
+      "runtime_address": "0x67dee",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67e8a",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x6738a",
+      "game_file_offset": "0x5978a",
+      "runtime_address": "0x67e8a",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67f26",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x67426",
+      "game_file_offset": "0x59826",
+      "runtime_address": "0x67f26",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_67fc2",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x674c2",
+      "game_file_offset": "0x598c2",
+      "runtime_address": "0x67fc2",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_6805e",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x6755e",
+      "game_file_offset": "0x5995e",
+      "runtime_address": "0x6805e",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_680fa",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x675fa",
+      "game_file_offset": "0x599fa",
+      "runtime_address": "0x680fa",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_686a6",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x67ba6",
+      "game_file_offset": "0x59fa6",
+      "runtime_address": "0x686a6",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_69234",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x68734",
+      "game_file_offset": "0x5ab34",
+      "runtime_address": "0x69234",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "inline_color_masks060_692f0",
+      "target": "inline_color_masks060",
+      "adf_offset": "0x687f0",
+      "game_file_offset": "0x5abf0",
+      "runtime_address": "0x692f0",
+      "expected_hex": "1c00e906540613c60006647542864287e2086400000446464846e208640000044646e2086400000446474847e208640000044647",
+      "replacement_hex": "4eb90006770a602c4e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71",
+      "dispatch_address": "0x6770a"
+    },
+    {
+      "id": "word_dispatch060_6646e",
+      "target": "word_dispatch060",
+      "adf_offset": "0x6596e",
+      "game_file_offset": "0x57d6e",
+      "runtime_address": "0x6646e",
+      "expected_hex": "3404464260000002",
+      "replacement_hex": "4ef900181cae4e71",
+      "dispatch_address": "0x181cae"
+    },
+    {
+      "id": "word_call060_665be",
+      "target": "word_call060",
+      "adf_offset": "0x65abe",
+      "game_file_offset": "0x57ebe",
+      "runtime_address": "0x665be",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_665d8",
+      "target": "word_call060",
+      "adf_offset": "0x65ad8",
+      "game_file_offset": "0x57ed8",
+      "runtime_address": "0x665d8",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_6660c",
+      "target": "word_call060",
+      "adf_offset": "0x65b0c",
+      "game_file_offset": "0x57f0c",
+      "runtime_address": "0x6660c",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_667be",
+      "target": "word_call060",
+      "adf_offset": "0x65cbe",
+      "game_file_offset": "0x580be",
+      "runtime_address": "0x667be",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_68818",
+      "target": "word_call060",
+      "adf_offset": "0x67d18",
+      "game_file_offset": "0x5a118",
+      "runtime_address": "0x68818",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_68832",
+      "target": "word_call060",
+      "adf_offset": "0x67d32",
+      "game_file_offset": "0x5a132",
+      "runtime_address": "0x68832",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "word_call060_68866",
+      "target": "word_call060",
+      "adf_offset": "0x67d66",
+      "game_file_offset": "0x5a166",
+      "runtime_address": "0x68866",
+      "expected_hex": "4eb90006646e",
+      "replacement_hex": "4eb9000663b0",
+      "dispatch_address": "0x663b0"
+    }
+  ],
+  "assembly_patches": [
+    {
+      "source": "SCR_SpanRow060.s",
+      "runtime_address": "0x66740",
+      "size": 86,
+      "bindings": {
+        "WORD_EDGE060": "0x663b0",
+        "fill_spans060": "0x181b40"
+      }
+    },
+    {
+      "source": "SCR_CoefficientsHead060.s",
+      "runtime_address": "0x6142a",
+      "size": 282,
+      "bindings": {
+        "coefficients_tail060": "0x181ba4"
+      }
+    },
+    {
+      "source": "SCR_ColorMasks060.s",
+      "runtime_address": "0x6770a",
+      "size": 54,
+      "bindings": {
+        "word_routines060": "0x181cc4",
+        "word_pointer060": "0x181cba",
+        "color_masks060": "0x181d04"
+      }
+    },
+    {
+      "source": "SCR_PixelSelect060.s",
+      "runtime_address": "0x66348",
+      "size": 170,
+      "bindings": {
+        "pixel_odd_pointer060": "0x181cbe",
+        "pixel_previous060": "0x181cc2",
+        "pixel_variants060": "0x181d84",
+        "word_pointer060": "0x181cba"
+      }
+    },
+    {
+      "source": "SCR_Pixel060.s",
+      "runtime_address": "0x663f2",
+      "size": 56,
+      "bindings": {
+        "pixel_odd_pointer060": "0x181cbe"
+      }
     }
   ]
 }

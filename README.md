@@ -1,7 +1,9 @@
 # Stunt Car Racer 50 FPS — 68060 patcher
 
-**Version 0.3.0 — emulator only.** This release is intended for FS-UAE,
+**Version 0.4.0 — emulator only.** This release is intended for FS-UAE,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
+
+In 512 sampled on-track frames of Draw Bridge Practice, version 0.4.0 had a median world/render time of 9.51 ms out of the 20 ms frame budget with the documented FS-UAE profile.
 
 [Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
 
@@ -36,5 +38,3 @@ Timo Heimonen (timo.heimonen@proton.me) · [MIT License](LICENSE)
 
 The license covers the patch code and documentation. Original game disks
 and Kickstart ROMs are not included.
-
-Tools: Amitools, FS-UAE, Ghidra, OpenAI, vasm.

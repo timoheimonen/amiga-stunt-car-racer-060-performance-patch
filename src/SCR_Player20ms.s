@@ -1,5 +1,5 @@
 ; 68000-compatible 20 ms player integration kernel. Installed by SCR_Boot.s at boot.
-; Assemble with -m68000 -Fbin. Default address is an emulator test placement.
+; Assemble with -m68000 -Fbin. The runtime begins at $181000.
         ifnd LOAD_BASE
 LOAD_BASE equ $181000
         endif
@@ -177,7 +177,7 @@ remainder_positive:
         ext.l d0
         bra.s scale_done
 invalid_coefficient:
-        ; Preserve defined original arithmetic, but mark the test invalid.
+        ; Preserve defined original arithmetic, but record an invalid coefficient.
         ; Never divide an unbounded live coefficient with overflowing DIVS.W.
         move.w #1,diagnostic
         move.b #$ee,d2
