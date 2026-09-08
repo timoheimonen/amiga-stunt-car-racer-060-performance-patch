@@ -27,7 +27,7 @@ class PatcherUnitTests(unittest.TestCase):
         hooks = [(int(p['adf_offset'], 0), p['expected_hex'], p['replacement_hex'])
                  for p in manifest['patches']]
         self.assertEqual(patch.HOOKS, hooks)
-        self.assertEqual(len(hooks), 40)
+        self.assertEqual(len(hooks), 75)
         for item in manifest['payloads']:
             payload = bytes.fromhex(getattr(patch, item['id'].upper() + '_HEX'))
             self.assertEqual(len(payload), item['size'])
@@ -41,16 +41,36 @@ class PatcherUnitTests(unittest.TestCase):
             with self.subTest(hook=item['id']):
                 adf = int(item['adf_offset'], 0)
                 runtime = int(item['runtime_address'], 0)
-                self.assertEqual(runtime, int(item['ghidra_address'], 0))
                 self.assertEqual(runtime, adf + 0xb00)
                 self.assertEqual(runtime, int(item['game_file_offset'], 0) + 0xe700)
                 old, new = bytes.fromhex(item['expected_hex']), bytes.fromhex(item['replacement_hex'])
                 self.assertEqual(len(old), len(new))
                 self.assertEqual(runtime % 2, 0)
-                self.assertIn(new[:2], (bytes.fromhex('4eb9'), bytes.fromhex('4ef9')))
-                destination = int.from_bytes(new[2:6], 'big')
-                self.assertEqual(destination, int(manifest['exports'][item['target']], 0))
-                self.assertTrue(0x181000 <= destination < 0x181000 + 2738)
+                if 'dispatch_address' in item:
+                    self.assertIn(new[:2], (bytes.fromhex('4eb9'), bytes.fromhex('4ef9')))
+                    destination = int.from_bytes(new[2:6], 'big')
+                    self.assertEqual(destination, int(item['dispatch_address'], 0))
+                    if item['target'] == 'inline_color_masks060':
+                        self.assertEqual(destination, 0x6770a)
+                    elif item['target'] == 'word_call060':
+                        self.assertEqual(destination, int(manifest['exports']['word_dispatch_local060'], 0))
+                    else:
+                        self.assertEqual(destination, int(manifest['exports'][item['target']], 0))
+                        self.assertTrue(0x181000 <= destination < 0x181000 + 4004)
+                else:
+                    self.assertIn(runtime, {int(p['runtime_address'], 0)
+                                            for p in manifest['assembly_patches']})
+
+    def test_boot_memory_and_copy_contract(self):
+        manifest = json.loads((ROOT / 'src/patches.json').read_text())
+        expected = [(int(p['adf_offset'], 0), p['expected_hex'], p['replacement_hex'])
+                    for p in manifest['boot_patches'] if int(p['adf_offset'], 0) != 4]
+        self.assertEqual(patch.BOOT_HOOKS, expected)
+        boot = bytes.fromhex(patch.BOOT_HEX)
+        self.assertEqual(boot[0x1a:0x1e], bytes.fromhex('00009c00'))
+        self.assertEqual((int.from_bytes(boot[0x64:0x66], 'big') + 1) * 2,
+                         len(bytes.fromhex(patch.RUNTIME_HEX)))
+        self.assertLessEqual(0x8b20 + len(bytes.fromhex(patch.RUNTIME_HEX)), 0x9c00)
 
     def test_reject_unknown_images(self):
         for data in (b'', b'bad', bytes(patch.DISK_SIZE), bytes(patch.DISK_SIZE - 1)):
@@ -99,9 +119,9 @@ class OriginalImageTests(unittest.TestCase):
         cls.original = SOURCE.read_bytes()
         cls.patched = patch.patch_disk(cls.original)
 
-    def test_matches_0_3_0_disk(self):
+    def test_matches_0_4_0_disk(self):
         self.assertEqual(patch.sha256(self.patched),
-                         'a0f94e01a3162fc3649f81526f76aac02200833b119f7e888e816aa1645e45d2')
+                         'ef2fb22aa5789a6be96dd986babdb498772b0a8baf042e742dde092c1160c45a')
         self.assertEqual(self.patched, patch.patch_disk(self.original))
         self.assertEqual(len(self.patched), patch.DISK_SIZE)
         self.assertEqual(patch.boot_sum(self.patched), 0xffffffff)

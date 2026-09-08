@@ -284,4 +284,9 @@ display_done:
         include "src/SCR_Opponent20ms.s"
         include "src/SCR_ObjectSetup060.s"
         include "src/SCR_TransformPoints060.s"
+        include "src/SCR_TrackPoints060.s"
+        include "src/SCR_FillSpans060.s"
+        include "src/SCR_CoefficientsTail060.s"
+        include "src/SCR_Angles060.s"
+        include "src/SCR_Colors060.s"
 runtime_end:

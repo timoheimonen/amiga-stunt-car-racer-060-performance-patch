@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 — 2026-09-08
+
+- Transform track points in batches to reduce repeated setup and calls.
+- Fill long polygon row interiors with aligned 32-bit writes.
+- Unroll coefficient calculation loops while preserving integer arithmetic.
+- Add exact angle lookup tables in 256 KiB of Fast RAM, with the original
+  calculation available if allocation fails.
+- Precompute color masks and use fixed pixel routines with data-based color
+  selection in place of instruction rewriting.
+- Expand the initial load to accommodate the rendering routines.
+
 ## 0.3.0 — 2026-09-07
 
 - Optimize geometry processing for the 68060 using scaled index addressing.

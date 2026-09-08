@@ -50,12 +50,37 @@ def main():
             raise ValueError(name + ' differs from the versioned source manifest')
     boot, runtime = assets['boot'], assets['runtime']
     # Boot copy count and entry offsets are an explicit versioned contract.
-    if len(boot) != 118 or len(runtime) != 2738 or boot[0x62:0x66].hex() != '303c0558':
+    if (len(boot) != 134 or len(runtime) != 4004 or boot[0x62:0x66].hex() != '303c07d1'
+            or boot[0x1a:0x1e].hex() != '00009c00'):
         raise ValueError('Update the boot entry/copy contract before changing asset sizes')
+    for item in manifest['assembly_patches']:
+        wrapper = work / (Path(item['source']).stem + '.s')
+        target = wrapper.with_suffix('.bin')
+        address = int(item['runtime_address'], 0)
+        definitions = ''.join('%s equ $%x\n' % (k, int(v, 0))
+                              for k, v in item['bindings'].items())
+        wrapper.write_text(' org $%x\n' % address + definitions
+                           + ' include "src/%s"\n' % item['source'])
+        subprocess.run([assembler, '-m68000', '-Fbin', '-o', str(target), str(wrapper)],
+                       cwd=ROOT, check=True)
+        assembled = target.read_bytes()
+        hook = next(p for p in manifest['patches'] if int(p['runtime_address'], 0) == address)
+        size = item['size']
+        if assembled[:size] != bytes.fromhex(hook['replacement_hex']):
+            raise ValueError(item['source'] + ' differs from the instruction patch')
+        # The polygon row includes its unchanged short-loop continuation.
+        expected_size = 112 if address == 0x66740 else size
+        if len(assembled) != expected_size:
+            raise ValueError(item['source'] + ' has an unexpected size')
+        offset = int(hook['adf_offset'], 0)
+        if assembled[size:] != source[offset + size:offset + len(assembled)]:
+            raise ValueError(item['source'] + ' changes its preserved continuation')
+    boot_hooks = [(int(p['adf_offset'], 0), p['expected_hex'], p['replacement_hex'])
+                  for p in manifest['boot_patches'] if int(p['adf_offset'], 0) != 4]
     hooks = [(int(p['adf_offset'], 0), p['expected_hex'], p['replacement_hex'])
              for p in manifest['patches']]
     result = bytearray(source)
-    for offset, old, new in [(0x2c, '4eaeff3a', '610001d2'), (0x70, '4eaefe38', '610001da')] + hooks:
+    for offset, old, new in boot_hooks + hooks:
         before, after = bytes.fromhex(old), bytes.fromhex(new)
         if source[offset:offset + len(before)] != before or len(before) != len(after):
             raise ValueError('Unexpected bytes at %x' % offset)
@@ -75,6 +100,8 @@ def main():
     for name, data in [('BOOT', boot), ('RUNTIME', runtime)]:
         lines += [name + '_HEX = ('] + ["    '" + line + "'" for line in textwrap.wrap(data.hex(), 96)] + [')']
         lines += [name + '_SHA256 = ' + repr(patch.sha256(data))]
+    lines += ['BOOT_HOOKS = [']
+    lines += ['    (0x%x, %r, %r),' % h for h in boot_hooks] + [']']
     lines += ['TAIL_SHA256 = ' + repr(patch.sha256(source[offset:offset + len(runtime)])),
               'OUTPUT_SHA256 = ' + repr(patch.sha256(result)), 'HOOKS = [']
     lines += ['    (0x%x, %r, %r),' % h for h in hooks] + [']']
