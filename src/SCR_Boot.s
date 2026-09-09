@@ -1,6 +1,6 @@
 ; Reserve memory, install the 50 Hz runtime and allocate optional Fast angle tables.
 ; Original boot $2c AllocMem is redirected to reserve_memory.
-; Original boot $70 (motor-off DoIO) is redirected to install_runtime.
+; Original boot $70 (motor-off DoIO) is redirected to run_intro.
 RUNTIME_WORDS equ 2002
 ANGLES_ALLOC equ $181ca6
         org $200
@@ -40,3 +40,5 @@ install_runtime:
         jsr -$27c(a6)          ; CacheClearU before executing copied code
         movem.l (sp)+,d0-d7/a0-a6
         rts
+
+        include "src/SCR_IntroBoot.s"

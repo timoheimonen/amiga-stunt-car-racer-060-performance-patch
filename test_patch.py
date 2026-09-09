@@ -119,9 +119,9 @@ class OriginalImageTests(unittest.TestCase):
         cls.original = SOURCE.read_bytes()
         cls.patched = patch.patch_disk(cls.original)
 
-    def test_matches_0_4_0_disk(self):
+    def test_matches_1_0_0_disk(self):
         self.assertEqual(patch.sha256(self.patched),
-                         'ef2fb22aa5789a6be96dd986babdb498772b0a8baf042e742dde092c1160c45a')
+                         '8549f5f36d14514f25c6a073ffea9363d28febf93ebf525de24611a214166df1')
         self.assertEqual(self.patched, patch.patch_disk(self.original))
         self.assertEqual(len(self.patched), patch.DISK_SIZE)
         self.assertEqual(patch.boot_sum(self.patched), 0xffffffff)
@@ -143,7 +143,7 @@ class OriginalImageTests(unittest.TestCase):
             ranges.append((offset, offset + len(new)))
         for item in manifest['payloads']:
             offset, size = int(item['adf_offset'], 0), item['size']
-            ranges.append((offset, offset + size))
+            ranges.append((offset, offset + item.get('reserved_size', size)))
             self.assertEqual(patch.sha256(self.patched[offset:offset + size]), item['sha256'])
         previous = 0
         for start, end in sorted(ranges):
@@ -163,7 +163,7 @@ class OriginalImageTests(unittest.TestCase):
                 patch.patch_disk(invalid)
 
     def test_corrupt_payloads_are_rejected(self):
-        for name in ('BOOT_HEX', 'RUNTIME_HEX'):
+        for name in ('BOOT_HEX', 'RUNTIME_HEX', 'INTRO_HEX'):
             broken = 'ff' + getattr(patch, name)[2:]
             with mock_patch.object(patch, name, broken), self.assertRaisesRegex(ValueError, 'corrupt'):
                 patch.patch_disk(self.original)

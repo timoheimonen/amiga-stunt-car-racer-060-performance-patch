@@ -1,9 +1,9 @@
-# Stunt Car Racer 50 FPS — 68060 patcher
+# Stunt Car Racer 50 HZ / 50 FPS — 68060 patcher
 
-**Version 0.4.0 — emulator only.** This release is intended for FS-UAE,
+**Version 1.0.0 — emulator only.** This release is intended for FS-UAE,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
-In 512 sampled on-track frames of Draw Bridge Practice, version 0.4.0 had a median world/render time of 9.51 ms out of the 20 ms frame budget with the documented FS-UAE profile.
+In 512 sampled on-track frames of Draw Bridge Practice, Median world/render time is 9.51 ms out of the 20 ms frame budget with the documented FS-UAE profile.
 
 [Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
 
@@ -26,10 +26,7 @@ Use `--output /path/to/output.adf` to choose a location and `--force` to
 replace an existing output. The original disk is never overwritten.
 `python3 patch.py --version` prints the package version.
 
-Boot the patched disk in DF0 using the [FS-UAE settings](FS-UAE.md), then
-choose Practice or a single-player race. Start with a fresh boot so the
-loader installs the patch. Do not restore an older emulator save state.
-The single `patch.py` file can be copied and used independently.
+Boot the patched disk in DF0 using the [FS-UAE settings](FS-UAE.md).
 
 [Changelog](CHANGELOG.md) · [Checksums](FS-UAE.md#checksums) ·
 [Patch details](PATCH.md) · [Assembly sources](src)

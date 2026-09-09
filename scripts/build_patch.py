@@ -39,9 +39,23 @@ def main():
     work = ROOT / 'work/adf-patch-build'
     work.mkdir(parents=True, exist_ok=True)
     assets = {}
-    for item in manifest['payloads']:
+    from intro_tables import write_tables
+    table_path = work / 'intro-tables.i'
+    write_tables(table_path)
+    for item in sorted(manifest['payloads'], key=lambda item: item['id'] != 'intro'):
         name, path = item['id'], 'src/' + item['source']
         target = work / (name + '.bin')
+        if name == 'intro':
+            wrapper = work / 'intro-wrapper.s'
+            wrapper.write_text(' include "src/SCR_Intro.s"\n include "%s"\n' % table_path)
+            path = str(wrapper)
+        elif name == 'boot':
+            intro = assets['intro']
+            padded = intro + bytes(patch.INTRO_RESERVED_SIZE - len(intro))
+            checksum = sum(struct.unpack('>2048I', padded)) & 0xffffffff
+            wrapper = work / 'boot-wrapper.s'
+            wrapper.write_text('INTRO_SUM equ $%x\n include "src/SCR_Boot.s"\n' % checksum)
+            path = str(wrapper)
         subprocess.run([assembler, '-m68000', '-Fbin', '-L', str(target.with_suffix('.lst')),
                         '-o', str(target), path], cwd=ROOT, check=True)
         assets[name] = target.read_bytes()
@@ -50,7 +64,7 @@ def main():
             raise ValueError(name + ' differs from the versioned source manifest')
     boot, runtime = assets['boot'], assets['runtime']
     # Boot copy count and entry offsets are an explicit versioned contract.
-    if (len(boot) != 134 or len(runtime) != 4004 or boot[0x62:0x66].hex() != '303c07d1'
+    if (len(boot) != 320 or len(runtime) != 4004 or boot[0x62:0x66].hex() != '303c07d1'
             or boot[0x1a:0x1e].hex() != '00009c00'):
         raise ValueError('Update the boot entry/copy contract before changing asset sizes')
     for item in manifest['assembly_patches']:
@@ -92,12 +106,16 @@ def main():
     if patch.sha256(source[offset:offset + len(runtime)]) != manifest['payloads'][1]['expected_sha256']:
         raise ValueError('Unexpected original loader tail')
     result[offset:offset + len(runtime)] = runtime
+    intro = assets['intro']
+    if any(source[patch.INTRO_OFFSET:patch.INTRO_OFFSET + patch.INTRO_RESERVED_SIZE]):
+        raise ValueError('Intro placement is occupied')
+    result[patch.INTRO_OFFSET:patch.INTRO_OFFSET + patch.INTRO_RESERVED_SIZE] = intro + bytes(patch.INTRO_RESERVED_SIZE - len(intro))
     result[4:8] = bytes(4)
     struct.pack_into('>I', result, 4, patch.boot_sum(result) ^ 0xffffffff)
     if patch.boot_sum(result) != 0xffffffff or patch.sha256(result) != manifest['output']['sha256']:
         raise ValueError('Generated ADF differs from the versioned release hash')
     lines = []
-    for name, data in [('BOOT', boot), ('RUNTIME', runtime)]:
+    for name, data in [('BOOT', boot), ('RUNTIME', runtime), ('INTRO', intro)]:
         lines += [name + '_HEX = ('] + ["    '" + line + "'" for line in textwrap.wrap(data.hex(), 96)] + [')']
         lines += [name + '_SHA256 = ' + repr(patch.sha256(data))]
     lines += ['BOOT_HOOKS = [']
