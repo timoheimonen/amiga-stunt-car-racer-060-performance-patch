@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "0.4.0",
+  "release_version": "1.0.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / MC68060 / 2 MiB Chip / 8 MiB Fast / profile in FS-UAE.md",
   "source": {
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "ef2fb22aa5789a6be96dd986babdb498772b0a8baf042e742dde092c1160c45a"
+    "sha256": "8549f5f36d14514f25c6a073ffea9363d28febf93ebf525de24611a214166df1"
   },
   "payloads": [
     {
@@ -24,9 +24,12 @@
       "source": "SCR_Boot.s",
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
-      "size": 134,
-      "sha256": "daf5903700c519d8785257dca9574a05af4974308fcc436cb57833ceac828492",
-      "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      "size": 320,
+      "sha256": "6357139095452c4ecfc31e931bfe8eb8587867dd48ad9ba7f69b91a41683f879",
+      "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "includes": [
+        "SCR_IntroBoot.s"
+      ]
     },
     {
       "id": "runtime",
@@ -48,6 +51,18 @@
         "SCR_Angles060.s",
         "SCR_Colors060.s"
       ]
+    },
+    {
+      "id": "intro",
+      "source": "SCR_Intro.s",
+      "adf_offset": "0x74000",
+      "size": 5496,
+      "reserved_size": 8192,
+      "sha256": "1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920",
+      "expected_sha256": "9f1dcbc35c350d6027f98be0f5c8b43b42ca52b7604459c0c42be3aa88913d47",
+      "geometry_allocation_size": 198144,
+      "backbuffer_allocation_size": 40960,
+      "chip_code_and_stack_size": 16384
     }
   ],
   "boot_patches": [
@@ -60,8 +75,8 @@
     {
       "adf_offset": "0x70",
       "expected_hex": "4eaefe38",
-      "replacement_hex": "610001da",
-      "description": "Install runtime after original DoIO"
+      "replacement_hex": "61000214",
+      "description": "Install runtime and run the boot intro before the game"
     },
     {
       "adf_offset": "0x1e",
@@ -78,8 +93,14 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "5a06f588",
+      "replacement_hex": "3081c081",
       "description": "Recalculate Amiga bootblock checksum"
+    },
+    {
+      "adf_offset": "0x2c36",
+      "expected_hex": "7c5f",
+      "replacement_hex": "7c7f",
+      "description": "Disable leftover sprite DMA before the original loading picture"
     }
   ],
   "exports": {

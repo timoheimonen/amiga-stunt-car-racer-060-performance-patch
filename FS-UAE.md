@@ -1,4 +1,4 @@
-# FS-UAE setup for version 0.4.0
+# FS-UAE setup for version 1.0.0
 
 **Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
 
@@ -42,7 +42,7 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (0.4.0, 50 FPS Practice and computer-opponent races) | `ef2fb22aa5789a6be96dd986babdb498772b0a8baf042e742dde092c1160c45a` |
+| Patched ADF (1.0.0, 50 FPS Practice and computer-opponent races) | `8549f5f36d14514f25c6a073ffea9363d28febf93ebf525de24611a214166df1` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 
 The patcher verifies the whole original disk, displaced instructions,
