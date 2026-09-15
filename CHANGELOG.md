@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 — 2026-09-15
+
+- Fix crane lift
+
 ## 1.0.0 — 2026-09-09
 
 - Add a boot intro

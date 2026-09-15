@@ -1,8 +1,8 @@
 {
   "format_version": 1,
-  "release_version": "1.0.0",
+  "release_version": "1.0.1",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
-  "target": "Emulator only: FS-UAE 3.2.35 / PAL / MC68060 / 2 MiB Chip / 8 MiB Fast / profile in FS-UAE.md",
+  "target": "Emulator only: FS-UAE 3.2.35 / PAL / Blizzard 1260 / MC68060 / 2 MiB Chip / 32 MiB accelerator RAM / profile in FS-UAE.md",
   "source": {
     "size": 901120,
     "sha256": "548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06",
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "8549f5f36d14514f25c6a073ffea9363d28febf93ebf525de24611a214166df1"
+    "sha256": "76833c56dd1799ea715aaeb7c13bc93cfc6e9c71c83b10e7dd9622b6b289857c"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "6357139095452c4ecfc31e931bfe8eb8587867dd48ad9ba7f69b91a41683f879",
+      "sha256": "3caca097f675d4547509ff325a6b4b0e48c09b2b44ad712a2fc60119ebd44212",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -37,9 +37,9 @@
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
       "allocation_size": 4096,
-      "size": 4004,
-      "sha256": "ab92db5f86e2e7dcaf05fffc7ffcba5141ddf6affd750fc519011635397b4071",
-      "expected_sha256": "89fa534120f1732393834029dfb57e234e45a782a504524f3566f5e0e24c6057",
+      "size": 4092,
+      "sha256": "5c360354a7d629944f5cf20c9e0dca1798ee799ce030522bda152a697267d8e0",
+      "expected_sha256": "716a81f5b9499481648b02c27286e14ae321366b1c6daf556385f57ee08ff194",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
@@ -49,7 +49,8 @@
         "SCR_FillSpans060.s",
         "SCR_CoefficientsTail060.s",
         "SCR_Angles060.s",
-        "SCR_Colors060.s"
+        "SCR_Colors060.s",
+        "SCR_Crane20ms.s"
       ]
     },
     {
@@ -93,7 +94,7 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "3081c081",
+      "replacement_hex": "3055c081",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -248,7 +249,7 @@
     "word_routines060": "0x181cc4",
     "color_masks060": "0x181d04",
     "pixel_variants060": "0x181d84",
-    "runtime_end": "0x181fa4",
+    "runtime_end": "0x181ffc",
     "word_dispatch_local060": "0x663b0",
     "WORD_EDGE060": "0x663b0",
     "span_row060": "0x66740",
@@ -256,7 +257,14 @@
     "span_dispatch060": "0x6678a",
     "span_short060": "0x66796",
     "span_word060": "0x6679e",
-    "span_end060": "0x667b0"
+    "span_end060": "0x667b0",
+    "crane_startup20": "0x181fa4",
+    "crane_startup_advance20": "0x181fba",
+    "crane_startup_done20": "0x181fc0",
+    "crane_target20": "0x181fc2",
+    "crane_target_original20": "0x181ff2",
+    "crane_fraction20": "0x181ffa",
+    "crane_controller20": "0x5b4a8"
   },
   "patches": [
     {
@@ -1003,6 +1011,25 @@
       "expected_hex": "4eb90006646e",
       "replacement_hex": "4eb9000663b0",
       "dispatch_address": "0x663b0"
+    },
+    {
+      "id": "crane_startup20_5b366",
+      "target": "crane_startup20",
+      "adf_offset": "0x5a866",
+      "game_file_offset": "0x4cc66",
+      "runtime_address": "0x5b366",
+      "expected_hex": "53390001bbdf",
+      "replacement_hex": "4eb900181fa4",
+      "dispatch_address": "0x181fa4"
+    },
+    {
+      "id": "crane_controller20_5b4a8",
+      "target": "crane_controller20",
+      "adf_offset": "0x5a9a8",
+      "game_file_offset": "0x4cda8",
+      "runtime_address": "0x5b4a8",
+      "expected_hex": "183c00104a390001bbe16a0000084400183c00f0e140143c00ee67000006c1c2e08036390001bc5ceb431e390001bc00be0467000008d1790001bc0030390001bc00904333c00001bce8303c000033c00001bd2610390001bc00b0044e75",
+      "replacement_hex": "383c101c4a390001bbe16a064400383cf0d2e140143c00eec1c2e08036390001bc5ceb43b8790001bc0067064eb900181fc230390001bc0090434a39001816ba67084a39001816bb670633c00001bce842790001bd26b8790001bc004e75"
     }
   ],
   "assembly_patches": [
@@ -1050,6 +1077,16 @@
       "size": 56,
       "bindings": {
         "pixel_odd_pointer060": "0x181cbe"
+      }
+    },
+    {
+      "source": "SCR_CraneController20ms.s",
+      "runtime_address": "0x5b4a8",
+      "size": 94,
+      "bindings": {
+        "active": "0x1816ba",
+        "legacy_due": "0x1816bb",
+        "crane_target20": "0x181fc2"
       }
     }
   ]

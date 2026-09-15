@@ -1,7 +1,7 @@
-# Patch details — 1.0.0
+# Patch details — 1.0.1
 
-This release targets FS-UAE with PAL timing, a 68060, 2 MiB Chip RAM and
-8 MiB Fast RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
+This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
+and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
 
 ## Physics and rendering
 
@@ -32,7 +32,7 @@ Practice mode and computer-opponent races use 50 Hz physics with a fixed
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 4004-byte runtime is stored at ADF offset `0xb720` and copied into
+intro. The 4092-byte runtime is stored at ADF offset `0xb720` and copied into
 a 4096-byte Chip RAM reservation at `0x181000`. The initial load starts at
 ADF offset `0x2c00` and uses a `0x9c00`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
@@ -56,15 +56,15 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 75 game instruction patches,
+[src/patches.json](src/patches.json) lists the 77 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `6357139095452c4ecfc31e931bfe8eb8587867dd48ad9ba7f69b91a41683f879` |
-| Runtime | 4004 | `ab92db5f86e2e7dcaf05fffc7ffcba5141ddf6affd750fc519011635397b4071` |
+| Boot | 320 | `3caca097f675d4547509ff325a6b4b0e48c09b2b44ad712a2fc60119ebd44212` |
+| Runtime | 4092 | `5c360354a7d629944f5cf20c9e0dca1798ee799ce030522bda152a697267d8e0` |
 | Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
