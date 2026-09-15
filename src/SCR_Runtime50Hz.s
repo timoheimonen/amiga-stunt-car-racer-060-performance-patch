@@ -289,4 +289,5 @@ display_done:
         include "src/SCR_CoefficientsTail060.s"
         include "src/SCR_Angles060.s"
         include "src/SCR_Colors060.s"
+        include "src/SCR_Crane20ms.s"
 runtime_end:

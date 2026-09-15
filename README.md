@@ -1,19 +1,19 @@
 # Stunt Car Racer 50 HZ / 50 FPS — 68060 patcher
 
-**Version 1.0.0 — emulator only.** This release is intended for FS-UAE,
+**Version 1.0.1 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
-
-In 512 sampled on-track frames of Draw Bridge Practice, Median world/render time is 9.51 ms out of the 20 ms frame budget with the documented FS-UAE profile.
 
 [Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
 
 ## Requirements
 
 - Python 3.8+; no additional packages or assembler needed to patch a disk.
-- FS-UAE 3.2.35 with PAL, MC68060, 2 MiB Chip RAM and 8 MiB Fast RAM,
+- FS-UAE 3.2.35 with PAL, Blizzard 1260 / MC68060, 2 MiB Chip RAM
+  and 32 MiB accelerator RAM,
   using the [FS-UAE profile](FS-UAE.md).
 - Your own original Stunt Car Racer ADF matching the
-  [supported checksum](FS-UAE.md#checksums), and your own Kickstart ROM.
+  [supported checksum](FS-UAE.md#checksums), and your own Kickstart and
+  Blizzard 1260 ROMs.
 
 ## Usage
 

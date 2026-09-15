@@ -64,7 +64,7 @@ def main():
             raise ValueError(name + ' differs from the versioned source manifest')
     boot, runtime = assets['boot'], assets['runtime']
     # Boot copy count and entry offsets are an explicit versioned contract.
-    if (len(boot) != 320 or len(runtime) != 4004 or boot[0x62:0x66].hex() != '303c07d1'
+    if (len(boot) != 320 or len(runtime) != 4092 or boot[0x62:0x66].hex() != '303c07fd'
             or boot[0x1a:0x1e].hex() != '00009c00'):
         raise ValueError('Update the boot entry/copy contract before changing asset sizes')
     for item in manifest['assembly_patches']:
