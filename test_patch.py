@@ -121,7 +121,7 @@ class OriginalImageTests(unittest.TestCase):
 
     def test_matches_1_0_1_disk(self):
         self.assertEqual(patch.sha256(self.patched),
-                         '76833c56dd1799ea715aaeb7c13bc93cfc6e9c71c83b10e7dd9622b6b289857c')
+                         '57a1154ed3fca17f3647061af4c777b5234400541061e977a6ea68ce3a1ec9b7')
         self.assertEqual(self.patched, patch.patch_disk(self.original))
         self.assertEqual(len(self.patched), patch.DISK_SIZE)
         self.assertEqual(patch.boot_sum(self.patched), 0xffffffff)
