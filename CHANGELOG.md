@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2 — 2026-09-15
+
+- Correct direct yaw correction timing for the 20 ms physics step.
+- Restore the severe-impact cooldown to its original 120 ms tick rate.
+
 ## 1.0.1 — 2026-09-15
 
 - Fix crane lift

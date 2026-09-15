@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.0.1",
+  "release_version": "1.0.2",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / Blizzard 1260 / MC68060 / 2 MiB Chip / 32 MiB accelerator RAM / profile in FS-UAE.md",
   "source": {
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "57a1154ed3fca17f3647061af4c777b5234400541061e977a6ea68ce3a1ec9b7"
+    "sha256": "be22268479c20b9046aeaf2506b93cc7a0fc822ad594a7dc5d77090b33bd1cc0"
   },
   "payloads": [
     {
@@ -264,7 +264,11 @@
     "crane_target20": "0x181fc2",
     "crane_target_original20": "0x181ff2",
     "crane_fraction20": "0x181ffa",
-    "crane_controller20": "0x5b4a8"
+    "crane_controller20": "0x5b4a8",
+    "yaw_fraction20": "0x1819f2",
+    "yaw_correction20": "0x611ce",
+    "yaw_damping20": "0x611f2",
+    "impact_cooldown20": "0x5dfe0"
   },
   "patches": [
     {
@@ -1030,6 +1034,33 @@
       "runtime_address": "0x5b4a8",
       "expected_hex": "183c00104a390001bbe16a0000084400183c00f0e140143c00ee67000006c1c2e08036390001bc5ceb431e390001bc00be0467000008d1790001bc0030390001bc00904333c00001bce8303c000033c00001bd2610390001bc00b0044e75",
       "replacement_hex": "2f0841f90001bc00383c101c4a28ffe16a064400383cf0d2e140143c00eec1c2e0803628005ceb43b85067064eb900181fc2301090434a39001816ba6710906800e848c081fc0006d16800e86004314000e842680126b850205f4e754e71"
+    },
+    {
+      "id": "yaw_correction20_611ce",
+      "target": "yaw_correction20",
+      "adf_offset": "0x606ce",
+      "game_file_offset": "0x52ace",
+      "runtime_address": "0x611ce",
+      "expected_hex": "d1790001bce6343c000030390001bcf202820000000fe4689840207c0007936091fc00014874263c667b379f068336729563b6906600000c4a390001bb7e66000006383c000033c40001bcfe4e75",
+      "replacement_hex": "2f0048c03439001819f248c2d08281fc0006484033c0001819f24840d1790001bce6201f30390001bcf29840948241fa38ee263c9cedcd02b69066084a390001bb7e6602424433c40001bcfe4e75"
+    },
+    {
+      "id": "impact_cooldown20_5dfe0",
+      "target": "impact_cooldown20",
+      "adf_offset": "0x5d4e0",
+      "game_file_offset": "0x4f8e0",
+      "runtime_address": "0x5dfe0",
+      "expected_hex": "10390001bb736700002e53390001bb730c0000456700000e10390001bb546600005c4e7514390001c9cf4eb90006091a4ef90005e05c",
+      "replacement_hex": "10390001bb73672e4a39001816bb670c53390001bb730c000045670a10390001bb5466584e7514390001c9cf4eb90006091a60484e71"
+    },
+    {
+      "id": "yaw_damping20_61252",
+      "target": "yaw_damping20",
+      "adf_offset": "0x60752",
+      "game_file_offset": "0x52b52",
+      "runtime_address": "0x61252",
+      "expected_hex": "6500ff80",
+      "replacement_hex": "6500ff9e"
     }
   ],
   "assembly_patches": [
@@ -1087,6 +1118,30 @@
         "active": "0x1816ba",
         "legacy_due": "0x1816bb",
         "crane_target20": "0x181fc2"
+      }
+    },
+    {
+      "source": "SCR_YawCorrection20ms.s",
+      "runtime_address": "0x611ce",
+      "size": 78,
+      "bindings": {
+        "yaw_fraction20": "0x1819f2"
+      }
+    },
+    {
+      "source": "SCR_ImpactCooldown20ms.s",
+      "runtime_address": "0x5dfe0",
+      "size": 54,
+      "bindings": {
+        "legacy_due": "0x1816bb"
+      }
+    },
+    {
+      "source": "SCR_YawDampingBranch20ms.s",
+      "runtime_address": "0x61252",
+      "size": 4,
+      "bindings": {
+        "yaw_damping20": "0x611f2"
       }
     }
   ]

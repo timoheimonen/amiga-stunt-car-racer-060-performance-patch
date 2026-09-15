@@ -1,4 +1,4 @@
-# Patch details — 1.0.1
+# Patch details — 1.0.2
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -10,6 +10,10 @@ Practice mode and computer-opponent races use 50 Hz physics with a fixed
 
 - Player and opponent movement, suspension, steering and collision calculations
   use integer arithmetic with fractional accumulators.
+- Direct yaw correction advances at one sixth of its original per-step amount,
+  retaining signed fractional remainders between 20 ms steps.
+- The severe-impact cooldown advances every sixth physics step, preserving
+  its original timing while fresh damage events remain processed at 50 Hz.
 - Race clocks, selected event timers, AI decisions and respawn counters
   advance through a pulse every sixth physics step. Time penalties are
   applied separately.
@@ -56,7 +60,7 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 77 game instruction patches,
+[src/patches.json](src/patches.json) lists the 80 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.

@@ -1,6 +1,6 @@
 # Stunt Car Racer 50 HZ / 50 FPS — 68060 patcher
 
-**Version 1.0.1 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
+**Version 1.0.2 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
 [Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
