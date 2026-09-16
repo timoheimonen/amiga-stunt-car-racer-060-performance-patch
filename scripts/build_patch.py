@@ -59,13 +59,22 @@ def main():
         subprocess.run([assembler, '-m68000', '-Fbin', '-L', str(target.with_suffix('.lst')),
                         '-o', str(target), path], cwd=ROOT, check=True)
         assets[name] = target.read_bytes()
+        if name == 'runtime':
+            data = bytearray(assets[name])
+            for overlay in manifest['runtime_overlays']:
+                offset = overlay['runtime_offset']
+                old, new = bytes.fromhex(overlay['old']), bytes.fromhex(overlay['new'])
+                if data[offset:offset + len(old)] != old or len(old) != len(new):
+                    raise ValueError('Runtime overlay precondition failed')
+                data[offset:offset + len(old)] = new
+            assets[name] = bytes(data)
         if (len(assets[name]) != item['size']
                 or patch.sha256(assets[name]) != item['sha256']):
             raise ValueError(name + ' differs from the versioned source manifest')
     boot, runtime = assets['boot'], assets['runtime']
     # Boot copy count and entry offsets are an explicit versioned contract.
-    if (len(boot) != 320 or len(runtime) != 4092 or boot[0x62:0x66].hex() != '303c07fd'
-            or boot[0x1a:0x1e].hex() != '00009c00'):
+    if (len(boot) != 320 or len(runtime) != 4870 or boot[0x62:0x66].hex() != '303c0982'
+            or boot[0x1a:0x1e].hex() != '0000ac00'):
         raise ValueError('Update the boot entry/copy contract before changing asset sizes')
     for item in manifest['assembly_patches']:
         wrapper = work / (Path(item['source']).stem + '.s')
@@ -77,7 +86,13 @@ def main():
                            + ' include "src/%s"\n' % item['source'])
         subprocess.run([assembler, '-m68000', '-Fbin', '-o', str(target), str(wrapper)],
                        cwd=ROOT, check=True)
-        assembled = target.read_bytes()
+        assembled = bytearray(target.read_bytes())
+        for overlay in item.get('overlays', []):
+            offset = overlay['offset']
+            old, new = bytes.fromhex(overlay['expected_hex']), bytes.fromhex(overlay['replacement_hex'])
+            if assembled[offset:offset + len(old)] != old or len(old) != len(new):
+                raise ValueError('Instruction overlay precondition failed')
+            assembled[offset:offset + len(old)] = new
         hook = next(p for p in manifest['patches'] if int(p['runtime_address'], 0) == address)
         size = item['size']
         if assembled[:size] != bytes.fromhex(hook['replacement_hex']):

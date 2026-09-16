@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.0.2",
+  "release_version": "1.1.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / Blizzard 1260 / MC68060 / 2 MiB Chip / 32 MiB accelerator RAM / profile in FS-UAE.md",
   "source": {
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "be22268479c20b9046aeaf2506b93cc7a0fc822ad594a7dc5d77090b33bd1cc0"
+    "sha256": "044dc12df045d0dbf744726474c7f54b391d17747936ac1d629b6677885f12fa"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "3caca097f675d4547509ff325a6b4b0e48c09b2b44ad712a2fc60119ebd44212",
+      "sha256": "1061e579770d4df6382de633c441e4aaf2df064621a7cb19a4e0d57478fcf325",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -36,10 +36,10 @@
       "source": "SCR_Runtime50Hz.s",
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
-      "allocation_size": 4096,
-      "size": 4092,
-      "sha256": "5c360354a7d629944f5cf20c9e0dca1798ee799ce030522bda152a697267d8e0",
-      "expected_sha256": "716a81f5b9499481648b02c27286e14ae321366b1c6daf556385f57ee08ff194",
+      "allocation_size": 8192,
+      "size": 4870,
+      "sha256": "83eff4a42bc5743eef6bc61c3f9756913c33d5fe3308b36322fdfd11644ed1c1",
+      "expected_sha256": "d90116a6f61cf2e9f23993f8364907eb33148d3fce81dc51b87b4e5db392a3f4",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
@@ -50,7 +50,9 @@
         "SCR_CoefficientsTail060.s",
         "SCR_Angles060.s",
         "SCR_Colors060.s",
-        "SCR_Crane20ms.s"
+        "SCR_Crane20ms.s",
+        "SCR_SpeedPhysics.s",
+        "SCR_SpeedMenu.s"
       ]
     },
     {
@@ -82,19 +84,19 @@
     {
       "adf_offset": "0x1e",
       "expected_hex": "00009800",
-      "replacement_hex": "00009c00",
-      "description": "Extend initial load and allocation to 0x9c00 bytes"
+      "replacement_hex": "0000ac00",
+      "description": "Extend initial load and allocation to 0xac00 bytes"
     },
     {
       "adf_offset": "0x3a",
       "expected_hex": "00009800",
-      "replacement_hex": "00009c00",
-      "description": "Extend initial load and allocation to 0x9c00 bytes"
+      "replacement_hex": "0000ac00",
+      "description": "Extend initial load and allocation to 0xac00 bytes"
     },
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "3055c081",
+      "replacement_hex": "eed0c080",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -229,10 +231,10 @@
     "lap_penalty": "0x1819f4",
     "object_setup060": "0x181a00",
     "transform_points060": "0x181a60",
-    "transform_points060_end": "0x181ab2",
     "track_points060": "0x181ab2",
-    "track_points060_end": "0x181b40",
+    "transform_points060_end": "0x181ab2",
     "fill_spans060": "0x181b40",
+    "track_points060_end": "0x181b40",
     "fill_aligned060": "0x181b64",
     "fill_pairs060": "0x181b7a",
     "coefficients_tail060": "0x181ba4",
@@ -241,16 +243,49 @@
     "angle10_lookup060": "0x181c88",
     "angles_alloc060": "0x181ca6",
     "angles_ready060": "0x181caa",
-    "colors_start060": "0x181cae",
     "word_dispatch060": "0x181cae",
+    "colors_start060": "0x181cae",
     "word_pointer060": "0x181cba",
     "pixel_odd_pointer060": "0x181cbe",
     "pixel_previous060": "0x181cc2",
     "word_routines060": "0x181cc4",
     "color_masks060": "0x181d04",
     "pixel_variants060": "0x181d84",
-    "runtime_end": "0x181ffc",
+    "crane_startup20": "0x181fa4",
+    "crane_startup_advance20": "0x181fba",
+    "crane_startup_done20": "0x181fc0",
+    "crane_target20": "0x181fc2",
+    "crane_target_original20": "0x181ff2",
+    "crane_fraction20": "0x181ffa",
+    "speed_spring20": "0x181ffc",
+    "speed_start": "0x181ffc",
+    "speed_scale20": "0x18201a",
+    "speed_opponent_factor": "0x182062",
+    "speed_op_rate": "0x1820a2",
+    "speed_decay_step": "0x1820cc",
+    "speed_yaw_correction": "0x182136",
+    "speed_menu": "0x18216c",
+    "speed_next": "0x182194",
+    "speed_update": "0x1821ac",
+    "speed_menu_row": "0x1821da",
+    "speed_menu_position": "0x18224a",
+    "speed_menu_keys": "0x182262",
+    "speed_menu_font": "0x18227a",
+    "speed_percent_glyph": "0x18229a",
+    "speed_label": "0x1822a2",
+    "speed_row_positions": "0x1822b0",
+    "speed_number_keys": "0x1822b5",
+    "speed_state_start": "0x1822ba",
+    "speed_k": "0x1822ba",
+    "speed_multiplier": "0x1822bc",
+    "speed_spring": "0x1822be",
+    "speed_decay": "0x1822c0",
+    "speed_menu_active": "0x1822c2",
+    "speed_state_end": "0x1822c4",
+    "speed_coefficients": "0x1822c4",
+    "runtime_end": "0x182306",
     "word_dispatch_local060": "0x663b0",
+    "crane_controller20": "0x5b4a8",
     "WORD_EDGE060": "0x663b0",
     "span_row060": "0x66740",
     "span_multiple060": "0x66774",
@@ -258,13 +293,6 @@
     "span_short060": "0x66796",
     "span_word060": "0x6679e",
     "span_end060": "0x667b0",
-    "crane_startup20": "0x181fa4",
-    "crane_startup_advance20": "0x181fba",
-    "crane_startup_done20": "0x181fc0",
-    "crane_target20": "0x181fc2",
-    "crane_target_original20": "0x181ff2",
-    "crane_fraction20": "0x181ffa",
-    "crane_controller20": "0x5b4a8",
     "yaw_fraction20": "0x1819f2",
     "yaw_correction20": "0x611ce",
     "yaw_damping20": "0x611f2",
@@ -1042,7 +1070,7 @@
       "game_file_offset": "0x52ace",
       "runtime_address": "0x611ce",
       "expected_hex": "d1790001bce6343c000030390001bcf202820000000fe4689840207c0007936091fc00014874263c667b379f068336729563b6906600000c4a390001bb7e66000006383c000033c40001bcfe4e75",
-      "replacement_hex": "2f0048c03439001819f248c2d08281fc0006484033c0001819f24840d1790001bce6201f30390001bcf29840948241fa38ee263c9cedcd02b69066084a390001bb7e6602424433c40001bcfe4e75"
+      "replacement_hex": "4ef9001821364e714e714e714e714e714e714e714e714e714e714e714e714e714e714e7130390001bcf29840948241fa38ee263c9cedcd02b69066084a390001bb7e6602424433c40001bcfe4e75"
     },
     {
       "id": "impact_cooldown20_5dfe0",
@@ -1061,6 +1089,56 @@
       "runtime_address": "0x61252",
       "expected_hex": "6500ff80",
       "replacement_hex": "6500ff9e"
+    },
+    {
+      "id": "speed_menu_5bb16",
+      "target": "speed_menu",
+      "adf_offset": "0x5b016",
+      "game_file_offset": "0x4d416",
+      "runtime_address": "0x5bb16",
+      "expected_hex": "4eb90005b840",
+      "replacement_hex": "4eb90018216c",
+      "dispatch_address": "0x18216c"
+    },
+    {
+      "id": "speed_menu_row_5b8de",
+      "target": "speed_menu_row",
+      "adf_offset": "0x5adde",
+      "game_file_offset": "0x4d1de",
+      "runtime_address": "0x5b8de",
+      "expected_hex": "14390001bb18",
+      "replacement_hex": "4ef9001821da",
+      "dispatch_address": "0x1821da"
+    },
+    {
+      "id": "speed_menu_position_64b34",
+      "target": "speed_menu_position",
+      "adf_offset": "0x64034",
+      "game_file_offset": "0x56434",
+      "runtime_address": "0x64b34",
+      "expected_hex": "207c00064af4",
+      "replacement_hex": "4ef90018224a",
+      "dispatch_address": "0x18224a"
+    },
+    {
+      "id": "speed_menu_keys_5b9d2",
+      "target": "speed_menu_keys",
+      "adf_offset": "0x5aed2",
+      "game_file_offset": "0x4d2d2",
+      "runtime_address": "0x5b9d2",
+      "expected_hex": "247c00060c8d",
+      "replacement_hex": "4ef900182262",
+      "dispatch_address": "0x182262"
+    },
+    {
+      "id": "speed_menu_font_595c2",
+      "target": "speed_menu_font",
+      "adf_offset": "0x58ac2",
+      "game_file_offset": "0x4aec2",
+      "runtime_address": "0x595c2",
+      "expected_hex": "207c0001fe82",
+      "replacement_hex": "4ef90018227a",
+      "dispatch_address": "0x18227a"
     }
   ],
   "assembly_patches": [
@@ -1126,7 +1204,14 @@
       "size": 78,
       "bindings": {
         "yaw_fraction20": "0x1819f2"
-      }
+      },
+      "overlays": [
+        {
+          "offset": 0,
+          "expected_hex": "2f0048c03439001819f248c2d08281fc0006484033c0001819f24840d1790001bce6201f",
+          "replacement_hex": "4ef9001821364e714e714e714e714e714e714e714e714e714e714e714e714e714e714e71"
+        }
+      ]
     },
     {
       "source": "SCR_ImpactCooldown20ms.s",
@@ -1143,6 +1228,48 @@
       "bindings": {
         "yaw_damping20": "0x611f2"
       }
+    }
+  ],
+  "runtime_overlays": [
+    {
+      "entry": "spring20",
+      "address": 1577506,
+      "runtime_offset": 546,
+      "target": "speed_spring20",
+      "old": "363c0678c1c3",
+      "new": "4ef900181ffc"
+    },
+    {
+      "entry": "scale20",
+      "address": 1577556,
+      "runtime_offset": 596,
+      "target": "speed_scale20",
+      "old": "48e710803602",
+      "new": "4ef90018201a"
+    },
+    {
+      "entry": "opponent_factor",
+      "address": 1579052,
+      "runtime_offset": 2092,
+      "target": "speed_opponent_factor",
+      "old": "4a39001816ba",
+      "new": "4ef900182062"
+    },
+    {
+      "entry": "op_rate",
+      "address": 1579156,
+      "runtime_offset": 2196,
+      "target": "speed_op_rate",
+      "old": "48e7188048c0",
+      "new": "4ef9001820a2"
+    },
+    {
+      "entry": "decay_step",
+      "address": 1578222,
+      "runtime_offset": 1262,
+      "target": "speed_decay_step",
+      "old": "4a39001816ba",
+      "new": "4ef9001820cc"
     }
   ]
 }

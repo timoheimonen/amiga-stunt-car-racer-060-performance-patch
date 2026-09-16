@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0 — 2026-09-16
+
+- Add main-menu speed adjustment from 100% to 150% in 5% increments.
+
 ## 1.0.2 — 2026-09-15
 
 - Correct direct yaw correction timing for the 20 ms physics step.
