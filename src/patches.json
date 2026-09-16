@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.1.0",
+  "release_version": "1.2.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / Blizzard 1260 / MC68060 / 2 MiB Chip / 32 MiB accelerator RAM / profile in FS-UAE.md",
   "source": {
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "044dc12df045d0dbf744726474c7f54b391d17747936ac1d629b6677885f12fa"
+    "sha256": "1711af8601b5999ca3a69462d9b45e728184e257e059178e0ecb460c9f5b4cad"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "1061e579770d4df6382de633c441e4aaf2df064621a7cb19a4e0d57478fcf325",
+      "sha256": "624c3b6a132e77bcde4a33d8ead377b267112cae741d2567f23c250790860a69",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -37,9 +37,9 @@
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
       "allocation_size": 8192,
-      "size": 4870,
-      "sha256": "83eff4a42bc5743eef6bc61c3f9756913c33d5fe3308b36322fdfd11644ed1c1",
-      "expected_sha256": "d90116a6f61cf2e9f23993f8364907eb33148d3fce81dc51b87b4e5db392a3f4",
+      "size": 5310,
+      "sha256": "38b746d6781639accda54295333dc4821e628466c52e3b00df567af84f6236b4",
+      "expected_sha256": "66e13bddfd16b4b1b5d1d38b3a9e28a5638126f56fbacb5874bdd951ab2ca319",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
@@ -52,7 +52,9 @@
         "SCR_Colors060.s",
         "SCR_Crane20ms.s",
         "SCR_SpeedPhysics.s",
-        "SCR_SpeedMenu.s"
+        "SCR_SpeedMenu.s",
+        "SCR_AIDifficulty.s",
+        "SCR_InfiniteBoost.s"
       ]
     },
     {
@@ -96,7 +98,7 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "eed0c080",
+      "replacement_hex": "edf4c080",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -231,10 +233,10 @@
     "lap_penalty": "0x1819f4",
     "object_setup060": "0x181a00",
     "transform_points060": "0x181a60",
-    "track_points060": "0x181ab2",
     "transform_points060_end": "0x181ab2",
-    "fill_spans060": "0x181b40",
+    "track_points060": "0x181ab2",
     "track_points060_end": "0x181b40",
+    "fill_spans060": "0x181b40",
     "fill_aligned060": "0x181b64",
     "fill_pairs060": "0x181b7a",
     "coefficients_tail060": "0x181ba4",
@@ -243,8 +245,8 @@
     "angle10_lookup060": "0x181c88",
     "angles_alloc060": "0x181ca6",
     "angles_ready060": "0x181caa",
-    "word_dispatch060": "0x181cae",
     "colors_start060": "0x181cae",
+    "word_dispatch060": "0x181cae",
     "word_pointer060": "0x181cba",
     "pixel_odd_pointer060": "0x181cbe",
     "pixel_previous060": "0x181cc2",
@@ -257,33 +259,48 @@
     "crane_target20": "0x181fc2",
     "crane_target_original20": "0x181ff2",
     "crane_fraction20": "0x181ffa",
-    "speed_spring20": "0x181ffc",
     "speed_start": "0x181ffc",
+    "speed_spring20": "0x181ffc",
     "speed_scale20": "0x18201a",
     "speed_opponent_factor": "0x182062",
     "speed_op_rate": "0x1820a2",
     "speed_decay_step": "0x1820cc",
     "speed_yaw_correction": "0x182136",
     "speed_menu": "0x18216c",
-    "speed_next": "0x182194",
-    "speed_update": "0x1821ac",
-    "speed_menu_row": "0x1821da",
-    "speed_menu_position": "0x18224a",
-    "speed_menu_keys": "0x182262",
-    "speed_menu_font": "0x18227a",
-    "speed_percent_glyph": "0x18229a",
-    "speed_label": "0x1822a2",
-    "speed_row_positions": "0x1822b0",
-    "speed_number_keys": "0x1822b5",
-    "speed_state_start": "0x1822ba",
-    "speed_k": "0x1822ba",
-    "speed_multiplier": "0x1822bc",
-    "speed_spring": "0x1822be",
-    "speed_decay": "0x1822c0",
-    "speed_menu_active": "0x1822c2",
-    "speed_state_end": "0x1822c4",
-    "speed_coefficients": "0x1822c4",
-    "runtime_end": "0x182306",
+    "speed_next": "0x1821d2",
+    "speed_update": "0x1821ea",
+    "ai_difficulty_next": "0x182218",
+    "speed_menu_row": "0x182232",
+    "speed_print_label": "0x1822e8",
+    "speed_menu_title": "0x1822f6",
+    "speed_menu_position": "0x182312",
+    "speed_menu_keys": "0x18233a",
+    "speed_menu_font": "0x182352",
+    "speed_percent_glyph": "0x182374",
+    "speed_label": "0x18237c",
+    "speed_game_label": "0x182385",
+    "speed_ai_label": "0x182395",
+    "speed_boost_no_label": "0x1823a5",
+    "speed_boost_yes_label": "0x1823b7",
+    "speed_return_label": "0x1823ca",
+    "speed_settings_title": "0x1823d1",
+    "speed_row_positions": "0x1823dd",
+    "speed_settings_positions": "0x1823e2",
+    "speed_number_keys": "0x1823e6",
+    "speed_state_start": "0x1823ec",
+    "speed_k": "0x1823ec",
+    "speed_multiplier": "0x1823ee",
+    "speed_spring": "0x1823f0",
+    "speed_decay": "0x1823f2",
+    "ai_difficulty_k": "0x1823f4",
+    "speed_menu_active": "0x1823f6",
+    "infinite_boost_enabled": "0x1823f7",
+    "speed_state_end": "0x1823f8",
+    "speed_coefficients": "0x1823f8",
+    "speed_ai_target": "0x18243a",
+    "speed_ai_speed_add": "0x182478",
+    "speed_infinite_boost_gate": "0x18249e",
+    "runtime_end": "0x1824be",
     "word_dispatch_local060": "0x663b0",
     "crane_controller20": "0x5b4a8",
     "WORD_EDGE060": "0x663b0",
@@ -1107,8 +1124,8 @@
       "game_file_offset": "0x4d1de",
       "runtime_address": "0x5b8de",
       "expected_hex": "14390001bb18",
-      "replacement_hex": "4ef9001821da",
-      "dispatch_address": "0x1821da"
+      "replacement_hex": "4ef900182232",
+      "dispatch_address": "0x182232"
     },
     {
       "id": "speed_menu_position_64b34",
@@ -1117,8 +1134,8 @@
       "game_file_offset": "0x56434",
       "runtime_address": "0x64b34",
       "expected_hex": "207c00064af4",
-      "replacement_hex": "4ef90018224a",
-      "dispatch_address": "0x18224a"
+      "replacement_hex": "4ef900182312",
+      "dispatch_address": "0x182312"
     },
     {
       "id": "speed_menu_keys_5b9d2",
@@ -1127,8 +1144,8 @@
       "game_file_offset": "0x4d2d2",
       "runtime_address": "0x5b9d2",
       "expected_hex": "247c00060c8d",
-      "replacement_hex": "4ef900182262",
-      "dispatch_address": "0x182262"
+      "replacement_hex": "4ef90018233a",
+      "dispatch_address": "0x18233a"
     },
     {
       "id": "speed_menu_font_595c2",
@@ -1137,8 +1154,48 @@
       "game_file_offset": "0x4aec2",
       "runtime_address": "0x595c2",
       "expected_hex": "207c0001fe82",
-      "replacement_hex": "4ef90018227a",
-      "dispatch_address": "0x18227a"
+      "replacement_hex": "4ef900182352",
+      "dispatch_address": "0x182352"
+    },
+    {
+      "id": "speed_menu_title_5b86e",
+      "target": "speed_menu_title",
+      "adf_offset": "0x5ad6e",
+      "game_file_offset": "0x4d16e",
+      "runtime_address": "0x5b86e",
+      "expected_hex": "4eb90005a656",
+      "replacement_hex": "4eb9001822f6",
+      "dispatch_address": "0x1822f6"
+    },
+    {
+      "id": "speed_ai_target_63c6c",
+      "target": "speed_ai_target",
+      "adf_offset": "0x6316c",
+      "game_file_offset": "0x5556c",
+      "runtime_address": "0x63c6c",
+      "expected_hex": "0200007f13c00001bb4a",
+      "replacement_hex": "4eb90018243a4e714e71",
+      "dispatch_address": "0x18243a"
+    },
+    {
+      "id": "speed_ai_speed_add_63bf0",
+      "target": "speed_ai_speed_add",
+      "adf_offset": "0x630f0",
+      "game_file_offset": "0x554f0",
+      "runtime_address": "0x63bf0",
+      "expected_hex": "d1790001bbee",
+      "replacement_hex": "4eb900182478",
+      "dispatch_address": "0x182478"
+    },
+    {
+      "id": "speed_infinite_boost_gate_608cc",
+      "target": "speed_infinite_boost_gate",
+      "adf_offset": "0x5fdcc",
+      "game_file_offset": "0x521cc",
+      "runtime_address": "0x608cc",
+      "expected_hex": "10390001ca20",
+      "replacement_hex": "4ef90018249e",
+      "dispatch_address": "0x18249e"
     }
   ],
   "assembly_patches": [

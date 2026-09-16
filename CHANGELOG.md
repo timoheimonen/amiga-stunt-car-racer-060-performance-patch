@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0 — 2026-09-16
+
+- Added a Settings menu with independent Game Speed, AI Difficulty controls and Infinite Boost (No/Yes)
+
 ## 1.1.0 — 2026-09-16
 
 - Add main-menu speed adjustment from 100% to 150% in 5% increments.

@@ -1,5 +1,6 @@
-; Five-row main menu. Number keys highlight; Space/Return/fire confirms.
-; The original input loop waits for confirmation release on each redraw.
+; Main menu and Settings share the original input/release loop.
+; Context: 0 = other menus, 1 = main menu, 2 = settings.
+; Number keys highlight; Space/Return/fire confirms once per release.
         machine 68000
 speed_menu:
         move.b #1,speed_menu_active
@@ -9,9 +10,30 @@ speed_menu:
         jsr $5b840.l
         cmpi.b #4,d0
         bne.s .done
-        bsr.w speed_next
+        move.b #2,speed_menu_active
+        moveq #0,d0
+.settings:
+        moveq #0,d1
+        moveq #3,d2
+        jsr $5b840.l
+        tst.b d0
+        beq.s .game
+        cmpi.b #1,d0
+        beq.s .ai
+        cmpi.b #2,d0
+        beq.s .boost
+        move.b #1,speed_menu_active
         moveq #4,d0
         bra.s .again
+.game:
+        bsr.w speed_next
+        bra.s .settings
+.ai:
+        bsr.w ai_difficulty_next
+        bra.s .settings
+.boost:
+        eori.b #1,infinite_boost_enabled
+        bra.s .settings
 .done:
         clr.b speed_menu_active
         rts
@@ -34,23 +56,55 @@ speed_update:
         movem.l (sp)+,d0/a0
         rts
 
+ai_difficulty_next:
+        addq.w #1,ai_difficulty_k
+        cmpi.w #30,ai_difficulty_k
+        bls.s .done
+        move.w #20,ai_difficulty_k
+.done:
+        rts
+
 speed_menu_row:
         move.b $1bb18.l,d2
-        tst.b speed_menu_active
-        beq.s .original
+        cmpi.b #2,speed_menu_active
+        beq.s .settings
+        cmpi.b #1,speed_menu_active
+        bne.s .original
         cmpi.b #4,d2
-        beq.s .speed
+        beq.s .main_speed
 .original:
         jmp $5b8e4.l
-.speed:
+.main_speed:
         lea speed_label(pc),a2
-.letter:
-        move.b (a2)+,d0
-        beq.s .percent
-        jsr $594c6.l
-        bra.s .letter
+        bra.s .label_only
+.settings:
+        tst.b d2
+        beq.s .game
+        cmpi.b #1,d2
+        beq.s .ai
+        cmpi.b #2,d2
+        beq.s .boost
+        lea speed_return_label(pc),a2
+.label_only:
+        bsr.w speed_print_label
+        jmp $5b914.l
+.boost:
+        lea speed_boost_no_label(pc),a2
+        tst.b infinite_boost_enabled
+        beq.s .label_only
+        lea speed_boost_yes_label(pc),a2
+        bra.s .label_only
+.game:
+        lea speed_game_label(pc),a2
+        move.w speed_k(pc),-(sp)
+        bra.s .setting_label
+.ai:
+        lea speed_ai_label(pc),a2
+        move.w ai_difficulty_k(pc),-(sp)
+.setting_label:
+        bsr.w speed_print_label
+        move.w (sp)+,d0
 .percent:
-        move.w speed_k(pc),d0
         mulu.w #5,d0
         divu.w #100,d0
         addi.b #'0',d0
@@ -67,14 +121,40 @@ speed_menu_row:
         jsr $594c6.l
         jmp $5b914.l
 
+speed_print_label:
+        move.b (a2)+,d0
+        beq.s .done
+        jsr $594c6.l
+        bra.s speed_print_label
+.done:
+        rts
+
+; Only the settings context replaces the original SELECT title. The byte
+; printer uses $1f,column,row for position and preserves D0-D5/A0-A1.
+speed_menu_title:
+        cmpi.b #2,speed_menu_active
+        beq.s .settings
+        jmp $5a656.l
+.settings:
+        move.l a2,-(sp)
+        lea speed_settings_title(pc),a2
+        bsr.s speed_print_label
+        movea.l (sp)+,a2
+        rts
+
 ; Original row-position routine continues with MOVE.B (A0,D1.W),D0.
 speed_menu_position:
+        cmpi.b #2,speed_menu_active
+        beq.s .settings
         lea speed_row_positions(pc),a0
         tst.b speed_menu_active
         bne.s .ready
         movea.l #$64af4,a0
 .ready:
         jmp $64b3a.l
+.settings:
+        lea speed_settings_positions(pc),a0
+        bra.s .ready
 
 speed_menu_keys:
         lea speed_number_keys(pc),a2
@@ -85,11 +165,11 @@ speed_menu_keys:
         jmp $5b9d8.l
 
 ; The original font contains fill data at '%'. Supply a private glyph only
-; while the speed menu is active; the game's glyph renderer stays in use.
+; in the settings menu; the game's glyph renderer stays in use.
 speed_menu_font:
         movea.l #$1fe82,a0
-        tst.b speed_menu_active
-        beq.s .ready
+        cmpi.b #2,speed_menu_active
+        bne.s .ready
         cmpi.l #40,d0
         bne.s .ready
         lea speed_percent_glyph-40(pc),a0
@@ -98,8 +178,15 @@ speed_menu_font:
 speed_percent_glyph:
         dc.b $00,$62,$64,$08,$10,$26,$46,$00
 
-speed_label: dc.b 'SPEED ADJUST ',0
+speed_label: dc.b 'Settings',0
+speed_game_label: dc.b 'Game Speed     ',0
+speed_ai_label: dc.b 'AI Difficulty  ',0
+speed_boost_no_label: dc.b 'Infinite Boost No',0
+speed_boost_yes_label: dc.b 'Infinite Boost Yes',0
+speed_return_label: dc.b 'Return',0
+speed_settings_title: dc.b $1f,16,11,'Settings',0
 speed_row_positions: dc.b 13,15,17,19,21
+speed_settings_positions: dc.b 13,16,19,22
 speed_number_keys: dc.b 1,2,3,4,5
         even
 speed_state_start:
@@ -107,7 +194,9 @@ speed_k: dc.w 20
 speed_multiplier: dc.w 2380
 speed_spring: dc.w 1656
 speed_decay: dc.w 3068
+ai_difficulty_k: dc.w 20
 speed_menu_active: dc.b 0
+infinite_boost_enabled: dc.b 0
         even
 speed_state_end:
 ; round(33120/k), round(65536*(1-(1-3068/65536)^(k/20))).
