@@ -292,4 +292,6 @@ display_done:
         include "src/SCR_Crane20ms.s"
         include "src/SCR_SpeedPhysics.s"
         include "src/SCR_SpeedMenu.s"
+        include "src/SCR_AIDifficulty.s"
+        include "src/SCR_InfiniteBoost.s"
 runtime_end:

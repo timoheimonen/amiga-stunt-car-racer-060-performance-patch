@@ -1,6 +1,6 @@
 # Stunt Car Racer 50 HZ / 50 FPS — 68060 patcher
 
-**Version 1.1.0 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
+**Version 1.2.0 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
 [Watch the video on YouTube](https://youtu.be/2XVfxuqHn-Q)
@@ -28,15 +28,17 @@ replace an existing output. The original disk is never overwritten.
 
 Boot the patched disk in DF0 using the [FS-UAE settings](FS-UAE.md).
 
-## Speed adjustment
+## Settings
 
-Select **5: SPEED ADJUST** in the main menu and confirm with Space, Return
-or joystick fire. Each confirmation advances by 5%, from 100% to 150%,
-then returns to 100%. The default after boot is 100%.
+Choose **5. Settings** in the main menu.
 
-The setting affects player and opponent simulation speed. Crane movement,
-lap timers and rendering frequency remain unchanged. The setting lasts for
-the current session; saved records do not distinguish speed settings.
+- **Game Speed:** 100–150%, in 5% steps. Changes both cars' simulation speed.
+- **AI Difficulty:** 100–150%, in 5% steps. Raises the opponent's target pace
+  without changing the simulation step.
+- **Infinite Boost:** No/Yes. Yes allows turbo without consuming the reserve,
+  even when it is empty.
+- **Return:** returns to the main menu.
+
 
 [Changelog](CHANGELOG.md) · [Checksums](FS-UAE.md#checksums) ·
 [Patch details](PATCH.md) · [Assembly sources](src)

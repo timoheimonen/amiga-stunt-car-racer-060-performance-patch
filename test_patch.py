@@ -27,7 +27,7 @@ class PatcherUnitTests(unittest.TestCase):
         hooks = [(int(p['adf_offset'], 0), p['expected_hex'], p['replacement_hex'])
                  for p in manifest['patches']]
         self.assertEqual(patch.HOOKS, hooks)
-        self.assertEqual(len(hooks), 85)
+        self.assertEqual(len(hooks), 89)
         for item in manifest['payloads']:
             payload = bytes.fromhex(getattr(patch, item['id'].upper() + '_HEX'))
             self.assertEqual(len(payload), item['size'])
@@ -56,7 +56,7 @@ class PatcherUnitTests(unittest.TestCase):
                         self.assertEqual(destination, int(manifest['exports']['word_dispatch_local060'], 0))
                     else:
                         self.assertEqual(destination, int(manifest['exports'][item['target']], 0))
-                        self.assertTrue(0x181000 <= destination < 0x181000 + 4870)
+                        self.assertTrue(0x181000 <= destination < 0x181000 + 5310)
                 else:
                     self.assertIn(runtime, {int(p['runtime_address'], 0)
                                             for p in manifest['assembly_patches']})
@@ -119,9 +119,9 @@ class OriginalImageTests(unittest.TestCase):
         cls.original = SOURCE.read_bytes()
         cls.patched = patch.patch_disk(cls.original)
 
-    def test_matches_1_1_0_disk(self):
+    def test_matches_1_2_0_disk(self):
         self.assertEqual(patch.sha256(self.patched),
-                         '044dc12df045d0dbf744726474c7f54b391d17747936ac1d629b6677885f12fa')
+                         '1711af8601b5999ca3a69462d9b45e728184e257e059178e0ecb460c9f5b4cad')
         self.assertEqual(self.patched, patch.patch_disk(self.original))
         self.assertEqual(len(self.patched), patch.DISK_SIZE)
         self.assertEqual(patch.boot_sum(self.patched), 0xffffffff)

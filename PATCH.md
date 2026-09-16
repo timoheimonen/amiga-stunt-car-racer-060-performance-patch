@@ -1,4 +1,4 @@
-# Patch details — 1.1.0
+# Patch details — 1.2.0
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -20,15 +20,24 @@ Practice mode and computer-opponent races use 50 Hz physics with a selectable
 - Rendering waits for the Copper display update before reusing a screen
   buffer. Display graphics, Copper lists and DMA buffers use Chip RAM.
 
-## Speed adjustment
+## Settings
 
-Player and opponent physics scale with the main-menu speed setting, including
-yaw correction. Crane movement and legacy timer pulses keep their timing.
-The setting stays between races and resets to 100% after boot. Saved records
-share the same table across speeds. See [controls](README.md#speed-adjustment).
+Game Speed scales both cars' physics, including yaw correction. Crane movement
+and legacy timer pulses keep their timing. AI Difficulty independently raises
+ordinary opponent target speeds, retaining flagged special-piece targets and
+moving-bridge targets. Positive signed speed overflow saturates at 32767 when
+AI Difficulty exceeds 100%. The engine, braking and track still determine
+achieved pace; Practice has no opponent.
 
+Infinite Boost at Yes bypasses the player's reserve check and consumption,
+while preserving turbo power and input conditions. It neither refills the
+reserve nor advances its consumption counter. No resumes normal consumption.
+
+Settings persist between races and reset on boot. Records share the same
+table across speeds and boost settings. See [controls](README.md#settings).
 Five guarded runtime entry overlays dispatch to the speed routines. The yaw
-instruction overlay preserves the existing damping continuation.
+instruction overlay preserves the existing damping continuation. Six menu
+hooks, two AI hooks and one boost hook install the Settings features.
 `src/patches.json` records their expected and replacement bytes.
 
 ## Rendering optimizations
@@ -47,7 +56,7 @@ instruction overlay preserves the existing damping continuation.
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 4870-byte runtime is stored at ADF offset `0xb720` and copied into
+intro. The 5310-byte runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The initial load starts at
 ADF offset `0x2c00` and uses a `0xac00`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
@@ -71,15 +80,15 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 85 game instruction patches,
+[src/patches.json](src/patches.json) lists the 89 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `1061e579770d4df6382de633c441e4aaf2df064621a7cb19a4e0d57478fcf325` |
-| Runtime | 4870 | `83eff4a42bc5743eef6bc61c3f9756913c33d5fe3308b36322fdfd11644ed1c1` |
+| Boot | 320 | `624c3b6a132e77bcde4a33d8ead377b267112cae741d2567f23c250790860a69` |
+| Runtime | 5310 | `38b746d6781639accda54295333dc4821e628466c52e3b00df567af84f6236b4` |
 | Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
