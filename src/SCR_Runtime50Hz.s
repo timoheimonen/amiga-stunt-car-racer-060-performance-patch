@@ -290,4 +290,6 @@ display_done:
         include "src/SCR_Angles060.s"
         include "src/SCR_Colors060.s"
         include "src/SCR_Crane20ms.s"
+        include "src/SCR_SpeedPhysics.s"
+        include "src/SCR_SpeedMenu.s"
 runtime_end:

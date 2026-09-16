@@ -1,20 +1,35 @@
-# Patch details — 1.0.1
+# Patch details — 1.1.0
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
 
 ## Physics and rendering
 
-Practice mode and computer-opponent races use 50 Hz physics with a fixed
-20 ms step and rendering at 50 FPS.
+Practice mode and computer-opponent races use 50 Hz physics with a selectable
+20–30 ms simulation step (100–150%) and rendering at 50 FPS.
 
 - Player and opponent movement, suspension, steering and collision calculations
   use integer arithmetic with fractional accumulators.
+- Direct yaw correction advances at one sixth of its original per-step amount at 100%,
+  retaining signed fractional remainders between simulation steps.
+- The severe-impact cooldown advances every sixth physics step, preserving
+  its original timing while fresh damage events remain processed at 50 Hz.
 - Race clocks, selected event timers, AI decisions and respawn counters
   advance through a pulse every sixth physics step. Time penalties are
   applied separately.
 - Rendering waits for the Copper display update before reusing a screen
   buffer. Display graphics, Copper lists and DMA buffers use Chip RAM.
+
+## Speed adjustment
+
+Player and opponent physics scale with the main-menu speed setting, including
+yaw correction. Crane movement and legacy timer pulses keep their timing.
+The setting stays between races and resets to 100% after boot. Saved records
+share the same table across speeds. See [controls](README.md#speed-adjustment).
+
+Five guarded runtime entry overlays dispatch to the speed routines. The yaw
+instruction overlay preserves the existing damping continuation.
+`src/patches.json` records their expected and replacement bytes.
 
 ## Rendering optimizations
 
@@ -32,9 +47,9 @@ Practice mode and computer-opponent races use 50 Hz physics with a fixed
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 4092-byte runtime is stored at ADF offset `0xb720` and copied into
-a 4096-byte Chip RAM reservation at `0x181000`. The initial load starts at
-ADF offset `0x2c00` and uses a `0x9c00`-byte Chip allocation. The loader clears
+intro. The 4870-byte runtime is stored at ADF offset `0xb720` and copied into
+a 8192-byte Chip RAM reservation at `0x181000`. The initial load starts at
+ADF offset `0x2c00` and uses a `0xac00`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
 
 The runtime and optional 256 KiB Fast angle tables remain allocated for the
@@ -56,15 +71,15 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 77 game instruction patches,
+[src/patches.json](src/patches.json) lists the 85 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `3caca097f675d4547509ff325a6b4b0e48c09b2b44ad712a2fc60119ebd44212` |
-| Runtime | 4092 | `5c360354a7d629944f5cf20c9e0dca1798ee799ce030522bda152a697267d8e0` |
+| Boot | 320 | `1061e579770d4df6382de633c441e4aaf2df064621a7cb19a4e0d57478fcf325` |
+| Runtime | 4870 | `83eff4a42bc5743eef6bc61c3f9756913c33d5fe3308b36322fdfd11644ed1c1` |
 | Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
