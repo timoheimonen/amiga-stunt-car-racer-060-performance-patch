@@ -3,7 +3,7 @@
 **Version 1.1.0 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
 not physical Amiga hardware. It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
-[Watch the video on YouTube](https://youtu.be/FqTMDyNoEq0)
+[Watch the video on YouTube](https://youtu.be/2XVfxuqHn-Q)
 
 ## Requirements
 
