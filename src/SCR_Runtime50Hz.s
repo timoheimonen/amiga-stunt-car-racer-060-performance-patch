@@ -296,4 +296,6 @@ display_done:
         include "src/SCR_InfiniteBoost.s"
         include "src/SCR_DisableDamage.s"
         include "src/SCR_NameEntry.s"
+        include "src/SCR_ProjectAngle.s"
+        include "src/SCR_ProjectDistance.s"
 runtime_end:

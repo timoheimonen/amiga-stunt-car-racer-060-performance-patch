@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 — 2026-09-18
+
+- Retain 32-bit precision in screen-point transforms and round to the nearest pixel.
+- Interpolate projection angle and distance lookup tables for smoother geometry.
+- Round projection distances and saturate values above 32767.
+
 ## 1.2.1 — 2026-09-18
 
 - Add Disable Damage (No/Yes, default No) to Settings.
