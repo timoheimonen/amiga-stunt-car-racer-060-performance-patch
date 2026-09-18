@@ -1,4 +1,4 @@
-# Patch details — 1.2.1
+# Patch details — 1.2.2
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -55,12 +55,19 @@ features. Two player-name hooks add Fire continuation and the name-screen text.
 - Color selection uses a 16-color mask table and data pointers to pixel
   and word drawing routines.
 
+## Rendering precision
+
+Screen-point transforms retain full 32-bit products and round once to the
+nearest pixel. Projection angles and distances interpolate between lookup-table
+entries. Projection distances are rounded and saturate at 32767. The shared
+physics angle and distance routines keep their existing arithmetic.
+
 ## Loader and memory
 
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 5670-byte runtime is stored at ADF offset `0xb720` and copied into
+intro. The 5914-byte runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The initial load starts at
 ADF offset `0x2c00` and uses a `0xac00`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
@@ -89,15 +96,15 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 96 game instruction patches,
+[src/patches.json](src/patches.json) lists the 101 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `779af87579920fed3be210565cb0e6b1a0820fc48b65414d1b5b8a2b47195041` |
-| Runtime | 5670 | `b760992b5c668db70c2914f9e5685fd32c5299df4fe9947d56347ab15bb8d9b5` |
+| Boot | 320 | `ca1f8e8c019d81bc4047ecde80667a1bb08a84432e84026c7fc850c0d4ed0c6a` |
+| Runtime | 5914 | `6580f10d086a0e0e1474ae7832758d937c79968d16b50086b51d8991973941bf` |
 | Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
