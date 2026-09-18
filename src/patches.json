@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.2.0",
+  "release_version": "1.2.1",
   "status": "50 Hz physics / 50 FPS rendering in Practice and computer-opponent races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / Blizzard 1260 / MC68060 / 2 MiB Chip / 32 MiB accelerator RAM / profile in FS-UAE.md",
   "source": {
@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-060-50FPS.adf",
     "size": 901120,
-    "sha256": "1711af8601b5999ca3a69462d9b45e728184e257e059178e0ecb460c9f5b4cad"
+    "sha256": "c3e76917eedc03c4956e7072249535e907bee3556e4eb6c877b605e750478f45"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "624c3b6a132e77bcde4a33d8ead377b267112cae741d2567f23c250790860a69",
+      "sha256": "779af87579920fed3be210565cb0e6b1a0820fc48b65414d1b5b8a2b47195041",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -37,9 +37,9 @@
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
       "allocation_size": 8192,
-      "size": 5310,
-      "sha256": "38b746d6781639accda54295333dc4821e628466c52e3b00df567af84f6236b4",
-      "expected_sha256": "66e13bddfd16b4b1b5d1d38b3a9e28a5638126f56fbacb5874bdd951ab2ca319",
+      "size": 5670,
+      "sha256": "b760992b5c668db70c2914f9e5685fd32c5299df4fe9947d56347ab15bb8d9b5",
+      "expected_sha256": "634be479c58c25c5072d2b879a9199dd436f5c81e9074c43632174afd8df27f8",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
@@ -54,7 +54,9 @@
         "SCR_SpeedPhysics.s",
         "SCR_SpeedMenu.s",
         "SCR_AIDifficulty.s",
-        "SCR_InfiniteBoost.s"
+        "SCR_InfiniteBoost.s",
+        "SCR_DisableDamage.s",
+        "SCR_NameEntry.s"
       ]
     },
     {
@@ -98,7 +100,7 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "edf4c080",
+      "replacement_hex": "ed40c080",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -134,8 +136,8 @@
     "reset_loop": "0x1812ae",
     "remainders": "0x1812c0",
     "diagnostic": "0x1812d8",
-    "kernel_end": "0x1812da",
     "runtime_header": "0x1812da",
+    "kernel_end": "0x1812da",
     "linear_entry": "0x181336",
     "linear_active": "0x18134a",
     "angular_entry": "0x181358",
@@ -245,8 +247,8 @@
     "angle10_lookup060": "0x181c88",
     "angles_alloc060": "0x181ca6",
     "angles_ready060": "0x181caa",
-    "colors_start060": "0x181cae",
     "word_dispatch060": "0x181cae",
+    "colors_start060": "0x181cae",
     "word_pointer060": "0x181cba",
     "pixel_odd_pointer060": "0x181cbe",
     "pixel_previous060": "0x181cc2",
@@ -267,40 +269,51 @@
     "speed_decay_step": "0x1820cc",
     "speed_yaw_correction": "0x182136",
     "speed_menu": "0x18216c",
-    "speed_next": "0x1821d2",
-    "speed_update": "0x1821ea",
-    "ai_difficulty_next": "0x182218",
-    "speed_menu_row": "0x182232",
-    "speed_print_label": "0x1822e8",
-    "speed_menu_title": "0x1822f6",
-    "speed_menu_position": "0x182312",
-    "speed_menu_keys": "0x18233a",
-    "speed_menu_font": "0x182352",
-    "speed_percent_glyph": "0x182374",
-    "speed_label": "0x18237c",
-    "speed_game_label": "0x182385",
-    "speed_ai_label": "0x182395",
-    "speed_boost_no_label": "0x1823a5",
-    "speed_boost_yes_label": "0x1823b7",
-    "speed_return_label": "0x1823ca",
-    "speed_settings_title": "0x1823d1",
-    "speed_row_positions": "0x1823dd",
-    "speed_settings_positions": "0x1823e2",
-    "speed_number_keys": "0x1823e6",
-    "speed_state_start": "0x1823ec",
-    "speed_k": "0x1823ec",
-    "speed_multiplier": "0x1823ee",
-    "speed_spring": "0x1823f0",
-    "speed_decay": "0x1823f2",
-    "ai_difficulty_k": "0x1823f4",
-    "speed_menu_active": "0x1823f6",
-    "infinite_boost_enabled": "0x1823f7",
-    "speed_state_end": "0x1823f8",
-    "speed_coefficients": "0x1823f8",
-    "speed_ai_target": "0x18243a",
-    "speed_ai_speed_add": "0x182478",
-    "speed_infinite_boost_gate": "0x18249e",
-    "runtime_end": "0x1824be",
+    "speed_next": "0x1821e2",
+    "speed_update": "0x1821fa",
+    "ai_difficulty_next": "0x182228",
+    "speed_menu_row": "0x182242",
+    "speed_print_label": "0x182310",
+    "speed_menu_title": "0x18231e",
+    "speed_menu_position": "0x18233a",
+    "speed_menu_keys": "0x182362",
+    "speed_menu_font": "0x18237a",
+    "speed_percent_glyph": "0x18239c",
+    "speed_label": "0x1823a4",
+    "speed_game_label": "0x1823ad",
+    "speed_ai_label": "0x1823bd",
+    "speed_boost_no_label": "0x1823cd",
+    "speed_boost_yes_label": "0x1823df",
+    "speed_damage_no_label": "0x1823f2",
+    "speed_damage_yes_label": "0x182404",
+    "speed_return_label": "0x182417",
+    "speed_settings_title": "0x18241e",
+    "speed_row_positions": "0x18242a",
+    "speed_settings_positions": "0x18242f",
+    "speed_number_keys": "0x182434",
+    "speed_k": "0x18243a",
+    "speed_state_start": "0x18243a",
+    "speed_multiplier": "0x18243c",
+    "speed_spring": "0x18243e",
+    "speed_decay": "0x182440",
+    "ai_difficulty_k": "0x182442",
+    "speed_menu_active": "0x182444",
+    "infinite_boost_enabled": "0x182445",
+    "disable_damage_enabled": "0x182446",
+    "speed_coefficients": "0x182448",
+    "speed_state_end": "0x182448",
+    "speed_ai_target": "0x18248a",
+    "speed_ai_speed_add": "0x1824c8",
+    "speed_infinite_boost_gate": "0x1824ee",
+    "speed_damage_front_left": "0x18250e",
+    "speed_damage_front_right": "0x18252a",
+    "speed_damage_rear": "0x182546",
+    "speed_damage_crack": "0x182562",
+    "speed_damage_severe": "0x182572",
+    "name_prompt_fire": "0x18258c",
+    "name_entry_fire": "0x18259e",
+    "name_prompt_fire_text": "0x1825da",
+    "runtime_end": "0x182626",
     "word_dispatch_local060": "0x663b0",
     "crane_controller20": "0x5b4a8",
     "WORD_EDGE060": "0x663b0",
@@ -1124,8 +1137,8 @@
       "game_file_offset": "0x4d1de",
       "runtime_address": "0x5b8de",
       "expected_hex": "14390001bb18",
-      "replacement_hex": "4ef900182232",
-      "dispatch_address": "0x182232"
+      "replacement_hex": "4ef900182242",
+      "dispatch_address": "0x182242"
     },
     {
       "id": "speed_menu_position_64b34",
@@ -1134,8 +1147,8 @@
       "game_file_offset": "0x56434",
       "runtime_address": "0x64b34",
       "expected_hex": "207c00064af4",
-      "replacement_hex": "4ef900182312",
-      "dispatch_address": "0x182312"
+      "replacement_hex": "4ef90018233a",
+      "dispatch_address": "0x18233a"
     },
     {
       "id": "speed_menu_keys_5b9d2",
@@ -1144,8 +1157,8 @@
       "game_file_offset": "0x4d2d2",
       "runtime_address": "0x5b9d2",
       "expected_hex": "247c00060c8d",
-      "replacement_hex": "4ef90018233a",
-      "dispatch_address": "0x18233a"
+      "replacement_hex": "4ef900182362",
+      "dispatch_address": "0x182362"
     },
     {
       "id": "speed_menu_font_595c2",
@@ -1154,8 +1167,8 @@
       "game_file_offset": "0x4aec2",
       "runtime_address": "0x595c2",
       "expected_hex": "207c0001fe82",
-      "replacement_hex": "4ef900182352",
-      "dispatch_address": "0x182352"
+      "replacement_hex": "4ef90018237a",
+      "dispatch_address": "0x18237a"
     },
     {
       "id": "speed_menu_title_5b86e",
@@ -1164,8 +1177,8 @@
       "game_file_offset": "0x4d16e",
       "runtime_address": "0x5b86e",
       "expected_hex": "4eb90005a656",
-      "replacement_hex": "4eb9001822f6",
-      "dispatch_address": "0x1822f6"
+      "replacement_hex": "4eb90018231e",
+      "dispatch_address": "0x18231e"
     },
     {
       "id": "speed_ai_target_63c6c",
@@ -1174,8 +1187,8 @@
       "game_file_offset": "0x5556c",
       "runtime_address": "0x63c6c",
       "expected_hex": "0200007f13c00001bb4a",
-      "replacement_hex": "4eb90018243a4e714e71",
-      "dispatch_address": "0x18243a"
+      "replacement_hex": "4eb90018248a4e714e71",
+      "dispatch_address": "0x18248a"
     },
     {
       "id": "speed_ai_speed_add_63bf0",
@@ -1184,8 +1197,8 @@
       "game_file_offset": "0x554f0",
       "runtime_address": "0x63bf0",
       "expected_hex": "d1790001bbee",
-      "replacement_hex": "4eb900182478",
-      "dispatch_address": "0x182478"
+      "replacement_hex": "4eb9001824c8",
+      "dispatch_address": "0x1824c8"
     },
     {
       "id": "speed_infinite_boost_gate_608cc",
@@ -1194,8 +1207,78 @@
       "game_file_offset": "0x521cc",
       "runtime_address": "0x608cc",
       "expected_hex": "10390001ca20",
-      "replacement_hex": "4ef90018249e",
-      "dispatch_address": "0x18249e"
+      "replacement_hex": "4ef9001824ee",
+      "dispatch_address": "0x1824ee"
+    },
+    {
+      "id": "speed_damage_front_left_61cc2",
+      "target": "speed_damage_front_left",
+      "adf_offset": "0x611c2",
+      "game_file_offset": "0x535c2",
+      "runtime_address": "0x61cc2",
+      "expected_hex": "13c00001bb4f",
+      "replacement_hex": "4ef90018250e",
+      "dispatch_address": "0x18250e"
+    },
+    {
+      "id": "speed_damage_front_right_61dea",
+      "target": "speed_damage_front_right",
+      "adf_offset": "0x612ea",
+      "game_file_offset": "0x536ea",
+      "runtime_address": "0x61dea",
+      "expected_hex": "13c00001bb50",
+      "replacement_hex": "4ef90018252a",
+      "dispatch_address": "0x18252a"
+    },
+    {
+      "id": "speed_damage_rear_61f12",
+      "target": "speed_damage_rear",
+      "adf_offset": "0x61412",
+      "game_file_offset": "0x53812",
+      "runtime_address": "0x61f12",
+      "expected_hex": "13c00001bb51",
+      "replacement_hex": "4ef900182546",
+      "dispatch_address": "0x182546"
+    },
+    {
+      "id": "speed_damage_crack_5dfda",
+      "target": "speed_damage_crack",
+      "adf_offset": "0x5d4da",
+      "game_file_offset": "0x4f8da",
+      "runtime_address": "0x5dfda",
+      "expected_hex": "4eb900066106",
+      "replacement_hex": "4eb900182562",
+      "dispatch_address": "0x182562"
+    },
+    {
+      "id": "speed_damage_severe_5e02e",
+      "target": "speed_damage_severe",
+      "adf_offset": "0x5d52e",
+      "game_file_offset": "0x4f92e",
+      "runtime_address": "0x5e02e",
+      "expected_hex": "14390001c9cf",
+      "replacement_hex": "4ef900182572",
+      "dispatch_address": "0x182572"
+    },
+    {
+      "id": "name_prompt_fire_5b652",
+      "target": "name_prompt_fire",
+      "adf_offset": "0x5ab52",
+      "game_file_offset": "0x4cf52",
+      "runtime_address": "0x5b652",
+      "expected_hex": "4eb900064340",
+      "replacement_hex": "4eb90018258c",
+      "dispatch_address": "0x18258c"
+    },
+    {
+      "id": "name_entry_fire_5b69e",
+      "target": "name_entry_fire",
+      "adf_offset": "0x5ab9e",
+      "game_file_offset": "0x4cf9e",
+      "runtime_address": "0x5b69e",
+      "expected_hex": "4eb90005b6de",
+      "replacement_hex": "4eb90018259e",
+      "dispatch_address": "0x18259e"
     }
   ],
   "assembly_patches": [

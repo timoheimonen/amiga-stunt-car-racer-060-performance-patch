@@ -1,4 +1,4 @@
-# Patch details — 1.2.0
+# Patch details — 1.2.1
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -33,11 +33,15 @@ Infinite Boost at Yes bypasses the player's reserve check and consumption,
 while preserving turbo power and input conditions. It neither refills the
 reserve nor advances its consumption counter. No resumes normal consumption.
 
+Disable Damage at Yes prevents new player damage, crack growth and damage
+holes. Existing damage remains; No restores normal damage handling.
+
 Settings persist between races and reset on boot. Records share the same
-table across speeds and boost settings. See [controls](README.md#settings).
+table across speeds, boost and damage settings. See [controls](README.md#settings).
 Five guarded runtime entry overlays dispatch to the speed routines. The yaw
 instruction overlay preserves the existing damping continuation. Six menu
-hooks, two AI hooks and one boost hook install the Settings features.
+hooks, two AI hooks, one boost hook and five damage hooks install the Settings
+features. Two player-name hooks add Fire continuation and the name-screen text.
 `src/patches.json` records their expected and replacement bytes.
 
 ## Rendering optimizations
@@ -56,7 +60,7 @@ hooks, two AI hooks and one boost hook install the Settings features.
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 5310-byte runtime is stored at ADF offset `0xb720` and copied into
+intro. The 5670-byte runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The initial load starts at
 ADF offset `0x2c00` and uses a `0xac00`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
@@ -71,6 +75,11 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 Press Space or click the mouse to continue to the game.
 
+## Player-name screen
+
+The prompt reads `NAME? OR PRESS FIRE TO CONTINUE`. Fire supplies `racer`
+when the name is empty and preserves a typed name.
+
 ## Address mapping and patches
 
 The main game block loads from ADF `0xdc00` to address `0xe700`.
@@ -80,15 +89,15 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 89 game instruction patches,
+[src/patches.json](src/patches.json) lists the 96 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. Words and longwords use big-endian encoding.
 [patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `624c3b6a132e77bcde4a33d8ead377b267112cae741d2567f23c250790860a69` |
-| Runtime | 5310 | `38b746d6781639accda54295333dc4821e628466c52e3b00df567af84f6236b4` |
+| Boot | 320 | `779af87579920fed3be210565cb0e6b1a0820fc48b65414d1b5b8a2b47195041` |
+| Runtime | 5670 | `b760992b5c668db70c2914f9e5685fd32c5299df4fe9947d56347ab15bb8d9b5` |
 | Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).

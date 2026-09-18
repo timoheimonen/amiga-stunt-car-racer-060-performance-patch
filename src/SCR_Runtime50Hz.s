@@ -294,4 +294,6 @@ display_done:
         include "src/SCR_SpeedMenu.s"
         include "src/SCR_AIDifficulty.s"
         include "src/SCR_InfiniteBoost.s"
+        include "src/SCR_DisableDamage.s"
+        include "src/SCR_NameEntry.s"
 runtime_end:
