@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 — 2026-09-18
+
+- Add Disable Damage (No/Yes, default No) to Settings.
+- Allow Fire to continue past player-name entry, using `racer` for an empty name.
+
 ## 1.2.0 — 2026-09-16
 
 - Added a Settings menu with independent Game Speed, AI Difficulty controls and Infinite Boost (No/Yes)

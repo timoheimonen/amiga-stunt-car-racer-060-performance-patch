@@ -1,4 +1,4 @@
-# FS-UAE setup for version 1.2.0
+# FS-UAE setup for version 1.2.1
 
 **Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
 
@@ -46,7 +46,7 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.2.0, 50 FPS Practice and computer-opponent races) | `1711af8601b5999ca3a69462d9b45e728184e257e059178e0ecb460c9f5b4cad` |
+| Patched ADF (1.2.1, 50 FPS Practice and computer-opponent races) | `c3e76917eedc03c4956e7072249535e907bee3556e4eb6c877b605e750478f45` |
 | Blizzard 1260 ROM | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 

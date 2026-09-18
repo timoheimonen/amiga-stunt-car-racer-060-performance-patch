@@ -14,7 +14,7 @@ speed_menu:
         moveq #0,d0
 .settings:
         moveq #0,d1
-        moveq #3,d2
+        moveq #4,d2
         jsr $5b840.l
         tst.b d0
         beq.s .game
@@ -22,6 +22,8 @@ speed_menu:
         beq.s .ai
         cmpi.b #2,d0
         beq.s .boost
+        cmpi.b #3,d0
+        beq.s .damage
         move.b #1,speed_menu_active
         moveq #4,d0
         bra.s .again
@@ -33,6 +35,9 @@ speed_menu:
         bra.s .settings
 .boost:
         eori.b #1,infinite_boost_enabled
+        bra.s .settings
+.damage:
+        eori.b #1,disable_damage_enabled
         bra.s .settings
 .done:
         clr.b speed_menu_active
@@ -84,6 +89,8 @@ speed_menu_row:
         beq.s .ai
         cmpi.b #2,d2
         beq.s .boost
+        cmpi.b #3,d2
+        beq.s .damage
         lea speed_return_label(pc),a2
 .label_only:
         bsr.w speed_print_label
@@ -93,6 +100,12 @@ speed_menu_row:
         tst.b infinite_boost_enabled
         beq.s .label_only
         lea speed_boost_yes_label(pc),a2
+        bra.s .label_only
+.damage:
+        lea speed_damage_no_label(pc),a2
+        tst.b disable_damage_enabled
+        beq.s .label_only
+        lea speed_damage_yes_label(pc),a2
         bra.s .label_only
 .game:
         lea speed_game_label(pc),a2
@@ -183,10 +196,12 @@ speed_game_label: dc.b 'Game Speed     ',0
 speed_ai_label: dc.b 'AI Difficulty  ',0
 speed_boost_no_label: dc.b 'Infinite Boost No',0
 speed_boost_yes_label: dc.b 'Infinite Boost Yes',0
+speed_damage_no_label: dc.b 'Disable Damage No',0
+speed_damage_yes_label: dc.b 'Disable Damage Yes',0
 speed_return_label: dc.b 'Return',0
 speed_settings_title: dc.b $1f,16,11,'Settings',0
 speed_row_positions: dc.b 13,15,17,19,21
-speed_settings_positions: dc.b 13,16,19,22
+speed_settings_positions: dc.b 13,15,17,19,21
 speed_number_keys: dc.b 1,2,3,4,5
         even
 speed_state_start:
@@ -197,6 +212,7 @@ speed_decay: dc.w 3068
 ai_difficulty_k: dc.w 20
 speed_menu_active: dc.b 0
 infinite_boost_enabled: dc.b 0
+disable_damage_enabled: dc.b 0
         even
 speed_state_end:
 ; round(33120/k), round(65536*(1-(1-3068/65536)^(k/20))).
