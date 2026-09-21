@@ -1,3 +1,8 @@
+; Select the pixel drawing routine for the requested color.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Select an immutable pixel drawing routine for the requested color.
         machine 68060
 pixel_select060:

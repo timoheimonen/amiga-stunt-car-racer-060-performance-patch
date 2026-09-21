@@ -1,3 +1,8 @@
+; Distribute crane target movement across 20 ms updates.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Crane controller: 120 ms target increments spread over six 20 ms calls.
 ; Hooked ADD flags are dead (the next MOVE replaces NZVC); D0/D1 preserved.
 ; Startup runs on every new lift and clears the fraction before target motion.

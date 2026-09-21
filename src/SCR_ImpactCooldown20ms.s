@@ -1,3 +1,8 @@
+; Preserve severe-impact cooldown timing during 50 Hz physics.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Replace [5dfe0,5e016), keeping the zero-counter and damage continuations.
 ; This function is called only by the gameplay loop after active frame_begin.
 ; Intermediate frames still process fresh impacts, but neither decrement the

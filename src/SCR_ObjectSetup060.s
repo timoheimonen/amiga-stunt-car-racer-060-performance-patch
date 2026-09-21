@@ -1,3 +1,8 @@
+; Prepare object coordinates for batched screen transforms.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Relocate $695a2..$69603 and fall through into the batched transform.
 ; Remove ASL.W #3,D0 using 68020+ scaled index EAs. No executed filler.
 ; Preserve original word arithmetic, byte counter, stack and buffer order.

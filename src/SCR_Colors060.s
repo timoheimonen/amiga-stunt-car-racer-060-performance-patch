@@ -1,3 +1,8 @@
+; Provide color masks and pixel and word drawing dispatch tables.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Select color drawing routines through data pointers and precomputed masks.
         machine 68060
 colors_start060:              ; start of color drawing module

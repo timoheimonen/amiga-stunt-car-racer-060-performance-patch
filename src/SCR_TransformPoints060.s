@@ -1,3 +1,8 @@
+; Transform object points in batches for screen projection.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Batch the sole TransformScreenPoint caller at $69604..$6960f.
 ; Target: FS-UAE / 68060. Integer operations remain 68000-compatible.
 ; A3=$1c230, A4=$1c0f0, A5=$1bfb0; D1.w is the last point byte offset.

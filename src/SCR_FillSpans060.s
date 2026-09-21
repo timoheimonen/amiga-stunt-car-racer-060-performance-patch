@@ -1,3 +1,8 @@
+; Fill polygon interiors using aligned 32-bit writes.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Fill long polygon row interiors with aligned 32-bit writes.
 ; D1.w=N-1; D6/D7 pack two plane words each (0 or $ffff).
 ; Leave one or two final words to the original loop at $6679e.

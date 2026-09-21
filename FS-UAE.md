@@ -1,4 +1,4 @@
-# FS-UAE setup for version 1.2.2
+# FS-UAE setup for version 1.3.0
 
 **Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
 
@@ -30,12 +30,19 @@ ntsc_mode = 0
 
 kickstart_file = /path/to/Kickstart-A1200.rom
 floppy_drive_count = 1
-floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.2.2.adf
+floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.3.0.adf
 ```
 
 The patcher checks the disk, not the emulator configuration. The runtime
 needs its fixed 8 KiB Chip allocation at `0x181000`. Allocation failure
 halts boot with a red screen. See [memory details](PATCH.md#loader-and-memory).
+
+## Editor storage
+
+Keep DF0 writable for the editor's 32 track slots and custom-track records.
+For Save/Load → Disk, set `floppy_drive_count = 2` and insert a separate
+writable ADF in DF1. The editor initializes a track disk only after confirmation;
+initialization erases that disk. Keep the game disk in DF0.
 
 ## Checksums
 
@@ -46,7 +53,7 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.2.2, 50 FPS Practice and computer-opponent races) | `14e99fbe992ddbb578ffb3c118ac516c1f8ef4966882c5ae88de1cd9c240849f` |
+| Patched ADF (1.3.0, 50 FPS Practice and computer-opponent races) | `aa19290574252dc42ba1cc94e5c382d9d572a771331bdb77601842c082a82722` |
 | Blizzard 1260 ROM | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 

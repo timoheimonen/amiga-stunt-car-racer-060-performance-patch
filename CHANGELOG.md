@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-09-21
+
+- Add in-game Track Editor: 33 section choices, a 16 × 16 building
+  grid.
+- Add 32 named Draft/Ready save slots, custom tracks in Practise, persistent
+  custom-track records, and DF1 track-disk import/export with 32 slots.
+- Initialize the keyboard before enabling game interrupts, preventing startup
+  key presses from leaving input locked.
+- Smoke / particles framerate fixed.
+
 ## 1.2.2 — 2026-09-18
 
 - Retain 32-bit precision in screen-point transforms and round to the nearest pixel.

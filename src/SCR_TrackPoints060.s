@@ -1,3 +1,8 @@
+; Transform track points while preserving the original point order.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Preserve coefficient reads, byte index wrap and the loop's final CCR.
 ; A3/A4/A5 are initialized only for the first non-skipped point.
         machine 68060

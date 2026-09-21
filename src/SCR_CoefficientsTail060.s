@@ -1,3 +1,8 @@
+; Calculate the final rendering coefficient groups.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Compute the final coefficient groups and restore loop output D3.w and XNZVC.
 coefficients_tail060:
         move.w $22(a5),d5

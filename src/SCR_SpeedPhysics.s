@@ -1,6 +1,11 @@
+; Scale the simulation step for the Game Speed setting.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; SPEED ADJUST: one 50 Hz update, selected simulated step 20..30 ms.
 ; Existing entry addresses, state records and reset/clamp hooks are retained.
-; The builder replaces five entry prefixes with guarded absolute JMPs.
+; Five entry prefixes dispatch through guarded absolute JMPs.
 ; All instructions are 68000-compatible. Clocks and crane code are unchanged.
 
 ; The shared spring entry is reached by JMP from spring_entry, leaving the
@@ -127,7 +132,7 @@ speed_decay_step:
         rts
 
 ; Only the neutral correction prefix is redirected. The original damping
-; tail and manual-steering branch remain at their historical addresses.
+; tail and manual-steering branch retain their original addresses.
 ; Signed remainder uses denominator120 at every speed; reset is unchanged.
 speed_yaw_correction:
         move.l d0,-(sp)

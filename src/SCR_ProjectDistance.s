@@ -1,3 +1,8 @@
+; Interpolate and round projection distances with saturation.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Projection-only hypotenuse. D4/D5 signed words, D7.w ratio from angle.
 ; D0.w = rounded distance saturated to 32767 (the consumer is signed).
 ; D4/D5 become unsigned sorted magnitudes, D7.w becomes table byte offset,

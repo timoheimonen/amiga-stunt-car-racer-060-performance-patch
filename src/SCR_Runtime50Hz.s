@@ -1,3 +1,8 @@
+; Coordinate 50 Hz physics, rendering and legacy game timers.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; 50 Hz player and computer-opponent runtime.
         include "src/SCR_Player20ms.s"
 runtime_header:
@@ -298,4 +303,5 @@ display_done:
         include "src/SCR_NameEntry.s"
         include "src/SCR_ProjectAngle.s"
         include "src/SCR_ProjectDistance.s"
+        include "src/SCR_Effects50Hz.s"
 runtime_end:

@@ -1,3 +1,8 @@
+; Apply fractional yaw correction at the 20 ms physics interval.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Replace [611ce,6121c); the caller runs after active frame_begin.
 ; Signed fractional carry conserves six constant 20 ms corrections exactly.
 ; yaw_fraction20 uses the otherwise unused expected-word of op_damage's

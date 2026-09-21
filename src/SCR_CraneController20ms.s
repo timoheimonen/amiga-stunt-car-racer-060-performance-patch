@@ -1,3 +1,8 @@
+; Smooth crane roll correction toward the target angle.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Guarded replacement of [5b4a8,5b506), 94 bytes, 68000 instructions.
 ; D0/D2/D3/D4 are scratch; D1/D7/A0 and the stack are preserved.
 ; Callers consume only final Z (exact target reached), then overwrite D0.

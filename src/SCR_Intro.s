@@ -1,3 +1,8 @@
+; Display the animated flag intro with mouse-button dismissal.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Position-independent Finnish flag boot intro, KS3.1 PAL. Called before SuperState.
 ; Intuition owns display/input; no CIA/custom register takeover.
 ; All pointers are relative to A5, the loaded code base. Payload is CHIP.
@@ -103,12 +108,6 @@ frame_loop:
         jsr -378(a6)
         tst.l pressed_class-start(a5)
         bne.s .release
-        cmp.l #$400,d2
-        bne.s .mouse
-        cmp.w #$40,d3
-        bne.s .input
-        bra.s .press
-.mouse:
         cmp.l #8,d2
         bne.s .input
         cmp.w #$68,d3
@@ -571,7 +570,7 @@ screen_tags:
 new_window:
         dc.w 0,0,320,256
         dc.b 0,0
-        dc.l $408,$31940,0,0,0
+        dc.l $8,$31940,0,0,0    ; IDCMP_MOUSEBUTTONS only; no keyboard events
 window_screen: dc.l 0
         dc.l 0
         dc.w 0,0,320,256,$f

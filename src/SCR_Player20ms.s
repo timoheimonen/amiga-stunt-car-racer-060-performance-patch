@@ -1,5 +1,10 @@
+; Integrate player movement, rotation and suspension every 20 ms.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; 68000-compatible 20 ms player integration kernel. Installed by SCR_Boot.s at boot.
-; Assemble with -m68000 -Fbin. The runtime begins at $181000.
+; The runtime begins at $181000.
         ifnd LOAD_BASE
 LOAD_BASE equ $181000
         endif

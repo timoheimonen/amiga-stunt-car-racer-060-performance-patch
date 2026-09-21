@@ -1,3 +1,8 @@
+; Apply the Infinite Boost setting to turbo reserve consumption.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Entered by JMP at $608cc after the original boost input/inhibit tests.
 ; Both paths reproduce the displaced MOVE.B exactly, including D0's upper
 ; bits and NZVC while preserving X, all other registers and the stack.

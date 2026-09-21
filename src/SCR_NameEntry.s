@@ -1,3 +1,8 @@
+; Display player-name credits and allow Fire to confirm the name.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Player-name call sites only: shared filename entry is left unchanged.
 name_prompt_fire:
         movem.l d0/a2,-(sp)
