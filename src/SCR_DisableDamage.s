@@ -1,3 +1,8 @@
+; Apply the Disable Damage setting to new player damage.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Suppress new player damage only. Contact forces, impact events and sound
 ; remain original. Existing damage is neither cleared nor repaired.
         machine 68000

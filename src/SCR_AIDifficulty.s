@@ -1,3 +1,8 @@
+; Adjust opponent target speed for the AI Difficulty setting.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; AI DIFFICULTY changes the selected target, never the simulation time step.
 ; Entered with JSR from $63c6c; D0.b is the selected target plus bit 7.
 ; Return D0.b and $1bb4a with the adjusted target, preserving D0's upper

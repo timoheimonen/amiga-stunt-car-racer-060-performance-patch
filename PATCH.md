@@ -1,4 +1,4 @@
-# Patch details — 1.2.2
+# Patch details — 1.3.0
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -20,6 +20,12 @@ Practice mode and computer-opponent races use 50 Hz physics with a selectable
 - Rendering waits for the Copper display update before reusing a screen
   buffer. Display graphics, Copper lists and DMA buffers use Chip RAM.
 
+## Smoke and particles
+
+Smoke and small particles move and renew on the original 120 ms step, with
+interpolated positions for 50 Hz drawing. Smoke animation keeps its original
+frame clock. This prevents effects from advancing six times too quickly.
+
 ## Settings
 
 Game Speed scales both cars' physics, including yaw correction. Crane movement
@@ -36,8 +42,9 @@ reserve nor advances its consumption counter. No resumes normal consumption.
 Disable Damage at Yes prevents new player damage, crack growth and damage
 holes. Existing damage remains; No restores normal damage handling.
 
-Settings persist between races and reset on boot. Records share the same
-table across speeds, boost and damage settings. See [controls](README.md#settings).
+Settings persist between races and reset on boot. Original-track records share
+the same table across settings. Custom-track records require Game Speed 100%,
+Infinite Boost No and Disable Damage No. See [controls](README.md#settings).
 Five guarded runtime entry overlays dispatch to the speed routines. The yaw
 instruction overlay preserves the existing damping continuation. Six menu
 hooks, two AI hooks, one boost hook and five damage hooks install the Settings
@@ -67,9 +74,9 @@ physics angle and distance routines keep their existing arithmetic.
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 5914-byte runtime is stored at ADF offset `0xb720` and copied into
-a 8192-byte Chip RAM reservation at `0x181000`. The initial load starts at
-ADF offset `0x2c00` and uses a `0xac00`-byte Chip allocation. The loader clears
+intro. The 6632-byte runtime is stored at ADF offset `0xb720` and copied into
+a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial load at ADF offset `0x2c00` to a
+`0xb000`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
 
 The runtime and optional 256 KiB Fast angle tables remain allocated for the
@@ -78,9 +85,25 @@ screen. Restart with the documented memory configuration.
 
 The code uses integer instructions and requires neither an FPU nor an MMU.
 
+## In-game track editor
+
+The editor is a separate relocatable module: 72,858 bytes of code and data,
+loaded from ADF offset `0x76000` in a 73,216-byte transfer. Its bootstrap is
+436 bytes at ADF offset `0xd800`. It reserves 384 KiB of Fast RAM and 81,408
+bytes of persistent Chip RAM for loading, disk I/O and display support.
+Track projects use two guarded storage banks with 32 slots each. Draft/Ready
+state, names and custom-track records persist on the game disk. A separate
+DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
+
+The loader installs the editor hooks only after checking their expected bytes.
+CIA initialization runs before game interrupts are enabled, preventing an early
+key event from interrupting initialization and leaving its acknowledgement stuck.
+The normal keyboard acknowledgement routine remains in use.
+
+
 ## Boot intro
 
-Press Space or click the mouse to continue to the game.
+Click a mouse button to continue to the game.
 
 ## Player-name screen
 
@@ -96,32 +119,25 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 101 game instruction patches,
+[src/patches.json](src/patches.json) lists the 105 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
-and payload hashes. Words and longwords use big-endian encoding.
-[patch.py](patch.py) embeds the boot, runtime and intro code for standalone use.
+and payload hashes. The `editor.changes` list is applied after the guarded
+performance layer; its expected bytes refer to that intermediate disk. Words and longwords use big-endian encoding.
+[patch.py](patch.py) embeds the boot, runtime, intro and editor overlay for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `ca1f8e8c019d81bc4047ecde80667a1bb08a84432e84026c7fc850c0d4ed0c6a` |
-| Runtime | 5914 | `6580f10d086a0e0e1474ae7832758d937c79968d16b50086b51d8991973941bf` |
-| Intro | 5496 | `1e529a65557ae685581a1f76d3dac9821ef6dc3487b089ee2cc223c4fec2f920` |
+| Boot | 320 | `9f78fdd44820f93adcee7ee559051b6d7a06fad56abebcc0af6bb4dabfaa0270` |
+| Runtime | 6632 | `9f35212e25c5ab54160936df588fde85f0f2bfc13d607e34fd56e7c0bcdd8156` |
+| Intro | 5480 | `843c61b14e467a8922a611578f8ba06a159d40612dfba72c9a3c0968976f4bf8` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
 
-## Building from source
+## Included sources
 
-Using the patcher requires Python and the supported original ADF. Rebuilding
-its embedded code also requires `vasmm68k_mot` with Motorola syntax support.
-
-```sh
-python3 -B scripts/build_patch.py "/path/to/Stunt Car Racer.adf" --check
-```
-
-The builder generates the intro tables, assembles the sources and checks
-the resulting bytes and hashes against [src/patches.json](src/patches.json).
-Build files go under `work/adf-patch-build/`. Use `--write` to regenerate the
-embedded data after updating the manifest and package version.
+`src/` contains the assembly sources and patch manifest. Applying the patch
+requires only `patch.py`, Python 3.8+ and the supported original ADF;
+no assembler is needed.
 
 ## Output protection and rollback
 

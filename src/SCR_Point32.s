@@ -1,3 +1,8 @@
+; Transform screen points with full 32-bit intermediate precision.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Shared screen-point kernel. Inputs and output arrays keep their word ABI.
 ; D4/D5 retain the original input words; D0/D3 are scratch as before.
 ; Q15 rotation coefficients from the game satisfy |c|+|s| <= 46342.

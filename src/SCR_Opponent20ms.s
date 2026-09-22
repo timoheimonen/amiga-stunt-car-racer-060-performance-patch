@@ -1,3 +1,8 @@
+; Update opponent physics and movement every 20 ms.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Independent opponent integration. Every rendered frame recomputes springs,
 ; acceleration and position. Only random AI decisions retain the legacy pulse.
 ; Integrator channels: three vertical speeds/heights, road speed and progress.

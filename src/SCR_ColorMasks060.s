@@ -1,3 +1,8 @@
+; Select bitplane masks and word drawing routines for each color.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Select bitplane masks and the word drawing routine for a color.
         machine 68060
 color_masks_entry060:

@@ -1,3 +1,8 @@
+; Interpolate projection angles for rendering.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Render-only angle calculation; physics retains the original $64d66.
 ; D0/D3 signed input components; D0.w output angle, D7.w exact ratio for
 ; the following distance calculation. D4/D5 retain original input signs.

@@ -1,3 +1,8 @@
+; Calculate rendering angles with Fast RAM lookup tables.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Build and use exact angle lookup tables for coefficient calculation.
 ; The last call at $61420 remains original and restores A0/D6/D7 side outputs.
 ; D4 is dead across these seven call sites and is overwritten by coefficient products.

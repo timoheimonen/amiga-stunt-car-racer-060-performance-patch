@@ -1,3 +1,8 @@
+; Display and handle the game Settings menu.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Main menu and Settings share the original input/release loop.
 ; Context: 0 = other menus, 1 = main menu, 2 = settings.
 ; Number keys highlight; Space/Return/fire confirms once per release.

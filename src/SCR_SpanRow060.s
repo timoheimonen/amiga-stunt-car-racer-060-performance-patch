@@ -1,3 +1,8 @@
+; Draw polygon rows with masked edges and optimized interior spans.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Draw polygon rows with edge masks and a long-span interior path.
 ; Fixed original entry $66740 and continuation $667b0.
         ifnd WORD_EDGE060

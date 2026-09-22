@@ -1,3 +1,8 @@
+; Draw a pixel using the selected color and bitplane masks.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Draw a pixel using the selected color routine and original bit index.
         machine 68060
 pixel060:

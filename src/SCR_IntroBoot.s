@@ -1,3 +1,8 @@
+; Load, run and release the boot intro before starting the game.
+; Copyright (c) 2026 Timo Heimonen
+; SPDX-License-Identifier: MIT
+; Licensed under the MIT License; see LICENSE.
+
 ; Appended after the unchanged render060 boot extension ($286).
 ; Original boot entered Forbid: balance it only while Intuition runs.
 run_intro:
