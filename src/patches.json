@@ -16,7 +16,7 @@
   "output": {
     "name": "StuntCarRacer-Performance-v1.3.0.adf",
     "size": 901120,
-    "sha256": "aa19290574252dc42ba1cc94e5c382d9d572a771331bdb77601842c082a82722"
+    "sha256": "073945edacbae40eb3f1d1479c950a28201267956b70c55ff93844f859bda5a9"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "041c4528304e2905a50150acdb0f910fcdbab6086993a1154a78e35704bb923f",
+      "sha256": "9f78fdd44820f93adcee7ee559051b6d7a06fad56abebcc0af6bb4dabfaa0270",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -37,9 +37,9 @@
       "adf_offset": "0xb720",
       "runtime_base": "0x181000",
       "allocation_size": 8192,
-      "size": 6528,
-      "sha256": "200aef229ae49838e93ef44984daa9e1887af081bd264b79315bd9f992d1052d",
-      "expected_sha256": "5ab2d48237121c435c27af371abb725d22fd60405bae7eff5388fc4c5dbe54e3",
+      "size": 6632,
+      "sha256": "9f35212e25c5ab54160936df588fde85f0f2bfc13d607e34fd56e7c0bcdd8156",
+      "expected_sha256": "49f846b0ca03a8081979600ec133033ef933e0e87137f773f2bb45fcc168651e",
       "includes": [
         "SCR_Player20ms.s",
         "SCR_Opponent20ms.s",
@@ -104,7 +104,7 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "b8a19982",
+      "replacement_hex": "b86d9982",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -322,30 +322,30 @@
     "render_angle_precise_end": "0x1826b8",
     "render_distance_precise": "0x1826b8",
     "render_distance_precise_end": "0x18271a",
-    "effects_frame": "0x18271a",
-    "effects_sparks": "0x18274e",
-    "effects_selected": "0x18276c",
-    "effects_tick": "0x18279e",
-    "effects_tick_sparks": "0x1827c0",
-    "effects_tick_done": "0x1827c6",
-    "effects_return": "0x1827cc",
-    "effects_hide": "0x1827d2",
-    "effects_clear": "0x1827da",
-    "effects_original": "0x1827e8",
-    "effects_original_sparks": "0x182804",
-    "effects_capture": "0x18280c",
-    "effects_capture_draw": "0x18282e",
-    "effects_interpolate": "0x182834",
-    "effects_lerp": "0x18284a",
-    "effects_draw": "0x182870",
-    "effects_state_start": "0x18287c",
-    "effects_mode": "0x18287c",
-    "effects_last": "0x18287d",
-    "effects_record": "0x18287e",
-    "effects_anchor": "0x182880",
-    "effects_display": "0x182900",
-    "effects_state_end": "0x182980",
-    "runtime_end": "0x182980",
+    "effects_frame": "0x182780",
+    "effects_sparks": "0x1827b4",
+    "effects_selected": "0x1827d2",
+    "effects_tick": "0x182804",
+    "effects_tick_sparks": "0x182826",
+    "effects_tick_done": "0x18282c",
+    "effects_return": "0x182832",
+    "effects_hide": "0x182838",
+    "effects_clear": "0x182840",
+    "effects_original": "0x18284e",
+    "effects_original_sparks": "0x18286a",
+    "effects_capture": "0x182872",
+    "effects_capture_draw": "0x182894",
+    "effects_interpolate": "0x18289a",
+    "effects_lerp": "0x1828b0",
+    "effects_draw": "0x1828d6",
+    "effects_state_start": "0x1828e2",
+    "effects_mode": "0x1828e5",
+    "effects_last": "0x1828e6",
+    "effects_record": "0x1828e7",
+    "effects_anchor": "0x1828e8",
+    "effects_display": "0x182968",
+    "effects_state_end": "0x1829e8",
+    "runtime_end": "0x1829e8",
     "word_dispatch_local060": "0x663b0",
     "crane_controller20": "0x5b4a8",
     "WORD_EDGE060": "0x663b0",
@@ -358,7 +358,11 @@
     "yaw_fraction20": "0x1819f2",
     "yaw_correction20": "0x611ce",
     "yaw_damping20": "0x611f2",
-    "impact_cooldown20": "0x5dfe0"
+    "impact_cooldown20": "0x5dfe0",
+    "effects_frame_begin": "0x18271a",
+    "effects_clock": "0x182752",
+    "effects_due": "0x1828e4",
+    "effects_elapsed": "0x1828e2"
   },
   "patches": [
     {
@@ -432,14 +436,14 @@
       "dispatch_address": "0x1813ae"
     },
     {
-      "id": "frame_begin_5d47e",
-      "target": "frame_begin",
+      "id": "effects_frame_begin_5d47e",
+      "target": "effects_frame_begin",
       "adf_offset": "0x5c97e",
       "game_file_offset": "0x4ed7e",
       "runtime_address": "0x5d47e",
       "expected_hex": "53390001bbac",
-      "replacement_hex": "4eb9001813e4",
-      "dispatch_address": "0x1813e4"
+      "replacement_hex": "4eb90018271a",
+      "dispatch_address": "0x18271a"
     },
     {
       "id": "event_clock_5db34",
@@ -1377,8 +1381,8 @@
       "game_file_offset": "0x569fc",
       "runtime_address": "0x650fc",
       "expected_hex": "4eb900060cf8",
-      "replacement_hex": "4eb90018271a",
-      "dispatch_address": "0x18271a"
+      "replacement_hex": "4eb900182780",
+      "dispatch_address": "0x182780"
     },
     {
       "id": "effects_capture_60dd2",
@@ -1387,8 +1391,8 @@
       "game_file_offset": "0x526d2",
       "runtime_address": "0x60dd2",
       "expected_hex": "4eb900060e88",
-      "replacement_hex": "4eb90018280c",
-      "dispatch_address": "0x18280c"
+      "replacement_hex": "4eb900182872",
+      "dispatch_address": "0x182872"
     },
     {
       "id": "effects_capture_60e7a",
@@ -1397,8 +1401,8 @@
       "game_file_offset": "0x5277a",
       "runtime_address": "0x60e7a",
       "expected_hex": "4eb900060e88",
-      "replacement_hex": "4eb90018280c",
-      "dispatch_address": "0x18280c"
+      "replacement_hex": "4eb900182872",
+      "dispatch_address": "0x182872"
     }
   ],
   "assembly_patches": [
@@ -1546,7 +1550,7 @@
       "new": "3a35100038341000302b0022c1c5362b0020c7c4d0830680000100004840e240064000803b801000302b0022c1c4362b0020c7c590830680000100004840e2400640004039801000"
     }
   ],
-  "performance_sha256": "c0256738e005aa1fb9f112c2160d725642b30811080b3cc6e871edadbf61fc34",
+  "performance_sha256": "7aee2743c6942241af1b119578f755916eb94e6b5cbf45396e9cf794588704b2",
   "editor": {
     "module_sha256": "9c89ce4d464a63d14ea248c77f9035ccfd4d08d318305a02b18ebee8ccb923bf",
     "payload_sha256": "8e1371ca86f7331a7d63490637eff9971eed8e695733761d9a2779843f634583",
@@ -1764,8 +1768,8 @@
       },
       {
         "adf_offset": 4,
-        "expected_hex": "b8a19982",
-        "replacement_hex": "823cdc32",
+        "expected_hex": "b86d9982",
+        "replacement_hex": "8208dc32",
         "reason": "Amiga boot checksum"
       }
     ],

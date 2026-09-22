@@ -1,10 +1,44 @@
-; Preserve smoke and particle timing with 50 Hz drawing interpolation.
+; Scale smoke and particle timing with Game Speed and interpolate drawing.
 ; Copyright (c) 2026 Timo Heimonen
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Original 120 ms particle simulation, with render-only 50 Hz interpolation.
-; Entry replaces the two world effect calls. No change to 0x1bbac's clock.
+; Original 120 ms effect steps, advanced by the selected 20..30 ms game step.
+; Render interpolation remains at 50 Hz; unrelated legacy clocks are unchanged.
+effects_frame_begin:
+        move.l d0,-(sp)
+        tst.b active
+        bne.s .running
+        move.w #120,d0
+        sub.w speed_k(pc),d0
+        move.w d0,effects_elapsed
+        clr.b effects_mode
+.running:
+        bsr.w frame_begin
+        move.w sr,-(sp)
+        ; Undo only the smoke animation decrement performed by frame_begin.
+        tst.b legacy_due
+        beq.s .advance
+        addq.b #1,$1bbac.l
+.advance:
+        bsr.s effects_clock
+        move.w (sp)+,ccr
+        movem.l (sp)+,d0
+        rts
+
+effects_clock:
+        clr.b effects_due
+        move.w effects_elapsed(pc),d0
+        add.w speed_k(pc),d0
+        cmpi.w #120,d0
+        bcs.s .store
+        subi.w #120,d0
+        move.b #1,effects_due
+        subq.b #1,$1bbac.l
+.store:
+        move.w d0,effects_elapsed
+        rts
+
 effects_frame:
         movem.l d6-d7/a6,-(sp)
         clr.b effects_record
@@ -29,7 +63,7 @@ effects_sparks:
         tst.b $1bd5c.l
         ble.w effects_hide
 effects_selected:
-        tst.b legacy_due
+        tst.b effects_due
         bne.s effects_tick
         tst.b $1bb7e.l
         beq.w effects_clear
@@ -96,14 +130,14 @@ effects_interpolate:
         movea.l #$1c380,a1
         lea effects_display(pc),a2
         moveq #0,d6
-        move.b phase(pc),d6
+        move.w effects_elapsed(pc),d6
         moveq #63,d1
 effects_lerp:
         move.w (a0)+,d0
         move.w (a1)+,d2
         sub.w d0,d2
         muls.w d6,d2
-        divs.w #6,d2
+        divs.w #120,d2
         add.w d2,d0
         move.w d0,(a2)+
         dbra d1,effects_lerp
@@ -119,6 +153,8 @@ effects_draw:
         rts
 
 effects_state_start:
+effects_elapsed: dc.w 0
+effects_due: dc.b 0
 effects_mode: dc.b 0
 effects_last: dc.b 0
 effects_record: dc.b 0

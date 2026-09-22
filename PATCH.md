@@ -74,7 +74,7 @@ physics angle and distance routines keep their existing arithmetic.
 The patcher modifies the game's raw-loader ADF at fixed offsets.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 6528-byte runtime is stored at ADF offset `0xb720` and copied into
+intro. The 6632-byte runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial load at ADF offset `0x2c00` to a
 `0xb000`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
@@ -127,8 +127,8 @@ performance layer; its expected bytes refer to that intermediate disk. Words and
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `041c4528304e2905a50150acdb0f910fcdbab6086993a1154a78e35704bb923f` |
-| Runtime | 6528 | `200aef229ae49838e93ef44984daa9e1887af081bd264b79315bd9f992d1052d` |
+| Boot | 320 | `9f78fdd44820f93adcee7ee559051b6d7a06fad56abebcc0af6bb4dabfaa0270` |
+| Runtime | 6632 | `9f35212e25c5ab54160936df588fde85f0f2bfc13d607e34fd56e7c0bcdd8156` |
 | Intro | 5480 | `843c61b14e467a8922a611578f8ba06a159d40612dfba72c9a3c0968976f4bf8` |
 
 Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
