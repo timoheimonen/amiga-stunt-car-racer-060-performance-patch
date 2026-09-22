@@ -28,9 +28,9 @@ replace an existing output. The original disk is never overwritten.
 
 Boot the patched disk in DF0 using the [FS-UAE settings](FS-UAE.md).
 
-## Track Editor
+## Track Editor (Beta)
 
-Choose **Track Editor** on the title menu. Build in the game's 3D view,
+Build in the game's 3D view,
 with a 16 × 16 ground grid, up to 64 internal pieces and 33 section choices.
 **V** toggles an overview of the whole track and building area.
 
@@ -61,7 +61,7 @@ and import them into the new game disk through the editor.
 
 ## Settings
 
-Choose **5. Settings** in the main menu.
+**Settings** in the main menu.
 
 - **Game Speed:** 100–150%, in 5% steps.
 - **AI Difficulty:** 100–150%, in 5% steps.
