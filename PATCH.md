@@ -1,4 +1,4 @@
-# Patch details — 1.3.0
+# Patch details — 1.3.1
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
@@ -87,18 +87,13 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 72,858 bytes of code and data,
+The editor is a separate relocatable module: 72,792 bytes of code and data,
 loaded from ADF offset `0x76000` in a 73,216-byte transfer. Its bootstrap is
 436 bytes at ADF offset `0xd800`. It reserves 384 KiB of Fast RAM and 81,408
 bytes of persistent Chip RAM for loading, disk I/O and display support.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
 DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
-
-The loader installs the editor hooks only after checking their expected bytes.
-CIA initialization runs before game interrupts are enabled, preventing an early
-key event from interrupting initialization and leaving its acknowledgement stuck.
-The normal keyboard acknowledgement routine remains in use.
 
 
 ## Boot intro

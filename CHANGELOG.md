@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 — 2026-09-22
+
+- Restore the original CIA startup initialization.
+
 ## 1.3.0 — 2026-09-21
 
 - Add in-game Track Editor: 33 section choices, a 16 × 16 building

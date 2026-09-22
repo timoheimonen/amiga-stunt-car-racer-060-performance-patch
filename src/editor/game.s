@@ -41,17 +41,6 @@ custom_install_hooks:
 .next:  dbra d7,.loop
         rts
 
-; Initialize CIA before enabling interrupts: do not reset an active keyboard
-; acknowledge timer later while leaving its busy flag set.
-custom_startup_cia:
-        move.l #$f000,$7c
-        move.l a0,-(sp)
-        jsr $ee8a.l
-        move.l (sp)+,a0
-        jmp $edc0.l
-custom_startup_cia_done:
-        rts
-
 custom_select:
         tst.b $5eb76
         bne .legacy
