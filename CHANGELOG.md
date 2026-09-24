@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.1 — 2026-09-24
+
+- Computer Link: if the other machine stops responding while a race is being
+  set up, the game returns to the title screen after about 5 seconds instead
+  of about 5 minutes.
+- Computer Link: when both cars finish, the winner is also decided correctly
+  after 10 min 55 s of racing. Finish times from 655.35 s upwards count as
+  equal, and a tie goes to the Host.
+
 ## 1.4.0 — 2026-09-24
 
 - Add a two-player Computer Link: 50 Hz local physics, 20 Hz position

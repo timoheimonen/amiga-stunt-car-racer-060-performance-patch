@@ -101,11 +101,11 @@ scr20_legacy_enqueue:
         move.w (sp)+,sr
         rts
 
-; Main-loop-only local drain. The game's $57134 is six 10 ms CIA-A timer B
-; waits ($5714c, 7070 E-clock ticks each), about 60 ms per call;
+; Main-loop-only local drain. The game's $5716c is one CIA-A timer B wait
+; of 707 E-clock ticks, about 1 ms ($57134 is six 10 ms waits, 60 ms);
 ; four consecutive idle waits cover the UART's final stop bit even though
 ; TSRE rises at its start. A busy/rejected queue resets the idle count.
-; The 5000-wait limit assumes that the game's CIA-A wait itself completes.
+; The 5000-wait limit (about 5 s) assumes that the CIA-A wait completes.
 ; This says nothing about the peer: its last legacy byte may arrive later.
 ; A5=base, D0=boolean; preserve D1-D7/A0-A6 and caller IPL.
 scr20_legacy_drain:
@@ -142,7 +142,7 @@ scr20_legacy_drain:
         beq.s .drained
         bra.s .wait
 .busy:  moveq #0,d1
-.wait:  jsr $57134.l
+.wait:  jsr $5716c.l
         dbra d2,.poll
         moveq #0,d0
         bra.s .return
@@ -247,7 +247,7 @@ scr20_peer_handoff:
         moveq #$3c,d6
         bra.w .phase
 .wait:
-        jsr $57134.l
+        jsr $5716c.l                 ; about 1 ms: resend 100 ms, limit 5 s
         subq.w #1,d3
         dbra d7,.poll
         bra.s .fail

@@ -1,4 +1,4 @@
-# Patch details — 1.4.0
+# Patch details — 1.4.1
 
 This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
 and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.

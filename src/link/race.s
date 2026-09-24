@@ -151,7 +151,8 @@ scr20_race_nonce:
         movem.l (sp)+,d1-d7/a0
         rts
 
-; D6=byte to send. One call is bounded to 5000 CIA-A waits.
+; D6=byte to send. One call is bounded to 5000 CIA-A waits of about 1 ms
+; ($5716c, 707 E-clock ticks), about 5 s.
 scr20_race_send:
         move.l d7,-(sp)
         move.w #4999,d7
@@ -160,7 +161,7 @@ scr20_race_send:
         bsr.w scr20_handoff_send
         tst.l d0
         bne.s .return
-        jsr $57134.l
+        jsr $5716c.l
         dbra d7,.poll
 .return:move.l (sp)+,d7
         rts
@@ -176,7 +177,7 @@ scr20_race_recv:
         moveq #1,d0
         move.l (sp)+,d7
         rts
-.wait: jsr $57134.l
+.wait: jsr $5716c.l
         dbra d7,.poll
         moveq #0,d0
         move.l (sp)+,d7
