@@ -304,4 +304,5 @@ display_done:
         include "src/SCR_ProjectAngle.s"
         include "src/SCR_ProjectDistance.s"
         include "src/SCR_Effects50Hz.s"
+        include "src/SCR_LinkContact.s"
 runtime_end:
