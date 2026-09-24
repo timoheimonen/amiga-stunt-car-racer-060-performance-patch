@@ -87,7 +87,6 @@ championship starts in Division 4.
 - **AI Difficulty:** 100–150%, in 5% steps.
 - **Infinite Boost:** No/Yes.
 - **Disable Damage:** No/Yes,
-- **Return:** returns to the main menu.
 
 
 [Changelog](CHANGELOG.md) · [Checksums](FS-UAE.md#checksums) ·
