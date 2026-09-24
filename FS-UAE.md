@@ -1,4 +1,4 @@
-# FS-UAE setup for version 1.4.0
+# FS-UAE setup for version 1.4.1
 
 **Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
 
@@ -30,7 +30,7 @@ ntsc_mode = 0
 
 kickstart_file = /path/to/Kickstart-A1200.rom
 floppy_drive_count = 1
-floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.0.adf
+floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.1.adf
 ```
 
 The patcher checks the disk, not the emulator configuration. The runtime
@@ -53,7 +53,7 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.0, 50 FPS Practice, computer-opponent and linked races) | `13a486198304aed650cd288c379470c77c5dae6e5f368a9b5c45d564c5369e4d` |
+| Patched ADF (1.4.1, 50 FPS Practice, computer-opponent and linked races) | `4ef1ca7d4ebb2bd1f6a27f91998cea01f16b30993ee38b4c65b7c2024dbf8abe` |
 | Blizzard 1260 ROM | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 

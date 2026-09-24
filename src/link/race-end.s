@@ -345,7 +345,8 @@ scr20_end_barrier:
 
 ; Host only: when both cars finished, the earlier finish time wins
 ; ($1bbb4 bit 7 = the opponent won). A tie goes to the Host. The Host's
-; result block ($5867a) carries the decision to the Join.
+; result block ($5867a) carries the decision to the Join. The local time
+; saturates like the sent End field: 655.35 s or more is $ffff.
 scr20_race_settle:
         cmpi.b #$80,$57c3c
         bne.s .return
@@ -355,7 +356,9 @@ scr20_race_settle:
         bpl.s .return
         move.l RACE_FINISH_AT(a5),d0
         divu.w #10,d0
-        move.b $1bbb4,d1
+        bvc.s .time
+        move.w #$ffff,d0
+.time:  move.b $1bbb4,d1
         move.b d1,d2
         bclr #7,d1
         cmp.w RACE_PEER_DATA+2(a5),d0
