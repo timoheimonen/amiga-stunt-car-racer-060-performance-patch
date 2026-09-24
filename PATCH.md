@@ -32,9 +32,10 @@ the editor module's interrupt call.
 
 ## Smoke and particles
 
-Smoke and small particles move and renew on the original 120 ms step, with
-interpolated positions for 50 Hz drawing. Smoke animation keeps its original
-frame clock. This prevents effects from advancing six times too quickly.
+Smoke and small particles move and renew on the original 120 ms simulation
+step, with interpolated positions for drawing. Their clock, including smoke
+animation, advances by the selected 20–30 ms Game Speed step. At 50 physics
+steps per second, effects update every 120 ms at 100% and every 80 ms at 150%.
 
 ## Settings
 
@@ -64,7 +65,7 @@ features. Two player-name hooks add Fire continuation and the name-screen text.
 ## Computer Link
 
 The link module is a separate relocatable 68000 module, 16,384 bytes on disk
-(8,408 bytes of code), loaded with the editor into its own 32 KiB Fast RAM
+(8,414 bytes of code), loaded with the editor into its own 32 KiB Fast RAM
 block. It checks the game code it hooks before installing anything.
 
 - The Computer Link menu offers an explicit Host/Join choice and a bounded
@@ -72,9 +73,13 @@ block. It checks the game code it hooks before installing anything.
 - Each machine sends a 32-byte frame with a CRC every 50 ms: its car state,
   a service time stamp and numbered reliable events (lap, race end, pause,
   resume, wreck, leave). Events are retransmitted until acknowledged.
-- The remote car is presented 70 ms behind the newest sample, interpolated
-  between two samples, including across track-piece boundaries. A receive gap
-  longer than two seconds restarts the presentation timing.
+- The remote car is interpolated between received samples using a 70 ms
+  playback delay, including across track-piece boundaries. A gap of at least
+  two seconds between samples decoded for presentation, such as during a long
+  pause, resets the presentation timing and history.
+- If no valid frame arrives for 2000 ms, or a reliable event remains
+  unacknowledged for that long, the link closes and the race returns to the
+  title screen. The serial connection remains serviced during a pause.
 - At race start both machines exchange a settings contract and a session
   generation, then open the race together. At the end both wait, up to 30
   seconds, for the other's result; the Host settles the finishing order from
