@@ -61,6 +61,17 @@ sum_loop:
         bne restore_io
         cmpi.l #MODULE_BYTES,24(a4)
         bne restore_io
+        ifd SERIAL_BYTES
+        lea SERIAL_OFFSET(a4),a0
+        cmpi.l #$53433230,4(a0)  ; SC20, independent relocatable module
+        bne restore_io
+        cmpi.l #$00010020,8(a0)
+        bne restore_io
+        cmpi.l #SERIAL_FAST_BYTES,20(a0)
+        bne restore_io
+        cmpi.l #SERIAL_BYTES,24(a0)
+        bne restore_io
+        endif
         moveq #5,d7             ; incompatible continuation: publish nothing
         cmpi.w #$207c,$124(a3)
         bne restore_io
@@ -77,11 +88,39 @@ fast_allocated:
         move.l d0,d6
         move.l d0,a0
         move.l a4,a1
+        ifd SERIAL_BYTES
+        move.l #SERIAL_OFFSET/4,d1
+        else
         move.l #READ_BYTES/4,d1
+        endif
 copy_loop:
         move.l (a1)+,(a0)+
         subq.l #1,d1
         bne.s copy_loop
+        ifd SERIAL_BYTES
+        moveq #7,d7             ; serial Fast failure: unwind editor as well
+serial_allocate:
+        move.l #SERIAL_FAST_BYTES,d0
+        move.l #$10004,d1
+        jsr -198(a6)
+serial_allocated:
+        tst.l d0
+        beq serial_failed
+        move.l d0,a0
+        move.l d0,d5
+        lea SERIAL_OFFSET(a4),a1
+        move.l #SERIAL_BYTES/4,d1
+serial_copy:
+        move.l (a1)+,(a0)+
+        subq.l #1,d1
+        bne.s serial_copy
+        move.l d5,a0
+        move.l #1,12(a0)        ; loaded, UART/CIA still owned by old code
+        move.l d5,16(a0)
+        move.l d6,28(a0)        ; owning editor allocation
+        move.l d6,a0
+        move.l d5,SERIAL_FIELD(a0)
+        endif
         move.l d6,a0
         move.l #1,12(a0)
         move.l d6,16(a0)
@@ -93,6 +132,13 @@ publish:
         move.l d6,$126(a3)
         jsr -636(a6)            ; CacheClearU, before any Fast code executes
         moveq #6,d7
+        ifd SERIAL_BYTES
+        bra.s restore_io
+serial_failed:
+        move.l d6,a1
+        move.l #FAST_BYTES,d0
+        jsr -210(a6)
+        endif
 restore_io:
         move.w #9,28(a2)        ; synchronous motor off, then restore request
         clr.l 36(a2)

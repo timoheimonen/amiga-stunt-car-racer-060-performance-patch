@@ -1,10 +1,8 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.3.1 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
+**Version 1.4.0 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
 not physical Amiga hardware. Stated as emulator only - until confirmation on real 060 hardwares. 
 It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
-
-[Watch the video on YouTube](https://youtu.be/2XVfxuqHn-Q)
 
 ## Requirements
 
@@ -59,6 +57,27 @@ Keep the patched game disk writable to retain tracks and records. Back it up
 before replacing it with a newly patched image; patching the original creates
 a fresh disk and does not transfer saved tracks. Export tracks to DF1 first
 and import them into the new game disk through the editor.
+
+## Computer Link (Beta)
+
+Two machines race each other over their serial ports (null-modem link). Both
+must run this version.
+
+1. Choose **Computer Link** in the main menu on both machines.
+2. Press **H** on one machine (Host) and **J** on the other (Join).
+   **Esc** returns to the menu.
+
+The Host's menu choices, including Settings, apply to both machines. Each
+machine runs its own 50 Hz physics; car positions are exchanged 20 times per
+second and the other car is shown smoothly with a short delay. Cars pass
+through each other. Pause, leaving the race, wrecks, results and points are
+shared. A tie is awarded to the Host. Link races do not change the records on
+either disk.
+
+The link championship runs four seasons through Divisions 4, 3, 2 and 1, the
+last one being the FINAL SEASON. Points accumulate over all four seasons and
+the driver with the most points after Division 1 wins. Each new link
+championship starts in Division 4.
 
 ## Settings
 

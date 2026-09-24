@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-09-24
+
+- Add a two-player Computer Link: 50 Hz local physics, 20 Hz position
+  exchange with a smoothed opponent, cars pass through each other, shared
+  pause, results and points. Choose Host (H) or Join (J).
+- The link championship runs through Divisions 4 to 1 with cumulative points;
+  the winner is decided after the FINAL SEASON in Division 1.
+- Frametime corrections
+- Finish row is marked with a small arrow in the track preview.
+
 ## 1.3.1 — 2026-09-22
 
 - Restore the original CIA startup initialization.

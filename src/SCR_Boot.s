@@ -6,7 +6,7 @@
 ; Reserve memory, install the 50 Hz runtime and allocate optional Fast angle tables.
 ; Original boot $2c AllocMem is redirected to reserve_memory.
 ; Original boot $70 (motor-off DoIO) is redirected to run_intro.
-RUNTIME_WORDS equ 3316
+RUNTIME_WORDS equ 3367
 ANGLES_ALLOC equ $181ca6
         org $200
 reserve_memory:

@@ -59,6 +59,10 @@ main_loaded:
         lea editor_keyboard(pc),a0
         move.l a0,$f060
         move.l #2,module_state-module_start(a5)
+        ifd SERIAL_ENABLED
+        movea.l serial_module_base(pc),a0
+        jsr (a0)               ; guarded dormant install; no hardware takeover
+        endif
         cpusha bc
         bra.s .done
 .failed:
@@ -68,6 +72,9 @@ main_loaded:
         move.w (sp)+,ccr
         movea.l #$e700,a0
         rts
+        ifd SERIAL_ENABLED
+serial_module_base: dc.l 0
+        endif
 
 ; Only the title menu owns the extra row. Preserve original menu result.
 title_menu_select:
@@ -251,6 +258,10 @@ editor_vbl:
         addq.w #1,(a0)
         bra editor_input_vbl
 .game:
+        move.l a0,-(sp)
+        lea auto_vbl_count(pc),a0
+        addq.w #1,(a0)
+        movea.l (sp)+,a0
         jmp $616dc
 old_label: dc.b 'Computer Link'
         even
@@ -287,6 +298,8 @@ saved_copper: dcb.l 8,0
         include "src/editor/practice.s"
 
         include "src/editor/game.s"
+        include "src/editor/preview-arrow.s"
+        include "src/editor/auto-frame.s"
 
 ; Port 2 JOY1DAT quadrature decoding, matching original read.joystick.
 ; D0 bits: up/down/left/right = 0/1/2/3. Keyboard arrows remain aliases.
