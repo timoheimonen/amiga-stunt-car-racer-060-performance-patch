@@ -1,7 +1,9 @@
-# Patch details — 1.4.1
+# Patch details — 1.4.2
 
-This release targets FS-UAE with PAL timing, a Blizzard 1260 / 68060, 2 MiB Chip RAM
-and 32 MiB accelerator RAM. See the [FS-UAE profile](FS-UAE.md) for configuration.
+This release targets FS-UAE with PAL timing, a 68040 or faster CPU, 2 MiB Chip RAM
+and at least 1 MiB Fast RAM; a 68030 works with reservations. The example profile
+uses a 68040 with 1 MiB Fast RAM. See the
+[FS-UAE profile](FS-UAE.md) for configuration.
 
 ## Physics and rendering
 
@@ -120,22 +122,31 @@ a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial l
 the CPU caches before executing copied code.
 
 The runtime and optional 256 KiB Fast angle tables remain allocated for the
-session. Failure of a required game Chip allocation halts boot with a red
-screen. Restart with the documented memory configuration.
+session. The Track Editor and Computer Link modules need 384 KiB and 32 KiB of
+Fast RAM; without them the game runs without the editor and the link. All
+Fast RAM is allocated at boot, 672 KiB in total. Failure of a required game
+Chip allocation halts boot with a red screen. Restart with the documented
+memory configuration.
 
 The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 73,622 bytes of code and data,
+The editor is a separate relocatable module: 73,692 bytes of code and data,
 loaded from ADF offset `0x76000` in a 90,112-byte transfer that also carries
-the link module. Its bootstrap is 588 bytes at ADF offset `0xd800`. It reserves
+the link module. Its bootstrap is 596 bytes at ADF offset `0xd800`. It reserves
 384 KiB of Fast RAM and 98,304 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
 arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
 DF1 track disk supports import/export. See [editor controls](README.md#track-editor-beta).
+
+The bootstrap stores Exec `AttnFlags` in the module. After installing its game
+hooks and around each editor disk transfer, the module pushes and invalidates
+the CPU caches for that processor: `CPUSHA BC` on a 68040 or 68060, a CACR
+instruction-cache clear on a 68020 and an instruction- and data-cache clear on
+a 68030.
 
 
 ## Boot intro

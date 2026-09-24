@@ -1,20 +1,23 @@
-# FS-UAE setup for version 1.4.1
+# FS-UAE setup for version 1.4.2
 
 **Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
 
-The example profile uses FS-UAE 3.2.35 with PAL A1200, Blizzard 1260 /
-MC68060, an A1200 Kickstart ROM, a Blizzard 1260 ROM, 2 MiB Chip RAM
-and 32 MiB accelerator RAM.
+The game needs PAL, a 68040 or faster, 2 MiB Chip RAM and at least 1 MiB
+Fast RAM. A 68030 works with reservations; adjust
+Game Speed in Settings if the frame rate drops.
+
+The example profile uses FS-UAE 3.2.35 with a PAL A1200, MC68040, an A1200
+Kickstart ROM, 2 MiB Chip RAM and 1 MiB Fast RAM.
 
 The intended profile uses `cpu_speed=real` with JIT disabled and CPU,
 memory and blitter cycle-exact emulation disabled.
 
-Include this in `.fs-uae` profile and replace the three file paths:
+Include this in `.fs-uae` profile and replace the two file paths:
 
 ```ini
 [fs-uae]
 amiga_model = A1200
-cpu = 68060
+cpu = 68040
 fpu = 0
 mmu = 0
 accuracy = 1
@@ -22,20 +25,28 @@ jit_compiler = 0
 uae_cpu_speed = real
 chip_memory = 2048
 slow_memory = 0
-fast_memory = 0
-accelerator = blizzard-1260
-accelerator_memory = 32768
-accelerator_rom = /path/to/Blizzard_1260.rom
+fast_memory = 1024
 ntsc_mode = 0
 
 kickstart_file = /path/to/Kickstart-A1200.rom
 floppy_drive_count = 1
-floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.1.adf
+floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.2.adf
+```
+
+For a Blizzard 1260 / MC68060 with 32 MiB accelerator RAM, set `cpu = 68060`
+and `fast_memory = 0`, and add:
+
+```ini
+accelerator = blizzard-1260
+accelerator_memory = 32768
+accelerator_rom = /path/to/Blizzard_1260.rom
 ```
 
 The patcher checks the disk, not the emulator configuration. The runtime
 needs its fixed 8 KiB Chip allocation at `0x181000`. Allocation failure
-halts boot with a red screen. See [memory details](PATCH.md#loader-and-memory).
+halts boot with a red screen. The Track Editor and Computer Link need
+416 KiB of Fast RAM; the angle tables use another 256 KiB when available.
+See [memory details](PATCH.md#loader-and-memory).
 
 ## Editor storage
 
@@ -53,8 +64,8 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.1, 50 FPS Practice, computer-opponent and linked races) | `4ef1ca7d4ebb2bd1f6a27f91998cea01f16b30993ee38b4c65b7c2024dbf8abe` |
-| Blizzard 1260 ROM | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
+| Patched ADF (1.4.2, 50 FPS Practice, computer-opponent and linked races) | `1174bbff4bf0cfcdee13198fd26dd558ee5a52bed69bb8baf764c2a9db87cbf0` |
+| Blizzard 1260 ROM (optional 68060 profile) | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 
 The patcher verifies the whole original disk, displaced instructions,
