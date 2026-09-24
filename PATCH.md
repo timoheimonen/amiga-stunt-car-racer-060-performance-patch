@@ -135,7 +135,7 @@ I/O and display support. The track preview marks the finish row with a small
 arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
-DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
+DF1 track disk supports import/export. See [editor controls](README.md#track-editor-beta).
 
 
 ## Boot intro
