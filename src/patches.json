@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.4.2",
+  "release_version": "1.4.3",
   "status": "50 Hz physics / 50 FPS rendering in Practice, computer-opponent and linked two-player races",
   "target": "Emulator only: FS-UAE 3.2.35 / PAL / MC68040 or faster (68030 with reservations) / 2 MiB Chip / at least 1 MiB Fast RAM / profile in FS-UAE.md",
   "source": {
@@ -14,9 +14,9 @@
     }
   },
   "output": {
-    "name": "StuntCarRacer-Performance-v1.4.2.adf",
+    "name": "StuntCarRacer-Performance-v1.4.3.adf",
     "size": 901120,
-    "sha256": "1174bbff4bf0cfcdee13198fd26dd558ee5a52bed69bb8baf764c2a9db87cbf0"
+    "sha256": "c68e3c9df067c380924964649eb2b1a25114900b5c7d1973cff42b9248eca53e"
   },
   "payloads": [
     {
@@ -1790,6 +1790,12 @@
         "reason": "Restore lowercase track preview controls hint"
       },
       {
+        "adf_offset": 14,
+        "expected_hex": "4ffa03f0",
+        "replacement_hex": "4e714e71",
+        "reason": "Retain the OS boot-task stack during OS calls"
+      },
+      {
         "adf_offset": 112,
         "expected_hex": "61000214",
         "replacement_hex": "610002ce",
@@ -1799,7 +1805,7 @@
         "adf_offset": 832,
         "expected_hex": "0000000000000000000000000000000000000000",
         "replacement_hex": "6100ff442f08204bd1fc0000ac004e90205f4e75",
-        "reason": "Boot trampoline; existing stack at $400"
+        "reason": "Boot trampoline using the OS boot-task stack"
       },
       {
         "adf_offset": 536,
@@ -1840,7 +1846,7 @@
       {
         "adf_offset": 4,
         "expected_hex": "b83a9982",
-        "replacement_hex": "81d5dc32",
+        "replacement_hex": "3754ddbb",
         "reason": "Amiga boot checksum"
       }
     ],

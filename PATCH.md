@@ -1,4 +1,4 @@
-# Patch details — 1.4.2
+# Patch details — 1.4.3
 
 This release targets FS-UAE with PAL timing, a 68040 or faster CPU, 2 MiB Chip RAM
 and at least 1 MiB Fast RAM; a 68030 works with reservations. The example profile
@@ -114,6 +114,11 @@ physics angle and distance routines keep their existing arithmetic.
 ## Loader and memory
 
 The patcher modifies the game's raw-loader ADF at fixed offsets.
+
+Boot retains the operating system's boot-task stack for OS calls, avoiding
+the small stack area inside the bootblock. The intro uses its own stack
+and restores the boot-task stack when it returns; the game's later stack
+switches are unchanged.
 
 A 320-byte boot extension at `0x200` installs the game runtime and loads the
 intro. The 6734-byte runtime is stored at ADF offset `0xb720` and copied into

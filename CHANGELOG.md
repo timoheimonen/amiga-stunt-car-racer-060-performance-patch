@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.3 — 2026-09-25
+
+- Fix boot failures on PiStorm / Emu68 by retaining the operating system's
+  boot-task stack during startup.
+
 ## 1.4.2 — 2026-09-24
 
 - Track Editor module: cache flushing now matches the detected CPU. Earlier
