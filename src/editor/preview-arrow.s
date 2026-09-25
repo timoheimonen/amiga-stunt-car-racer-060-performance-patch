@@ -7,24 +7,96 @@
 ; black outline above the middle of the finish row, drawn over the preview.
 ;
 ; $604b4 draws the preview; its JSR $602e4 at $60532 walks the piece grid.
-; $602e4 -> $60324 transforms each visible piece with JSR $6521c at $603d6
-; (only caller path of $60324) and then fills its polygons at once. After
-; $6521c the piece's projected points are in $1bfb0 (x) and $1c0f0 (y),
-; indexed by byte offset D1 (left/right road edge pairs per row), with
-; -$8000 in the height table $1be70 for a skipped point. $657b4 marks the
-; row at byte offset $1bb98*2 of piece $1ca1c as the finish row.
+; $602e4 calls $60324 for every grid cell; $60324 transforms the cell's
+; piece with $6521c and fills its polygons at once. Once $60324 returns,
+; the piece's projected points are in $1bfb0 (x) and $1c0f0 (y), indexed
+; by byte offset (left/right road edge pairs per row), with -$8000 in the
+; height table $1be70 for a skipped point; $1bb85 is the piece. $657b4
+; marks the row at byte offset $1bb98*2 of piece $1ca1c as the finish row.
 ; Preview screen pixel = projected point + (32,15) into the draw surface
 ; ($6a58c), 4 planes of 40 x 200 bytes; the preview frame's inner picture
 ; is x 15..309, y 10..143. Palette 15 is white and 8 black during preview.
+;
+; Only the call at $60532 is hooked. The hook walks the grid itself with
+; the same instructions as $602e4 and reads the finish row after each
+; completed piece, never inside the transform. Its state lives on the
+; stack; nothing is written into code.
 
 PREVIEW_ARROW_LIFT equ 3        ; pixels between the tip and the finish row
 
-; Hook $603d6 (JSR $6521c): remember the finish row's projected centre.
-preview_arrow_piece:
-        jsr $6521c
-        movem.l d0-d2/a0,-(sp)
-        tst.w preview_arrow_armed(pc)
+; Hook $60532 (JSR $602e4): the grid walk of $602e4, then the arrow on top.
+; Registers on return equal those after $602e4. The caller's next
+; instruction sets the flags.
+; Stack frame during the walk: 0(sp) x.w, 2(sp) y.w, 4(sp) valid.w.
+preview_arrow_draw:
+        clr.w -(sp)             ; valid
+        clr.l -(sp)             ; x, y
+        move.b #$10,d2          ; $602e4 from here to .walked
+.row:
+        move.b #8,d1
+        move.b #0,$1bb93
+.right:
+        jsr $60324
+        bsr.w preview_arrow_capture
+        subq.b #1,d1
+        bne.s .right
+        move.b #$f8,d1
+        move.b #$80,$1bb93
+.left:
+        jsr $60324
+        bsr.w preview_arrow_capture
+        addq.b #1,d1
+        bmi.s .left
+        beq.s .left
+        subq.b #1,d2
+        bpl.s .row
+.walked:
+        movem.l d0-d7/a0-a2,-(sp)
+        tst.w 44+4(sp)
         beq.s .done
+        move.w 44(sp),d6
+        addi.w #32-6,d6         ; left column of the 13 pixel wide mask
+        move.w 44+2(sp),d7
+        addi.w #15-PREVIEW_ARROW_LIFT-7,d7 ; top row; tip is row 7
+        movea.l $6a58c,a1
+        lea preview_arrow_mask(pc),a0
+        moveq #7,d5             ; rows 0..7
+.mask_row:
+        move.w (a0)+,d3         ; outline bits (bit 15 = column 0)
+        move.w (a0)+,d4         ; white bits
+        moveq #0,d2             ; column
+.column:
+        moveq #15,d0            ; white
+        btst.l #15,d4
+        bne.s .plot
+        moveq #8,d0             ; black
+        btst.l #15,d3
+        beq.s .next
+.plot:
+        move.w d6,d1
+        add.w d2,d1
+        bsr.w preview_arrow_pixel
+.next:
+        add.w d3,d3
+        add.w d4,d4
+        addq.w #1,d2
+        cmpi.w #13,d2
+        blo.s .column
+        addq.w #1,d7
+        dbra d5,.mask_row
+.done:
+        movem.l (sp)+,d0-d7/a0-a2
+        addq.l #6,sp
+        rts
+
+; After a completed $60324: remember the finish row's projected centre in
+; the caller's frame (x, y, valid at 4, 6 and 8 above the return address).
+; A cell without a piece leaves $1bb85 and the tables of the previous
+; piece, so a repeat capture reads the same centre. All registers and the
+; caller's following flag-setting instruction are unaffected.
+preview_arrow_capture:
+        movem.l d0-d2/a0-a1,-(sp)
+        lea 20+4(sp),a1         ; x, y, valid
         move.b $1bb85,d0
         cmp.b $1ca1c,d0
         bne.s .done
@@ -49,67 +121,15 @@ preview_arrow_piece:
         move.w (a0,d1.w),d0
         add.w (a0,d2.w),d0
         asr.w #1,d0
-        lea preview_arrow_x(pc),a0
-        move.w d0,(a0)
+        move.w d0,(a1)
         lea $1c0f0,a0
         move.w (a0,d1.w),d0
         add.w (a0,d2.w),d0
         asr.w #1,d0
-        lea preview_arrow_y(pc),a0
-        move.w d0,(a0)
-        lea preview_arrow_valid(pc),a0
-        move.w #1,(a0)
+        move.w d0,2(a1)
+        move.w #1,4(a1)
 .done:
-        movem.l (sp)+,d0-d2/a0
-        rts
-
-; Hook $60532 (JSR $602e4): draw the grid, then the arrow on top.
-; The caller's next instruction sets the flags; all registers returned by
-; $602e4 are preserved.
-preview_arrow_draw:
-        move.l a0,-(sp)
-        lea preview_arrow_armed(pc),a0
-        move.w #1,(a0)
-        clr.w preview_arrow_valid-preview_arrow_armed(a0)
-        movea.l (sp)+,a0
-        jsr $602e4
-        movem.l d0-d7/a0-a2,-(sp)
-        lea preview_arrow_armed(pc),a2
-        clr.w (a2)
-        tst.w preview_arrow_valid-preview_arrow_armed(a2)
-        beq.s .done
-        move.w preview_arrow_x-preview_arrow_armed(a2),d6
-        addi.w #32-6,d6         ; left column of the 13 pixel wide mask
-        move.w preview_arrow_y-preview_arrow_armed(a2),d7
-        addi.w #15-PREVIEW_ARROW_LIFT-7,d7 ; top row; tip is row 7
-        movea.l $6a58c,a1
-        lea preview_arrow_mask(pc),a0
-        moveq #7,d5             ; rows 0..7
-.row:
-        move.w (a0)+,d3         ; outline bits (bit 15 = column 0)
-        move.w (a0)+,d4         ; white bits
-        moveq #0,d2             ; column
-.column:
-        moveq #15,d0            ; white
-        btst.l #15,d4
-        bne.s .plot
-        moveq #8,d0             ; black
-        btst.l #15,d3
-        beq.s .next
-.plot:
-        move.w d6,d1
-        add.w d2,d1
-        bsr.s preview_arrow_pixel
-.next:
-        add.w d3,d3
-        add.w d4,d4
-        addq.w #1,d2
-        cmpi.w #13,d2
-        blo.s .column
-        addq.w #1,d7
-        dbra d5,.row
-.done:
-        movem.l (sp)+,d0-d7/a0-a2
+        movem.l (sp)+,d0-d2/a0-a1
         rts
 
 ; D0 colour, D1 x, D7 y, A1 draw surface. Clipped to the preview picture.
@@ -157,7 +177,3 @@ preview_arrow_mask:
         dc.w %0000100010000000,%0000011100000000
         dc.w %0000010100000000,%0000001000000000
         dc.w %0000001000000000,%0000000000000000
-preview_arrow_armed: dc.w 0
-preview_arrow_valid: dc.w 0
-preview_arrow_x: dc.w 0
-preview_arrow_y: dc.w 0
