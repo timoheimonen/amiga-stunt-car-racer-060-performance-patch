@@ -61,8 +61,9 @@ start:
         lea 44(a0),a0
         lea palette(pc),a1
         jsr -882(a6)            ; LoadRGB32, exact 24-bit palette
+        bsr draw_static
         bsr draw_frame
-        bsr present
+        bsr present_full
         move.l ibase-start(a5),a6
         move.l screen-start(a5),a0
         jsr -252(a6)
@@ -244,159 +245,14 @@ prepare_flag_frames:
         clr.w phase-start(a5)
         rts
 
-; Clear and redraw into private PUBLIC RAM. The screen uses its own CHIP plane.
-draw_flag:
-        move.l backbuffer-start(a5),a0
-        move.w #10239,d0
-.clear: clr.l (a0)+
-        dbra d0,.clear
-        ; Fixed five-pixel silver flagpole beside the anchored cloth edge.
-        move.l backbuffer-start(a5),a0
-        adda.w #24*40+4,a0
-        move.w #174,d0
-        moveq #6,d1
-        moveq #64,d2
-        bsr paint_span
-        move.l backbuffer-start(a5),a0
-        adda.w #24*40+4,a0
-        move.w #174,d0
-        moveq #7,d1
-        moveq #32,d2
-        bsr paint_span
-        move.l backbuffer-start(a5),a0
-        adda.w #24*40+4,a0
-        move.w #174,d0
-        moveq #7,d1
-        moveq #16,d2
-        bsr paint_span
-        move.l backbuffer-start(a5),a0
-        adda.w #24*40+4,a0
-        move.w #174,d0
-        moveq #6,d1
-        moveq #8,d2
-        bsr paint_span
-        move.l backbuffer-start(a5),a0
-        adda.w #24*40+4,a0
-        move.w #174,d0
-        moveq #4,d1
-        moveq #4,d2
-        bsr paint_span
-        ; Small rounded finial, drawn from seven procedural row masks.
-        move.l backbuffer-start(a5),a0
-        adda.w #20*40+4,a0
-        lea finial(pc),a1
-        moveq #6,d0
-.finial:
-        move.b (a1)+,d1
-        or.b d1,(a0)
-        or.b d1,10240(a0)
-        or.b d1,20480(a0)
-        adda.w #40,a0
-        dbra d0,.finial
-        moveq #0,d0
-        move.w phase-start(a5),d0
-        and.w #254,d0
-        lsr.w #1,d0
-        mulu #129*12,d0
-        move.l flag_frames-start(a5),a3
-        adda.l d0,a3
-        moveq #0,d7
-.strip:
-        move.w (a3),d6
-        move.w 12(a3),d5
-        subq.w #1,d5
-        cmp.w d6,d5
-        blt .next_strip
-        moveq #0,d4
-        cmp.w #36,d7            ; physical X / width: blue cross from 5/18 to 8/18
-        blo.s .pixel_column
-        cmp.w #57,d7
-        bhs.s .pixel_column
-        moveq #1,d4
-.pixel_column:
-        move.w 2(a3),d0
-        mulu #40,d0
-        move.l backbuffer-start(a5),a0
-        adda.l d0,a0
-        move.w d6,d0
-        lsr.w #3,d0
-        adda.w d0,a0
-        move.w d6,d0
-        and.w #7,d0
-        move.w #$80,d2
-        lsr.w d0,d2
-        move.w 4(a3),d3
-        sub.w 2(a3),d3          ; complete projected height, without dropped remainder
-        tst.w flag_kind-start(a5)
-        bne .checker
-        cmp.w wipe_column-start(a5),d7
-        bhs .checker
-        tst.w d4
-        beq.s .horizontal
-        move.w d3,d0
-        subq.w #1,d0
-        bsr blue_shade
-        bsr paint_span
-        bra .next_column
-.horizontal:
-        move.w 8(a3),d0
-        move.w d0,cell_height-start(a5) ; upper white field: 4/11
-        subq.w #1,d0
-        move.w 6(a3),d1
-        bsr paint_span
-        move.w 10(a3),d0
-        move.w d0,blue_end-start(a5)
-        sub.w cell_height-start(a5),d0
-        subq.w #1,d0
-        bsr blue_shade
-        bsr paint_span
-        move.w d3,d0
-        sub.w blue_end-start(a5),d0
-        subq.w #1,d0
-        move.w 6(a3),d1
-        bsr paint_span
-        bra .next_column
-.checker:
-        clr.w checker_row-start(a5)
-        clr.w checker_prev-start(a5)
-.checker_row:
-        moveq #0,d0
-        move.w checker_row-start(a5),d0
-        addq.w #1,d0
-        mulu d3,d0
-        divu #5,d0
-        move.w d0,d1
-        sub.w checker_prev-start(a5),d0
-        move.w d1,checker_prev-start(a5)
-        subq.w #1,d0
-        move.w d7,d1
-        lsr.w #4,d1
-        move.w checker_row-start(a5),d4
-        eor.w d4,d1
-        and.w #1,d1
-        beq.s .black_cell
-        moveq #7,d1
-        bra.s .paint_cell
-.black_cell:
-        moveq #1,d1
-.paint_cell:
-        bsr paint_span
-        addq.w #1,checker_row-start(a5)
-        cmp.w #5,checker_row-start(a5)
-        blo.s .checker_row
-.next_column:
-        addq.w #1,d6
-        cmp.w d6,d5
-        bge .pixel_column
-.next_strip:
-        adda.w #12,a3
-        addq.w #1,d7
-        cmp.w #128,d7
-        blo .strip
-        rts
+FLAG_ROWS equ 183               ; cloth markers end at row 182
+TEXT_ROW equ 218
+TEXT_ROWS equ 16
 
-draw_frame:
-        bsr draw_flag           ; Render only the current frame from prepared geometry.
+; Planes 0-2 of the flag area are rebuilt in private PUBLIC RAM each frame:
+; XOR edge markers per column, then a downward long-word fill. The plaque,
+; plane 3 and the rows below the cloth stay static after present_full.
+draw_static:
         ; Raised pale-green plaque: 304x40, three-pixel upper/lower bevels.
         move.l backbuffer-start(a5),a0
         adda.w #204*40+1,a0
@@ -423,6 +279,13 @@ draw_frame:
         addq.w #1,d7
         cmp.w #40,d7
         blo.s .plaque_row
+        rts
+
+draw_frame:
+        bsr clear_dynamic
+        bsr mark_flag           ; Render only the current frame from prepared geometry.
+        bsr fill_flag
+        bsr draw_pole
         ; Black glyphs use colour 11; sky remains colour 0. Clip to plaque edges.
         moveq #0,d4
         move.w scroll_x-start(a5),d4
@@ -493,7 +356,285 @@ draw_frame:
         blo.s .edge_row
         dbra d7,.edge_column
         rts
+
+clear_dynamic:
+        moveq #0,d0
+        moveq #0,d1
+        moveq #0,d2
+        moveq #0,d3
+        moveq #0,d4
+        moveq #0,d5
+        moveq #0,d6
+        moveq #0,d7
+        move.l backbuffer-start(a5),a2
+        bsr.s .flag_plane
+        lea 10240(a2),a2
+        bsr.s .flag_plane
+        lea 10240(a2),a2
+        bsr.s .flag_plane
+        ; Scroller rows of planes 0 and 1; the plaque sets no bits there.
+        move.l backbuffer-start(a5),a0
+        adda.w #(TEXT_ROW+TEXT_ROWS)*40,a0
+        bsr.s .text_plane
+        adda.w #10240+TEXT_ROWS*40,a0
+.text_plane:
+        rept TEXT_ROWS*40/32
+        movem.l d0-d7,-(a0)
+        endr
+        rts
+; A2 plane base: clear bytes 4..35 of rows 0..FLAG_ROWS-1, bottom-up.
+.flag_plane:
+        lea (FLAG_ROWS-1)*40+36(a2),a0
+        lea -4(a2),a1
+.flag_row:
+        movem.l d0-d7,-(a0)
+        subq.l #8,a0
+        cmpa.l a1,a0
+        bhi.s .flag_row
+        rts
+
+; Each geometry strip toggles one bit per plane at every colour boundary.
+; Planes 0 and 1 cover white (7) and blue (3); plane 2 covers white only.
+; The checkered flag is black (1) and white (7).
+mark_flag:
+        moveq #0,d0
+        move.w phase-start(a5),d0
+        and.w #254,d0
+        lsr.w #1,d0
+        mulu #129*12,d0
+        move.l flag_frames-start(a5),a3
+        adda.l d0,a3
+        moveq #0,d7
+.strip:
+        move.w (a3),d6          ; first pixel column
+        move.w 12(a3),d5
+        subq.w #1,d5            ; last pixel column
+        cmp.w d6,d5
+        blt .next_strip
+        lea marker_list(pc),a1
+        move.w 2(a3),d0
+        mulu #40,d0             ; top row offset
+        move.w 4(a3),d1
+        mulu #40,d1             ; bottom row offset, exclusive
+        move.w d0,(a1)+         ; plane 0 spans the whole cloth in every pattern
+        move.w d1,(a1)+
+        tst.w flag_kind-start(a5)
+        bne.s .checker
+        cmp.w wipe_column-start(a5),d7
+        bhs.s .checker
+        move.w d0,d2
+        add.w #10240,d2
+        move.w d2,(a1)+         ; white and blue both set plane 1
+        move.w d1,d2
+        add.w #10240,d2
+        move.w d2,(a1)+
+        cmp.w #36,d7            ; physical X / width: blue cross from 5/18 to 8/18
+        blo.s .horizontal
+        cmp.w #57,d7
+        blo.s .emit
+.horizontal:
+        move.w d0,d2            ; white fields 0..4/11 and 7/11..1 set plane 2
+        add.w #20480,d2
+        move.w d2,(a1)+
+        move.w 8(a3),d2
+        mulu #40,d2
+        add.w d0,d2
+        add.w #20480,d2
+        move.w d2,(a1)+
+        move.w 10(a3),d2
+        mulu #40,d2
+        add.w d0,d2
+        add.w #20480,d2
+        move.w d2,(a1)+
+        move.w d1,d2
+        add.w #20480,d2
+        move.w d2,(a1)+
+        bra.s .emit
+.checker:
+        move.w 4(a3),d3
+        sub.w 2(a3),d3          ; complete projected height
+        move.w d7,d4
+        lsr.w #4,d4
+        and.w #1,d4
+        eor.w #1,d4             ; first white row of five
+.cell:
+        move.w d4,d2
+        bsr.s .row_offset
+        move.w d4,d2
+        addq.w #1,d2
+        bsr.s .row_offset
+        addq.w #2,d4
+        cmp.w #5,d4
+        blo.s .cell
+.emit:
+        move.w #-1,(a1)
+.byte:
+        move.w d6,d0
+        lsr.w #3,d0
+        move.w d6,d3
+        or.w #7,d3              ; last column of this byte
+        cmp.w d5,d3
+        bls.s .mask
+        move.w d5,d3
+.mask:
+        move.w d6,d1
+        and.w #7,d1
+        move.w #$ff,d2
+        lsr.w d1,d2
+        move.w d3,d1
+        and.w #7,d1
+        eor.w #7,d1
+        moveq #-1,d4
+        lsl.w d1,d4
+        and.w d4,d2             ; columns d6..d3 within the byte
+        move.l backbuffer-start(a5),a0
+        adda.w d0,a0
+        lea marker_list(pc),a1
+.mark:
+        move.w (a1)+,d0
+        bmi.s .marked
+        eor.b d2,(a0,d0.w)
+        bra.s .mark
+.marked:
+        move.w d3,d6
+        addq.w #1,d6
+        cmp.w d5,d6
+        bls.s .byte
+.next_strip:
+        adda.w #12,a3
+        addq.w #1,d7
+        cmp.w #128,d7
+        blo .strip
+        rts
+; D2 checker row boundary 0..5: planes 1 and 2 toggle at top + D2*height/5.
+.row_offset:
+        mulu d3,d2
+        divu #5,d2
+        mulu #40,d2
+        add.w d0,d2
+        add.w #10240,d2
+        move.w d2,(a1)+
+        add.w #10240,d2
+        move.w d2,(a1)+
+        rts
+
+; Running XOR down each long column turns the markers into filled spans.
+fill_flag:
+        move.l backbuffer-start(a5),a1
+        addq.l #4,a1            ; longs 1..8 hold every cloth and pole column
+        bsr.s .plane
+        lea 10240-FLAG_ROWS*40(a1),a1
+        bsr.s .plane
+        lea 10240-FLAG_ROWS*40(a1),a1
+.plane:
+        moveq #0,d0
+        moveq #0,d1
+        moveq #0,d2
+        moveq #0,d3
+        moveq #0,d4
+        moveq #0,d5
+        moveq #0,d6
+        moveq #0,d7
+        lea FLAG_ROWS*40(a1),a4
+.row:
+        eor.l d0,(a1)
+        move.l (a1)+,d0
+        eor.l d1,(a1)
+        move.l (a1)+,d1
+        eor.l d2,(a1)
+        move.l (a1)+,d2
+        eor.l d3,(a1)
+        move.l (a1)+,d3
+        eor.l d4,(a1)
+        move.l (a1)+,d4
+        eor.l d5,(a1)
+        move.l (a1)+,d5
+        eor.l d6,(a1)
+        move.l (a1)+,d6
+        eor.l d7,(a1)
+        move.l (a1)+,d7
+        addq.l #8,a1
+        cmpa.l a4,a1
+        blo.s .row
+        rts
+
+draw_pole:
+        ; Finnish flagpole from the generated tables: shaded white body
+        ; segments, then the gilded knob. Long masks cover x 16..47.
+        lea pole_segments(pc),a1
+.segment:
+        move.w (a1)+,d0
+        bmi.s .knob
+        move.l backbuffer-start(a5),a0
+        adda.w d0,a0
+        move.w (a1)+,d0
+        movem.l (a1)+,d1-d3
+.row:   or.l d1,(a0)
+        or.l d2,10240(a0)
+        or.l d3,20480(a0)
+        adda.w #40,a0
+        dbra d0,.row
+        bra.s .segment
+.knob:
+        move.l backbuffer-start(a5),a0
+        adda.w #KNOB_TOP*40+2,a0
+        moveq #KNOB_ROWS-1,d0
+.knob_row:
+        movem.l (a1)+,d1-d3
+        or.l d1,(a0)
+        or.l d2,10240(a0)
+        or.l d3,20480(a0)
+        adda.w #40,a0
+        dbra d0,.knob_row
+        rts
+
+; Copy only what draw_frame can change: planes 0-2, bytes 4..35 of the
+; cloth rows, and the scroller rows of planes 0 and 1.
 present:
+        moveq #0,d2
+        move.w rowbytes-start(a5),d2
+        move.l backbuffer-start(a5),a0
+        addq.l #4,a0
+        lea plane(pc),a2
+        moveq #2,d3
+.plane:
+        move.l (a2)+,a1
+        addq.l #4,a1
+        move.w #FLAG_ROWS-1,d1
+.row:
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        move.l (a0)+,(a1)+
+        addq.l #8,a0
+        lea -32(a1,d2.l),a1
+        dbra d1,.row
+        lea 10240-FLAG_ROWS*40(a0),a0
+        dbra d3,.plane
+        move.l backbuffer-start(a5),a0
+        adda.w #TEXT_ROW*40,a0
+        lea plane(pc),a2
+        moveq #1,d3
+.text_plane:
+        move.l d2,d0
+        mulu #TEXT_ROW,d0
+        move.l (a2)+,a1
+        adda.l d0,a1
+        moveq #TEXT_ROWS-1,d1
+.text_row:
+        moveq #9,d0
+.copy:  move.l (a0)+,(a1)+
+        dbra d0,.copy
+        lea -40(a1,d2.l),a1
+        dbra d1,.text_row
+        adda.w #10240-TEXT_ROWS*40,a0
+        dbra d3,.text_plane
+        rts
+present_full:
         move.l backbuffer-start(a5),a0
         lea plane(pc),a2
         moveq #3,d3
@@ -510,56 +651,6 @@ present:
         dbra d1,.row
         dbra d3,.plane
         rts
-; D0 count-1, D1 palette index, D2 pixel mask, A0 advances down the plane.
-; Dispatch outside the loop, avoiding per-pixel colour tests.
-blue_shade:
-        moveq #3,d1            ; uniform blue cross
-        rts
-paint_span:
-        add.w d1,d1
-        move.w .offsets(pc,d1.w),d1
-        jmp .offsets(pc,d1.w)
-.offsets:
-        dc.w .c0-.offsets,.c1-.offsets,.c2-.offsets,.c3-.offsets
-        dc.w .c4-.offsets,.c5-.offsets,.c6-.offsets,.c7-.offsets
-.c0:    adda.w #40,a0
-        dbra d0,.c0
-        rts
-.c1:    or.b d2,(a0)
-        adda.w #40,a0
-        dbra d0,.c1
-        rts
-.c2:    or.b d2,10240(a0)
-        adda.w #40,a0
-        dbra d0,.c2
-        rts
-.c3:    or.b d2,(a0)
-        or.b d2,10240(a0)
-        adda.w #40,a0
-        dbra d0,.c3
-        rts
-.c4:    or.b d2,20480(a0)
-        adda.w #40,a0
-        dbra d0,.c4
-        rts
-.c5:    or.b d2,(a0)
-        or.b d2,20480(a0)
-        adda.w #40,a0
-        dbra d0,.c5
-        rts
-.c6:    or.b d2,10240(a0)
-        or.b d2,20480(a0)
-        adda.w #40,a0
-        dbra d0,.c6
-        rts
-.c7:    or.b d2,(a0)
-        or.b d2,10240(a0)
-        or.b d2,20480(a0)
-        adda.w #40,a0
-        dbra d0,.c7
-        rts
-finial: dc.b $7c,$fe,$fe,$fe,$fe,$fe,$7c
-        even
 intuition_name: dc.b 'intuition.library',0
 graphics_name: dc.b 'graphics.library',0
         even
@@ -574,15 +665,16 @@ new_window:
 window_screen: dc.l 0
         dc.l 0
         dc.w 0,0,320,256,$f
-; White fabric and display-quantized PMS 294 C approximation (#003366).
+; White fabric and display-quantized PMS 294 C approximation (#003366);
+; colours 2 and 5 are the dark and light gold of the flagpole knob.
 palette:
         dc.l $000c0000
         dc.l $99999999,$cccccccc,$ffffffff
         dc.l $00000000,$00000000,$00000000
-        dc.l $00000000,$22222222,$55555555
+        dc.l $aaaaaaaa,$77777777,$11111111
         dc.l $00000000,$33333333,$66666666
         dc.l $88888888,$88888888,$88888888
-        dc.l $aaaaaaaa,$aaaaaaaa,$aaaaaaaa
+        dc.l $eeeeeeee,$bbbbbbbb,$33333333
         dc.l $cccccccc,$cccccccc,$cccccccc
         dc.l $ffffffff,$ffffffff,$ffffffff
         dc.l $bbbbbbbb,$dddddddd,$aaaaaaaa
@@ -605,13 +697,9 @@ pressed_code: dc.w 0
 rowbytes: dc.w 0
 phase: dc.w 0
 scroll_x: dc.w 0
-
-cell_height: dc.w 0
-blue_end: dc.w 0
 flag_frames: dc.l 0
 
 flag_kind: dc.w 0
-checker_row: dc.w 0
-checker_prev: dc.w 0
 flag_start_vbl: dc.l 0
 wipe_column: dc.w 128
+marker_list: dcb.w 16,0

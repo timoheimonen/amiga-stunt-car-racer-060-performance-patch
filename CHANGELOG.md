@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.5 — 2026-09-25
+
+- Smoke and particles keep real time when frames are late.
+- Boot intro rendering updated.
+
 ## 1.4.4 — 2026-09-25
 
 - Crane lifts keep real time when frames are late: like racing, the crane

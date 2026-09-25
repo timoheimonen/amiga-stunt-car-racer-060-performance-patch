@@ -1,6 +1,8 @@
-# FS-UAE setup for version 1.4.4
+# FS-UAE setup for version 1.4.5
 
-**Emulator only:** this version targets FS-UAE rather than physical Amiga hardware.
+This version targets FS-UAE. On real hardware it has been tested working on
+at least an Amiga 1200 + PiStorm32 Lite + Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1;
+see the [README](README.md).
 
 The game needs PAL, a 68040 or faster, 2 MiB Chip RAM and at least 1 MiB
 Fast RAM. A 68030 works with reservations; adjust
@@ -30,7 +32,7 @@ ntsc_mode = 0
 
 kickstart_file = /path/to/Kickstart-A1200.rom
 floppy_drive_count = 1
-floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.4.adf
+floppy_drive_0 = /path/to/StuntCarRacer-Performance-v1.4.5.adf
 ```
 
 For a Blizzard 1260 / MC68060 with 32 MiB accelerator RAM, set `cpu = 68060`
@@ -64,7 +66,7 @@ support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.4, 50 FPS Practice, computer-opponent and linked races) | `431079f5ea053992029f4128440c5d6a1dac3459387d0678d877e2160c4f0914` |
+| Patched ADF (1.4.5, 50 FPS Practice, computer-opponent and linked races) | `4f87da43beca502a78416bff36942a66422907446070c248f48b0ee71ec70ccd` |
 | Blizzard 1260 ROM (optional 68060 profile) | `d583d6c378a58344d133763066c353e44b4dd00b234409a89d6ba2e238a6ef2a` |
 | Example A1200 Kickstart ROM, rev 40.68 | `6d43840d4099a74170ea0f0425b6257c3891ebcaa39c4d1840075a9ab22b5707` |
 
