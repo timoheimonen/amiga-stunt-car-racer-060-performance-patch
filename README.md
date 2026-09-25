@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.5.** This release is intended for FS-UAE / WinUAE etc. On real
+**Version 1.4.5.** This release is intended for FS-UAE. On real
 hardware it has been tested working on at least an **Amiga 1200 + PiStorm32 Lite +
 Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1**. Other real Amiga configurations
 are unconfirmed.
