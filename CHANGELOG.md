@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.3 — 2026-09-25
+
+- Fix boot failures on PiStorm / Emu68 by retaining the operating system's
+  boot-task stack during startup.
+
+## 1.4.2 — 2026-09-24
+
+- Track Editor module: cache flushing now matches the detected CPU. Earlier
+  versions used a 68040/68060-only instruction, which stopped 68020 and
+  68030 systems with a Line-F error (8000 000B) after the intro.
+- Requirements: a 68040 or faster with 2 MiB Chip RAM and at least 1 MiB
+  Fast RAM; a 68030 works with reservations.
+
 ## 1.4.1 — 2026-09-24
 
 - Computer Link: if the other machine stops responding while a race is being

@@ -46,7 +46,7 @@ storage_io:
         andi.w #$7fff,d7
         movea.l 28(a5),a1
         lea 16384(a1),a0
-        cpusha bc
+        bsr cache_flush
         moveq #0,d0           ; DF0 unless a scoped external operation
         tst.w disk_io_active-module_start(a5)
         beq.s .drive_ready
@@ -78,7 +78,7 @@ storage_io:
         not.w d0
         andi.w #$0050,d0
         move.w d0,$dff096
-        cpusha bc
+        bsr cache_flush
         jsr $ee8a             ; original I/O return's CIA timer/IRQ setup
         move.l (sp)+,d0
         move.w (sp)+,sr

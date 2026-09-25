@@ -1,18 +1,20 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.1 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
-not physical Amiga hardware. Stated as emulator only - until confirmation on real 060 hardwares. 
+**Version 1.4.3 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
+not physical Amiga hardware. Stated as emulator only until confirmed on real hardware.
 It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
 ## Requirements
 
 - Python 3.8+; no additional packages or assembler needed to patch a disk.
-- FS-UAE 3.2.35+ with PAL, Blizzard 1260 / MC68060, 2 MiB Chip RAM
-  and 32 MiB accelerator RAM,
+- FS-UAE 3.2.35+ with PAL, MC68040 or faster, 2 MiB Chip RAM
+  and at least 1 MiB Fast RAM,
   using the [FS-UAE profile](FS-UAE.md).
+- A 68030 works with reservations: lower frame rates may call for adjusting
+  **Game Speed** in [Settings](#settings).
 - Your own original Stunt Car Racer ADF matching the
-  [supported checksum](FS-UAE.md#checksums), and your own Kickstart and
-  Blizzard 1260 ROMs.
+  [supported checksum](FS-UAE.md#checksums), and your own Kickstart ROM
+  (plus a Blizzard 1260 ROM for the optional 68060 profile).
 
 ## Usage
 

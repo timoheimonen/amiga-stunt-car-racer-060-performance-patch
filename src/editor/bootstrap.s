@@ -97,6 +97,8 @@ copy_loop:
         move.l (a1)+,(a0)+
         subq.l #1,d1
         bne.s copy_loop
+        move.l d6,a0
+        move.w 296(a6),CPU_FLAGS(a0)  ; Exec AttnFlags selects the cache flush
         ifd SERIAL_BYTES
         moveq #7,d7             ; serial Fast failure: unwind editor as well
 serial_allocate:
