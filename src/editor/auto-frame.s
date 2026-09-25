@@ -18,6 +18,9 @@
 ;   $5d574 jsr $5dac0  -> auto_pace_end    race-end pacing and swap
 ;   $5d5a6 jsr $5d9dc  -> auto_pause       pause check; paused time excluded
 ;   $64f80 move.b #$80,d0 / move.b d0,$1bc14 -> auto_render_gate (JMP)
+;   $60e88 move.b d1,$1bbe4 -> auto_effect_draw (JMP)
+; Smoke and sparks keep their per-step clock, motion and PRNG in logic-only
+; iterations; only their drawing into the hidden buffer is skipped.
 ; The VBL count comes from editor_vbl (the game's VBL call at $f0e4).
 AUTO_MAX_STEPS equ 4            ; steps per drawn frame (80 ms)
 AUTO_RESYNC equ 50              ; longer gaps (1 s) are not caught up
@@ -33,12 +36,14 @@ auto_late: dc.l 0               ; drawn frames that covered >= 2 VBLs
 auto_max: dc.w 0                ; longest drawn frame in VBLs
 auto_crane_late: dc.l 0         ; late crane frames eligible for catch-up
 auto_crane_primed: dc.b 0       ; first regular drawn frame only anchors time
+auto_nodraw: dc.b 0             ; set from the render gate to the loop end
         even
 
 ; Race loop pacing. Logic-only iteration: no wait, no swap.
 auto_pace:
         movem.l d0-d1/a0,-(sp)
         lea auto_state(pc),a0
+        clr.b auto_nodraw-auto_state(a0)
         tst.b auto_skip-auto_state(a0)
         beq.s .drawn
         addq.l #1,auto_extra-auto_state(a0)
@@ -92,6 +97,7 @@ auto_pace_end:
         move.b auto_skip-auto_state(a0),d0
         clr.b auto_skip-auto_state(a0)
         clr.b auto_pending-auto_state(a0)
+        clr.b auto_nodraw-auto_state(a0)
         tst.b d0
         movem.l (sp)+,d0/a0         ; MOVEM keeps the flags of TST
         bne.s .skip
@@ -140,10 +146,18 @@ auto_render_gate:
         tst.b auto_skip(pc)
         bne.s .logic
 .draw:
+        move.l a0,-(sp)
+        lea auto_nodraw(pc),a0
+        clr.b (a0)
+        movea.l (sp)+,a0
         move.b #$80,d0              ; displaced original instructions
         move.b d0,$1bc14
         jmp $64f8a
 .logic:
+        move.l a0,-(sp)
+        lea auto_nodraw(pc),a0
+        st (a0)
+        movea.l (sp)+,a0
         tst.b $57c3c
         beq.s .join
         cmpi.w #$4eb9,$650a8        ; JSR abs.l as checked at install
@@ -155,3 +169,30 @@ auto_render_gate:
         moveq #0,d2
         moveq #0,d3
         jmp $650e2
+
+; Effect draw $60e88 (smoke $60c92, sparks $60cf8, runtime interpolation).
+; Drawn iterations run the original. Logic-only iterations keep its state
+; writes and return values but draw nothing: $1bbe4 = D1, an off-screen
+; slot gets Y = $d2 at $60eae, a visible one returns through $60f2a
+; (D1.b from $1bbe4, D0.b = 0, Z set). The motion code after the calls
+; reads only D1, A4, A5 and these flags. The skipped drawing went to the
+; hidden draw buffer ($6a58c/$6a590), which the next drawn frame redraws.
+auto_effect_draw:
+        move.b d1,$1bbe4            ; displaced original instruction
+        tst.b auto_nodraw(pc)
+        bne.s .clip
+        jmp $60e8e
+.clip:  move.w ($40,a4,d1.w),d5
+        cmpi.w #$80,d5
+        bcc.s .off
+        move.w (0,a4,d1.w),d0
+        cmpi.w #$100,d0
+        bcc.s .off
+        cmpi.w #1,d5
+        bcs.s .off
+        tst.b $1bb9c
+        bmi.s .kept                 ; smoke: no further bound
+        cmpi.w #$fe,d0
+        bcc.s .off
+.kept:  jmp $60f2a
+.off:   jmp $60eae

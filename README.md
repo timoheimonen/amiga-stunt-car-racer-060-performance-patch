@@ -1,7 +1,9 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.4 — emulator only.** This release is intended for FS-UAE / WinUAE etc,
-not physical Amiga hardware. Stated as emulator only until confirmed on real hardware.
+**Version 1.4.5.** This release is intended for FS-UAE / WinUAE etc. On real
+hardware it has been tested working on at least an **Amiga 1200 + PiStorm32 Lite +
+Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1**. Other real Amiga configurations
+are unconfirmed.
 It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
 
 ## Requirements
