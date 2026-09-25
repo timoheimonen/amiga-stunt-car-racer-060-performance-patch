@@ -1,4 +1,4 @@
-# Patch details — 1.4.3
+# Patch details — 1.4.4
 
 This release targets FS-UAE with PAL timing, a 68040 or faster CPU, 2 MiB Chip RAM
 and at least 1 MiB Fast RAM; a 68030 works with reservations. The example profile
@@ -28,8 +28,9 @@ Each race step is the same fixed physics step. When a drawn frame covers two
 or more PAL vertical blanks, the following loop passes run up to three extra
 steps without 3D drawing, pacing or display swap, so race time stays real.
 Input, physics, the opponent, link service, lap clock, effects, sound and end
-checks run on every step. While the crane is active there is one step per
-frame. Time spent paused is not caught up. The vertical blank count is kept by
+checks run on every step. Crane lifts are caught up the same way with their
+fixed 20 ms step; race setup drawing is complete and does not add steps to
+catch up. Time spent paused is not caught up. The vertical blank count is kept by
 the editor module's interrupt call.
 
 ## Smoke and particles
@@ -103,6 +104,11 @@ block. It checks the game code it hooks before installing anything.
   allocation fails, angles are calculated directly.
 - Color selection uses a 16-color mask table and data pointers to pixel
   and word drawing routines.
+- HUD and cockpit images are converted once into a Fast RAM cache and drawn
+  as 32-bit pairs: fully transparent pairs are skipped and fully opaque pairs
+  are written without reading the screen. The screen result is the same as
+  the original drawing; images that do not match the cache use the original
+  routine.
 
 ## Rendering precision
 
@@ -137,10 +143,10 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 73,692 bytes of code and data,
-loaded from ADF offset `0x76000` in a 90,112-byte transfer that also carries
+The editor is a separate relocatable module: 74,588 bytes of code and data,
+loaded from ADF offset `0x76000` in a 91,136-byte transfer that also carries
 the link module. Its bootstrap is 596 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 98,304 bytes of persistent Chip RAM for loading, disk
+384 KiB of Fast RAM and 99,328 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
 arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.4 — 2026-09-25
+
+- Crane lifts keep real time when frames are late: like racing, the crane
+  runs extra fixed physics steps without drawing.
+- HUD and cockpit images are drawn from a Fast RAM cache with fewer Chip RAM
+  accesses.
+- Track preview: the finish arrow is placed from a single hook after each
+  completed track piece and no longer writes into the editor module's code
+  while the game runs.
+
 ## 1.4.3 — 2026-09-25
 
 - Fix boot failures on PiStorm / Emu68 by retaining the operating system's

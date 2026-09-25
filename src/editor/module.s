@@ -325,6 +325,7 @@ saved_copper: dcb.l 8,0
         include "src/editor/game.s"
         include "src/editor/preview-arrow.s"
         include "src/editor/auto-frame.s"
+        include "src/editor/hud-copy.s"
 
 ; Port 2 JOY1DAT quadrature decoding, matching original read.joystick.
 ; D0 bits: up/down/left/right = 0/1/2/3. Keyboard arrows remain aliases.

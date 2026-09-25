@@ -9,8 +9,9 @@
 ; logic-only: the 3D drawing $64f80..$650e1 and the pacing and display
 ; swap $5dac0 are skipped, everything else runs (input, physics, part A of
 ; $64e4c with the opponent and link hooks, lap clock, end checks, pause).
-; While the crane is active ($1bbdf != 0) there is exactly one step per
-; frame and no catch-up is carried over, so crane speeds never change.
+; Crane lifts use the same bounded catch-up with their existing fixed
+; 20 ms physics step. Setup rendering stays complete, and the first
+; regular drawn frame anchors the clock without catching up setup time.
 ;
 ; Hooks (custom HOOKS, original bytes checked before install):
 ;   $5d5a0 jsr $5dac0  -> auto_pace        loop pacing and swap
@@ -30,7 +31,8 @@ auto_frames: dc.l 0             ; drawn race frames
 auto_extra: dc.l 0              ; logic-only steps run
 auto_late: dc.l 0               ; drawn frames that covered >= 2 VBLs
 auto_max: dc.w 0                ; longest drawn frame in VBLs
-auto_crane_late: dc.l 0         ; late frames not caught up (crane)
+auto_crane_late: dc.l 0         ; late crane frames eligible for catch-up
+auto_crane_primed: dc.b 0       ; first regular drawn frame only anchors time
         even
 
 ; Race loop pacing. Logic-only iteration: no wait, no swap.
@@ -41,10 +43,7 @@ auto_pace:
         beq.s .drawn
         addq.l #1,auto_extra-auto_state(a0)
         subq.b #1,auto_pending-auto_state(a0)
-        tst.b $1bbdf                ; crane began during catch-up
-        beq.s .more
-        clr.b auto_pending-auto_state(a0)
-.more:  tst.b auto_pending-auto_state(a0)
+        tst.b auto_pending-auto_state(a0)
         sne auto_skip-auto_state(a0)
         movem.l (sp)+,d0-d1/a0
         rts
@@ -60,6 +59,11 @@ auto_pace:
         move.w d0,auto_last-auto_state(a0)
         clr.b auto_pending-auto_state(a0)
         clr.b auto_skip-auto_state(a0)
+        tst.b auto_crane_primed-auto_state(a0)
+        bne.s .primed
+        st auto_crane_primed-auto_state(a0)
+        bra.s .done                 ; exclude setup/fade from race-step debt
+.primed:
         cmpi.w #AUTO_RESYNC,d1
         bhi.s .done                 ; race start or other discontinuity
         cmp.w auto_max-auto_state(a0),d1
@@ -68,10 +72,9 @@ auto_pace:
 .max:   cmpi.w #2,d1
         bcs.s .done
         addq.l #1,auto_late-auto_state(a0)
-        tst.b $1bbdf                ; crane: one step per frame
+        tst.b $1bbdf                ; count late crane frames separately
         beq.s .catch
         addq.l #1,auto_crane_late-auto_state(a0)
-        bra.s .done
 .catch: cmpi.w #AUTO_MAX_STEPS,d1
         bls.s .steps
         moveq #AUTO_MAX_STEPS,d1
@@ -121,8 +124,22 @@ auto_pause:
 ; D1.W after a byte load; the drawn path leaves the upper byte clear, so
 ; D0-D3 are cleared here.
 auto_render_gate:
+        ; race_init clears the performance active byte before the two
+        ; setup draws, including recovery via $5d608 -> $5d402. Those
+        ; draws use direct swaps and must never inherit a logic-only flag.
+        tst.b AUTO_CRANE_ACTIVE_ADDR
+        bne.s .regular
+        move.l a0,-(sp)
+        lea auto_state(pc),a0
+        clr.b auto_pending-auto_state(a0)
+        clr.b auto_skip-auto_state(a0)
+        clr.b auto_crane_primed-auto_state(a0)
+        movea.l (sp)+,a0
+        bra.s .draw
+.regular:
         tst.b auto_skip(pc)
         bne.s .logic
+.draw:
         move.b #$80,d0              ; displaced original instructions
         move.b d0,$1bc14
         jmp $64f8a
