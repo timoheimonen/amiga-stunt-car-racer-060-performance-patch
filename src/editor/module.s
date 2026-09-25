@@ -63,7 +63,7 @@ main_loaded:
         movea.l serial_module_base(pc),a0
         jsr (a0)               ; guarded dormant install; no hardware takeover
         endif
-        cpusha bc
+        bsr cache_flush
         bra.s .done
 .failed:
         move.l #3,module_state-module_start(a5)
@@ -75,6 +75,31 @@ main_loaded:
         ifd SERIAL_ENABLED
 serial_module_base: dc.l 0
         endif
+cpu_attn_flags: dc.w 0          ; Exec AttnFlags, stored by the bootstrap
+
+; Push and invalidate caches after code installation or disk DMA.
+; Supervisor mode only; preserves all registers and CCR.
+; 68040/68060: CPUSHA. 68020/68030: CACR clear. 68000/68010: no cache.
+cache_flush:
+        move.w ccr,-(sp)
+        movem.l d0-d1,-(sp)
+        move.w cpu_attn_flags(pc),d1
+        andi.w #$0088,d1        ; AFF_68040 | AFF_68060
+        bne.s .push
+        move.w cpu_attn_flags(pc),d1
+        btst #1,d1              ; AFF_68020, also set on 68030
+        beq.s .done
+        movec cacr,d0
+        ori.w #$0008,d0         ; CI: clear instruction cache
+        btst #2,d1              ; AFF_68030
+        beq.s .write
+        ori.w #$0800,d0         ; CD: clear write-through data cache
+.write: movec d0,cacr
+        bra.s .done
+.push:  cpusha bc
+.done:  movem.l (sp)+,d0-d1
+        move.w (sp)+,ccr
+        rts
 
 ; Only the title menu owns the extra row. Preserve original menu result.
 title_menu_select:
