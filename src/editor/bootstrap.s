@@ -5,10 +5,27 @@
 
 ; Called with A3=first-load allocation, A2=trackdisk request, OS still alive.
 ; Preserve registers and CCR. The module is owned until reset.
+LOADER_WINDOW equ $4d4        ; first-load offset of the loading screen window
 bootstrap_start:
         move.w ccr,-(sp)
         movem.l d0-d7/a0-a6,-(sp)
         move.l 4.w,a6
+        bsr video_is_ntsc       ; once, before any display of our own
+        lea video_ntsc(pc),a0
+        move.b d0,(a0)
+        beq.s .loader_window_done
+        ; NTSC: the loading screen's DIWSTRT/DIWSTOP moves at first-load
+        ; +$4d4 (runtime $445c) show the same 200 lines 16 lines higher.
+        ; The loader has not run yet; patch its immediates and clear the
+        ; caches before any of it executes. PAL leaves the loader unchanged.
+        cmpi.l #$33fc3c81,LOADER_WINDOW(a3)
+        bne.s .loader_window_done
+        cmpi.l #$33fc04c1,LOADER_WINDOW+8(a3)
+        bne.s .loader_window_done
+        move.w #$2c81,LOADER_WINDOW+2(a3)
+        move.w #$f4c1,LOADER_WINDOW+10(a3)
+        jsr -636(a6)            ; CacheClearU
+.loader_window_done:
         moveq #1,d7             ; Chip allocation failure / unsafe address range
 chip_allocate:
         move.l #CHIP_BYTES,d0
@@ -99,6 +116,7 @@ copy_loop:
         bne.s copy_loop
         move.l d6,a0
         move.w 296(a6),CPU_FLAGS(a0)  ; Exec AttnFlags selects the cache flush
+        move.b video_ntsc(pc),VIDEO_NTSC(a0)  ; game display window
         ifd SERIAL_BYTES
         moveq #7,d7             ; serial Fast failure: unwind editor as well
 serial_allocate:
@@ -184,3 +202,7 @@ loader_clear_sprites:
         movem.l (sp)+,d0/a0
         move.w #$7c7f,$dff096    ; displaced MOVE's CCR, including preserved X
         rts
+
+video_ntsc: dc.b 0              ; 1 = NTSC, measured at boot
+        even
+        include "src/editor/video-mode.s"

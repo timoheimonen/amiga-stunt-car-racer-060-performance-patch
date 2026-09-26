@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.8 — 2026-09-26
+
+- PAL and NTSC
+
 ## 1.4.7 — 2026-09-26
 
 - Faster frame rate when frames are late: the extra physics steps no longer
