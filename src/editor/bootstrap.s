@@ -4,7 +4,7 @@
 ; Licensed under the MIT License; see LICENSE.
 
 ; Called with A3=first-load allocation, A2=trackdisk request, OS still alive.
-; Preserve registers and CCR. The module is owned until emulator reset/exit.
+; Preserve registers and CCR. The module is owned until reset.
 bootstrap_start:
         move.w ccr,-(sp)
         movem.l d0-d7/a0-a6,-(sp)

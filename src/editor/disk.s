@@ -10,7 +10,7 @@ DISK_HEADER equ $50b00
 DISK_CANDIDATE equ $50d00
 
 ; External drive ID is shifted on select edges with the motor off.
-; FS-UAE DRIVE_ID_35DD=$ffffffff, NONE=0, independent of inserted media.
+; DRIVE_ID_35DD=$ffffffff, NONE=0, independent of inserted media.
 disk_detect:
         movem.l d0-d2,-(sp)
         move.w sr,-(sp)

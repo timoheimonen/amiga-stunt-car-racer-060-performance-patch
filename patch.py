@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Timo Heimonen
 # SPDX-License-Identifier: MIT
 
-"""Patch a Stunt Car Racer ADF for 68040+, PAL 50 FPS.
+"""Patch a Stunt Car Racer ADF for 68060 emulation, PAL 50 FPS.
 
 Self-contained: Python 3.8+ and the supported original ADF are sufficient.
 Selectable 20–30 ms physics and 50 FPS rendering for Practice, computer-opponent
@@ -139,7 +139,7 @@ def main(argv=None):
         parser.exit(1, 'Error: %s\n' % error)
     print('Stunt Car Racer 50 FPS patch ' + VERSION)
     print('Created %s\nSHA-256: %s' % (output, digest))
-    print('Practice, computer-opponent and linked races: PAL, 68040 or faster, 2 MiB Chip, at least 1 MiB Fast RAM.')
+    print('Practice, computer-opponent and linked races: PAL 68060 emulation, 2 MiB Chip, at least 1 MiB Fast RAM.')
 
 
 # BEGIN GENERATED PATCH DATA
