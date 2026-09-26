@@ -1,4 +1,4 @@
-# Patch details — 1.4.5
+# Patch details — 1.4.7
 
 This release is primarily intended for emulation with PAL timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -46,7 +46,9 @@ steps without 3D drawing, pacing or display swap, so race time stays real.
 Input, physics, the opponent, link service, lap clock, effects, sound and end
 checks run on every step. On extra steps, smoke and particles advance their
 motion, renewal and random numbers but are not drawn; the next drawn frame
-shows them. Crane lifts are caught up the same way with their
+shows them. The HUD and cockpit images are not drawn on extra steps either;
+wheel heights and the turbo animation still advance, and the next drawn frame
+draws the images before its display swap. Crane lifts are caught up the same way with their
 fixed 20 ms step; race setup drawing is complete and does not add steps to
 catch up. Time spent paused is not caught up. The vertical blank count is kept by
 the editor module's interrupt call.
@@ -161,10 +163,10 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 74,704 bytes of code and data,
-loaded from ADF offset `0x76000` in a 91,136-byte transfer that also carries
+The editor is a separate relocatable module: 74,758 bytes of code and data,
+loaded from ADF offset `0x76000` in a 91,648-byte transfer that also carries
 the link module. Its bootstrap is 596 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 99,328 bytes of persistent Chip RAM for loading, disk
+384 KiB of Fast RAM and 99,840 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
 arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
@@ -217,7 +219,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.5, up to 50 FPS Practice, computer-opponent and linked races) | `4f87da43beca502a78416bff36942a66422907446070c248f48b0ee71ec70ccd` |
+| Patched ADF (1.4.7, up to 50 FPS Practice, computer-opponent and linked races) | `2c24230a2498da05c053ab3ae1a4a6c0f390883e297dde68bc01c764ebaaa976` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.

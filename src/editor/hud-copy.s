@@ -15,7 +15,9 @@
 ; Hooks (custom HOOKS, original bytes checked before install):
 ;   $1ba64 jsr $69cfc -> hud_build   original image build, then the cache
 ;   $69f42 move.l d5,-(sp) / move.w d1,-(sp) / movem.l a4-a6,-(sp)
-;          -> hud_copy (JMP); anything not cached runs the original.
+;          -> hud_gate (JMP): calls of the HUD block on logic-only frame
+;          steps are skipped, the rest go to hud_copy; anything not cached
+;          runs the original.
 ; An image is cached only when every fully transparent mask word has zero
 ; plane data. A call is served from the cache only when the image pointer
 ; $6a4ac, the width and height and the x word parity in $6a16c still
@@ -159,6 +161,36 @@ hud_build:
 .word:  move.l (a0)+,(a2)+
         move.l (a0)+,(a2)+
         move.w (a0)+,(a2)+
+        rts
+
+; Logic-only steps (auto_render_gate -> $650e2) run the HUD block
+; $6510c..$651aa, whose images go to the hidden buffer. No swap follows a
+; logic-only step, and the next drawn frame draws the same block again
+; after its 3D view, before its swap, so these draws never reach the
+; screen. They are skipped; the rest of the $650e2 path (wheel heights
+; $5e778, turbo animation $1814d6, $5e508) still runs. Every other caller of
+; $69f42 (damage holes, menus) and every drawn frame draws as before.
+; On a skip D0 keeps its low word, D3 = $0000ffff and D4.w = $ffff as after
+; the copy; the block reloads D0 before each call, $5e778 sets all it
+; reads and $5e508 reads only D1, which the copy preserves.
+HUD_GATE_FIRST equ $65112       ; return address of jsr $69f42 at $6510c
+HUD_GATE_LAST equ $651b0        ; return address of jsr $69f42 at $651aa
+hud_gate_skips: dc.l 0          ; skipped logic-step block calls
+
+hud_gate:
+        tst.b auto_nodraw(pc)
+        beq hud_copy
+        cmpi.l #HUD_GATE_FIRST,(sp)
+        blo hud_copy
+        cmpi.l #HUD_GATE_LAST,(sp)
+        bhi hud_copy
+        move.l a0,-(sp)
+        lea hud_gate_skips(pc),a0
+        addq.l #1,(a0)
+        movea.l (sp)+,a0
+        andi.l #$ffff,d0
+        move.l #$ffff,d3
+        move.w #-1,d4
         rts
 
 hud_copy:
