@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.7 — 2026-09-26
+
+- Faster frame rate when frames are late: the extra physics steps no longer
+  redraw the HUD and cockpit images, which the next drawn frame draws anyway.
+  The images are drawn once per displayed frame, as in the original game.
+
 ## 1.4.5 — 2026-09-25
 
 - Smoke and particles keep real time when frames are late.
