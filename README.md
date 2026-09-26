@@ -1,22 +1,20 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.5.** This release is intended for FS-UAE. On real
+**Version 1.4.5.** This release is primarily intended for emulation. On real
 hardware it has been tested working on at least an **Amiga 1200 + PiStorm32 Lite +
 Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1**. Other real Amiga configurations
 are unconfirmed.
-It provides **50 Hz physics and rendering at 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
+It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
+The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 
 ## Requirements
 
 - Python 3.8+; no additional packages or assembler needed to patch a disk.
-- FS-UAE 3.2.35+ with PAL, MC68040 or faster, 2 MiB Chip RAM
-  and at least 1 MiB Fast RAM,
-  using the [FS-UAE profile](FS-UAE.md).
-- A 68030 works with reservations: lower frame rates may call for adjusting
-  **Game Speed** in [Settings](#settings).
+- Primarily an emulated Amiga with PAL, MC68060, 2 MiB Chip RAM and at least
+  1 MiB Fast RAM ([requirements](PATCH.md#requirements)). Lower frame rates may call
+  for adjusting **Game Speed** in [Settings](#settings).
 - Your own original Stunt Car Racer ADF matching the
-  [supported checksum](FS-UAE.md#checksums), and your own Kickstart ROM
-  (plus a Blizzard 1260 ROM for the optional 68060 profile).
+  [supported checksum](PATCH.md#checksums), and your own Kickstart ROM.
 
 ## Usage
 
@@ -29,7 +27,7 @@ Use `--output /path/to/output.adf` to choose a location and `--force` to
 replace an existing output. The original disk is never overwritten.
 `python3 patch.py --version` prints the package version.
 
-Boot the patched disk in DF0 using the [FS-UAE settings](FS-UAE.md).
+Boot the patched disk in DF0.
 
 ## Track Editor (Beta)
 
@@ -93,7 +91,7 @@ championship starts in Division 4.
 - **Disable Damage:** No/Yes,
 
 
-[Changelog](CHANGELOG.md) · [Checksums](FS-UAE.md#checksums) ·
+[Changelog](CHANGELOG.md) · [Checksums](PATCH.md#checksums) ·
 [Patch details](PATCH.md) · [Assembly sources](src)
 
 Timo Heimonen (timo.heimonen@proton.me) · [MIT License](LICENSE)

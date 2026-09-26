@@ -4,7 +4,7 @@
 ; Licensed under the MIT License; see LICENSE.
 
 ; Batch the sole TransformScreenPoint caller at $69604..$6960f.
-; Target: FS-UAE / 68060. Integer operations remain 68000-compatible.
+; Target: 68060. Integer operations remain 68000-compatible.
 ; A3=$1c230, A4=$1c0f0, A5=$1bfb0; D1.w is the last point byte offset.
 ; Preserve the original per-point arithmetic and register/CCR result at $69610.
 ; No extra register spills or coefficient-hoisting assumptions are needed.

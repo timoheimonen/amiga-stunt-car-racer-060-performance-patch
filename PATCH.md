@@ -1,14 +1,30 @@
 # Patch details — 1.4.5
 
-This release targets FS-UAE with PAL timing, a 68040 or faster CPU, 2 MiB Chip RAM
-and at least 1 MiB Fast RAM; a 68030 works with reservations. The example profile
-uses a 68040 with 1 MiB Fast RAM. See the
-[FS-UAE profile](FS-UAE.md) for configuration.
+This release is primarily intended for emulation with PAL timing, a 68060 CPU,
+2 MiB Chip RAM and at least 1 MiB Fast RAM.
+
+## Requirements
+
+- Primarily for emulation: PAL, a 68060 CPU, 2 MiB Chip RAM and at least 1 MiB Fast RAM.
+- Adjust Game Speed in Settings if the frame rate drops.
+- On real hardware the release has been tested working on at least an
+  Amiga 1200 + PiStorm32 Lite + Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1.
+- The patcher checks the disk, not the machine configuration. The runtime
+  needs its fixed 8 KiB Chip allocation at `0x181000`; allocation failure
+  halts boot with a red screen. The Track Editor and Computer Link need
+  416 KiB of Fast RAM; the angle tables use another 256 KiB when available.
+  See [Loader and memory](#loader-and-memory).
+- Keep DF0 writable for the editor's 32 track slots and custom-track records.
+  For Save/Load → Disk, enable a second floppy drive and insert a separate
+  writable ADF in DF1. The editor initializes a track disk only after
+  confirmation; initialization erases that disk. Keep the game disk in DF0.
 
 ## Physics and rendering
 
 Practice mode, computer-opponent and linked races use 50 Hz physics with a
-selectable 20–30 ms simulation step (100–150%) and rendering at 50 FPS.
+selectable 20–30 ms simulation step (100–150%) and rendering at up to 50 FPS.
+The achieved frame rate depends on the machine's Chip RAM access speed; see
+[Late frames](#late-frames).
 
 - Player and opponent movement, suspension, steering and collision calculations
   use integer arithmetic with fractional accumulators.
@@ -157,9 +173,7 @@ DF1 track disk supports import/export. See [editor controls](README.md#track-edi
 
 The bootstrap stores Exec `AttnFlags` in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
-the CPU caches for that processor: `CPUSHA BC` on a 68040 or 68060, a CACR
-instruction-cache clear on a 68020 and an instruction- and data-cache clear on
-a 68030.
+the CPU caches with the instructions of the detected processor.
 
 
 ## Boot intro
@@ -195,7 +209,20 @@ performance layer; its expected bytes refer to that intermediate disk. Words and
 | Runtime | 6734 | `95ccd057ccbdd4edf0f83d74f8c15a44044948c0f56c97b42c348acd4bfeef44` |
 | Intro | 5848 | `e3cdca9d501ce365797c0399a2c45172da5c85ef7480ff3b7e9ac3b07bbaf1c1` |
 
-Disk and ROM identifiers are in [FS-UAE.md](FS-UAE.md#checksums).
+## Checksums
+
+Both ADFs are 901,120 bytes. The identified source dump shows QUARTEX text in
+the track introduction; support is limited to the exact checksum below.
+
+| File | SHA-256 |
+| --- | --- |
+| Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
+| Patched ADF (1.4.5, up to 50 FPS Practice, computer-opponent and linked races) | `4f87da43beca502a78416bff36942a66422907446070c248f48b0ee71ec70ccd` |
+
+The patcher verifies the whole original disk, displaced instructions,
+embedded payloads, loader-tail contents, boot checksum and whole output.
+It reads back the complete temporary file before publishing it. A different
+dump, modified save disk, truncated image or already-patched disk is rejected.
 
 ## Included sources
 

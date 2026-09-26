@@ -23,10 +23,9 @@
 ## 1.4.2 — 2026-09-24
 
 - Track Editor module: cache flushing now matches the detected CPU. Earlier
-  versions used a 68040/68060-only instruction, which stopped 68020 and
-  68030 systems with a Line-F error (8000 000B) after the intro.
-- Requirements: a 68040 or faster with 2 MiB Chip RAM and at least 1 MiB
-  Fast RAM; a 68030 works with reservations.
+  versions used an instruction that stopped some processors with a Line-F
+  error (8000 000B) after the intro.
+- Requirements: 2 MiB Chip RAM and at least 1 MiB Fast RAM.
 
 ## 1.4.1 — 2026-09-24
 
@@ -103,7 +102,7 @@
 
 ## 0.2.0 — 2026-09-07
 
-- Change the target platform to FS-UAE (emulator only).
+- Change the target platform to emulation only.
 - Add 50 Hz physics and 50 FPS rendering to computer-opponent races.
 - Fix a Guru Meditation caused by time penalties after leaving the track.
 
