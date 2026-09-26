@@ -1,16 +1,13 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.7.** This release is primarily intended for emulation. On real
-hardware it has been tested working on at least an **Amiga 1200 + PiStorm32 Lite +
-Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1**. Other real Amiga configurations
-are unconfirmed.
-It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate** in PAL.
+**Version 1.4.8.** This release is primarily intended for emulation.
+It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 
 ## Requirements
 
 - Python 3.8+; no additional packages or assembler needed to patch a disk.
-- Primarily an emulated Amiga with PAL, MC68060, 2 MiB Chip RAM and at least
+- Primarily an emulated Amiga with PAL or NTSC, MC68060, 2 MiB Chip RAM and at least
   1 MiB Fast RAM ([requirements](PATCH.md#requirements)). Lower frame rates may call
   for adjusting **Game Speed** in [Settings](#settings).
 - Your own original Stunt Car Racer ADF matching the
@@ -63,7 +60,7 @@ and import them into the new game disk through the editor.
 ## Computer Link (Beta)
 
 Two machines race each other over their serial ports (null-modem link). Both
-must run this version.
+must run this version in PAL.
 
 1. Choose **Computer Link** in the main menu on both machines.
 2. Press **H** on one machine (Host) and **J** on the other (Join).

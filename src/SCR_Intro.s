@@ -3,7 +3,8 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Position-independent Finnish flag boot intro, KS3.1 PAL. Called before SuperState.
+; Position-independent Finnish flag boot intro, KS3.1. Called before SuperState.
+; 320 x 200 screen: fits the standard NTSC display and is the same in PAL.
 ; Intuition owns display/input; no CIA/custom register takeover.
 ; All pointers are relative to A5, the loaded code base. Payload is CHIP.
         org 0
@@ -21,7 +22,7 @@ start:
         jsr -552(a6)
         move.l d0,gbase-start(a5)
         beq cleanup
-        move.l #40960,d0
+        move.l #4*PLANE+MARKER_BYTES,d0
         move.l #$10001,d1
         jsr -198(a6)
         move.l d0,backbuffer-start(a5)
@@ -158,7 +159,7 @@ cleanup:
         move.l backbuffer-start(a5),d0
         beq.s .no_buffer
         move.l d0,a1
-        move.l #40960,d0
+        move.l #4*PLANE+MARKER_BYTES,d0
         jsr -210(a6)
 .no_buffer:
         move.l flag_frames-start(a5),d0
@@ -208,16 +209,16 @@ prepare_flag_frames:
         move.w d0,d1
         move.w d7,d2
         sub.w #64,d2
-        muls #672,d2
+        muls #FLAG_WIDTH,d2
         divs d1,d2
-        add.w #160,d2
+        add.w #FLAG_X0,d2
         move.w d2,(a3)+         ; screen X boundary
-        move.l #26283,d3
+        move.l #FLAG_HEIGHT,d3
         divs d1,d3             ; projected half-height
         move.w d7,d4
         lsr.w #3,d4
         neg.w d4
-        add.w #108,d4          ; slight roll, centre 92..108
+        add.w #FLAG_CENTRE,d4  ; slight roll, centre FLAG_CENTRE-16..FLAG_CENTRE
         add.w d5,d4
         move.w d4,d2
         sub.w d3,d2
@@ -245,8 +246,18 @@ prepare_flag_frames:
         clr.w phase-start(a5)
         rts
 
-FLAG_ROWS equ 183               ; cloth markers end at row 182
-TEXT_ROW equ 218
+; Layout: the flag is 0.708 of the former 320 x 256
+; intro so that cloth, pole and plaque fit 200 rows. The hoist stays at
+; x 70 next to the pole; the projection keeps the 18:11 flag proportions.
+PLANE equ 8000                  ; 320 x 200 bitplane
+MARKER_BYTES equ 32             ; mark_flag's toggle offsets, after the buffer
+FLAG_WIDTH equ 476              ; perspective X scale
+FLAG_HEIGHT equ 18608           ; perspective half-height scale
+FLAG_CENTRE equ 87              ; hoist centre row
+FLAG_X0 equ 156                 ; screen X of the cloth centre line
+FLAG_ROWS equ 140               ; cloth markers end at row 139
+TEXT_ROW equ 170
+PLAQUE_ROW equ 156
 TEXT_ROWS equ 16
 
 ; Planes 0-2 of the flag area are rebuilt in private PUBLIC RAM each frame:
@@ -255,7 +266,7 @@ TEXT_ROWS equ 16
 draw_static:
         ; Raised pale-green plaque: 304x40, three-pixel upper/lower bevels.
         move.l backbuffer-start(a5),a0
-        adda.w #204*40+1,a0
+        adda.w #PLAQUE_ROW*40+1,a0
         moveq #0,d7
 .plaque_row:
         moveq #0,d1
@@ -271,8 +282,8 @@ draw_static:
         moveq #37,d6
 .plaque_byte:
         move.b d1,(a0)
-        move.b d2,10240(a0)
-        move.b #$ff,30720(a0)
+        move.b d2,PLANE(a0)
+        move.b #$ff,3*PLANE(a0)
         addq.l #1,a0
         dbra d6,.plaque_byte
         addq.l #2,a0
@@ -296,7 +307,7 @@ draw_frame:
         lea scroll_data(pc),a2
         adda.w d4,a2
         move.l backbuffer-start(a5),a1
-        adda.l #30720+218*40,a1
+        adda.l #3*PLANE+TEXT_ROW*40,a1
         moveq #7,d7
 .scroll_row:
         move.l a2,a0
@@ -308,10 +319,10 @@ draw_frame:
         bhs.s .skip_word
         cmp.w #3,d6
         blo.s .skip_word
-        or.w d0,-30720(a1)
-        or.w d0,-30680(a1)
-        or.w d0,-20480(a1)
-        or.w d0,-20440(a1)
+        or.w d0,-3*PLANE(a1)
+        or.w d0,-3*PLANE+40(a1)
+        or.w d0,-2*PLANE(a1)
+        or.w d0,-2*PLANE+40(a1)
 .skip_word:
         addq.l #2,a1
         addq.l #2,a0
@@ -348,7 +359,7 @@ draw_frame:
         btst d3,d2
         beq.s .edge_blank
         or.b d4,(a1)
-        or.b d4,10240(a1)
+        or.b d4,PLANE(a1)
 .edge_blank:
         adda.w #40,a1
         addq.w #1,d5
@@ -368,15 +379,15 @@ clear_dynamic:
         moveq #0,d7
         move.l backbuffer-start(a5),a2
         bsr.s .flag_plane
-        lea 10240(a2),a2
+        lea PLANE(a2),a2
         bsr.s .flag_plane
-        lea 10240(a2),a2
+        lea PLANE(a2),a2
         bsr.s .flag_plane
         ; Scroller rows of planes 0 and 1; the plaque sets no bits there.
         move.l backbuffer-start(a5),a0
         adda.w #(TEXT_ROW+TEXT_ROWS)*40,a0
         bsr.s .text_plane
-        adda.w #10240+TEXT_ROWS*40,a0
+        adda.w #PLANE+TEXT_ROWS*40,a0
 .text_plane:
         rept TEXT_ROWS*40/32
         movem.l d0-d7,-(a0)
@@ -396,7 +407,11 @@ clear_dynamic:
 ; Each geometry strip toggles one bit per plane at every colour boundary.
 ; Planes 0 and 1 cover white (7) and blue (3); plane 2 covers white only.
 ; The checkered flag is black (1) and white (7).
+; The marker list lives in Fast memory after the draw buffer (A4); reading
+; and writing it in the Chip-resident intro stalled on display DMA.
 mark_flag:
+        move.l backbuffer-start(a5),a2
+        lea 4*PLANE(a2),a4
         moveq #0,d0
         move.w phase-start(a5),d0
         and.w #254,d0
@@ -411,7 +426,7 @@ mark_flag:
         subq.w #1,d5            ; last pixel column
         cmp.w d6,d5
         blt .next_strip
-        lea marker_list(pc),a1
+        movea.l a4,a1
         move.w 2(a3),d0
         mulu #40,d0             ; top row offset
         move.w 4(a3),d1
@@ -423,10 +438,10 @@ mark_flag:
         cmp.w wipe_column-start(a5),d7
         bhs.s .checker
         move.w d0,d2
-        add.w #10240,d2
+        add.w #PLANE,d2
         move.w d2,(a1)+         ; white and blue both set plane 1
         move.w d1,d2
-        add.w #10240,d2
+        add.w #PLANE,d2
         move.w d2,(a1)+
         cmp.w #36,d7            ; physical X / width: blue cross from 5/18 to 8/18
         blo.s .horizontal
@@ -434,20 +449,20 @@ mark_flag:
         blo.s .emit
 .horizontal:
         move.w d0,d2            ; white fields 0..4/11 and 7/11..1 set plane 2
-        add.w #20480,d2
+        add.w #2*PLANE,d2
         move.w d2,(a1)+
         move.w 8(a3),d2
         mulu #40,d2
         add.w d0,d2
-        add.w #20480,d2
+        add.w #2*PLANE,d2
         move.w d2,(a1)+
         move.w 10(a3),d2
         mulu #40,d2
         add.w d0,d2
-        add.w #20480,d2
+        add.w #2*PLANE,d2
         move.w d2,(a1)+
         move.w d1,d2
-        add.w #20480,d2
+        add.w #2*PLANE,d2
         move.w d2,(a1)+
         bra.s .emit
 .checker:
@@ -487,9 +502,9 @@ mark_flag:
         moveq #-1,d4
         lsl.w d1,d4
         and.w d4,d2             ; columns d6..d3 within the byte
-        move.l backbuffer-start(a5),a0
+        movea.l a2,a0
         adda.w d0,a0
-        lea marker_list(pc),a1
+        movea.l a4,a1
 .mark:
         move.w (a1)+,d0
         bmi.s .marked
@@ -508,13 +523,14 @@ mark_flag:
         rts
 ; D2 checker row boundary 0..5: planes 1 and 2 toggle at top + D2*height/5.
 .row_offset:
-        mulu d3,d2
-        divu #5,d2
+        mulu d3,d2              ; height * boundary, at most 5 * 106
+        mulu #13108,d2          ; / 5 without DIVU: exact below 16384
+        swap d2
         mulu #40,d2
         add.w d0,d2
-        add.w #10240,d2
+        add.w #PLANE,d2
         move.w d2,(a1)+
-        add.w #10240,d2
+        add.w #PLANE,d2
         move.w d2,(a1)+
         rts
 
@@ -523,9 +539,9 @@ fill_flag:
         move.l backbuffer-start(a5),a1
         addq.l #4,a1            ; longs 1..8 hold every cloth and pole column
         bsr.s .plane
-        lea 10240-FLAG_ROWS*40(a1),a1
+        lea PLANE-FLAG_ROWS*40(a1),a1
         bsr.s .plane
-        lea 10240-FLAG_ROWS*40(a1),a1
+        lea PLANE-FLAG_ROWS*40(a1),a1
 .plane:
         moveq #0,d0
         moveq #0,d1
@@ -560,7 +576,7 @@ fill_flag:
 
 draw_pole:
         ; Finnish flagpole from the generated tables: shaded white body
-        ; segments, then the gilded knob. Long masks cover x 16..47.
+        ; segments, then the gilded knob. Long masks cover x 48..79.
         lea pole_segments(pc),a1
 .segment:
         move.w (a1)+,d0
@@ -570,20 +586,20 @@ draw_pole:
         move.w (a1)+,d0
         movem.l (a1)+,d1-d3
 .row:   or.l d1,(a0)
-        or.l d2,10240(a0)
-        or.l d3,20480(a0)
+        or.l d2,PLANE(a0)
+        or.l d3,2*PLANE(a0)
         adda.w #40,a0
         dbra d0,.row
         bra.s .segment
 .knob:
         move.l backbuffer-start(a5),a0
-        adda.w #KNOB_TOP*40+2,a0
+        adda.w #KNOB_TOP*40+POLE_BYTE,a0
         moveq #KNOB_ROWS-1,d0
 .knob_row:
         movem.l (a1)+,d1-d3
         or.l d1,(a0)
-        or.l d2,10240(a0)
-        or.l d3,20480(a0)
+        or.l d2,PLANE(a0)
+        or.l d3,2*PLANE(a0)
         adda.w #40,a0
         dbra d0,.knob_row
         rts
@@ -613,7 +629,7 @@ present:
         addq.l #8,a0
         lea -32(a1,d2.l),a1
         dbra d1,.row
-        lea 10240-FLAG_ROWS*40(a0),a0
+        lea PLANE-FLAG_ROWS*40(a0),a0
         dbra d3,.plane
         move.l backbuffer-start(a5),a0
         adda.w #TEXT_ROW*40,a0
@@ -631,7 +647,7 @@ present:
         dbra d0,.copy
         lea -40(a1,d2.l),a1
         dbra d1,.text_row
-        adda.w #10240-TEXT_ROWS*40,a0
+        adda.w #PLANE-TEXT_ROWS*40,a0
         dbra d3,.text_plane
         rts
 present_full:
@@ -643,7 +659,7 @@ present_full:
         moveq #0,d2
         move.w rowbytes-start(a5),d2
         sub.w #40,d2
-        move.w #255,d1
+        move.w #199,d1
 .row:   moveq #9,d0
 .copy:  move.l (a0)+,(a1)+
         dbra d0,.copy
@@ -655,16 +671,16 @@ intuition_name: dc.b 'intuition.library',0
 graphics_name: dc.b 'graphics.library',0
         even
 screen_tags:
-        dc.l $80000023,320,$80000024,256,$80000025,4
+        dc.l $80000023,320,$80000024,200,$80000025,4
         dc.l $80000032,0,$80000036,0,$80000037,1
         dc.l $80000038,1,$8000003e,0,0,0
 new_window:
-        dc.w 0,0,320,256
+        dc.w 0,0,320,200
         dc.b 0,0
         dc.l $8,$31940,0,0,0    ; IDCMP_MOUSEBUTTONS only; no keyboard events
 window_screen: dc.l 0
         dc.l 0
-        dc.w 0,0,320,256,$f
+        dc.w 0,0,320,200,$f
 ; White fabric and display-quantized PMS 294 C approximation (#003366);
 ; colours 2 and 5 are the dark and light gold of the flagpole knob.
 palette:
@@ -702,4 +718,3 @@ flag_frames: dc.l 0
 flag_kind: dc.w 0
 flag_start_vbl: dc.l 0
 wipe_column: dc.w 128
-marker_list: dcb.w 16,0

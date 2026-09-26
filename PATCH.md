@@ -1,11 +1,12 @@
-# Patch details — 1.4.7
+# Patch details — 1.4.8
 
-This release is primarily intended for emulation with PAL timing, a 68060 CPU,
+This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
 
 ## Requirements
 
-- Primarily for emulation: PAL, a 68060 CPU, 2 MiB Chip RAM and at least 1 MiB Fast RAM.
+- Primarily for emulation: PAL or NTSC, a 68060 CPU, 2 MiB Chip RAM and at least 1 MiB Fast RAM.
+  Computer Link needs PAL on both machines.
 - Adjust Game Speed in Settings if the frame rate drops.
 - On real hardware the release has been tested working on at least an
   Amiga 1200 + PiStorm32 Lite + Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1.
@@ -41,7 +42,7 @@ The achieved frame rate depends on the machine's Chip RAM access speed; see
 ## Late frames
 
 Each race step is the same fixed physics step. When a drawn frame covers two
-or more PAL vertical blanks, the following loop passes run up to three extra
+or more vertical blanks, the following loop passes run up to three extra
 steps without 3D drawing, pacing or display swap, so race time stays real.
 Input, physics, the opponent, link service, lap clock, effects, sound and end
 checks run on every step. On extra steps, smoke and particles advance their
@@ -52,6 +53,25 @@ draws the images before its display swap. Crane lifts are caught up the same way
 fixed 20 ms step; race setup drawing is complete and does not add steps to
 catch up. Time spent paused is not caught up. The vertical blank count is kept by
 the editor module's interrupt call.
+
+## PAL and NTSC
+
+The boot measures the length of a display field from the beam counter once:
+PAL fields end at line 311/312, NTSC fields at 261/262. The game keeps the
+video standard the machine was started in.
+
+- On PAL the display windows are unchanged: the loading screen and the game
+  screens (menus, track preview, race, editor) use lines 60–259.
+- On NTSC the same 200 lines are shown at lines 44–243, the standard NTSC
+  area. The editor bootstrap sets the loading screen's window in the loader
+  before it runs; a module hook at `0xedfc` sets the window and the sprite
+  origin (`0x69ec4`) of the game screens. The Copper list is unchanged.
+- The game clock counts vertical blanks. On NTSC it runs 60 physics steps per
+  second, about 20% faster than PAL in real time. The lap clock still
+  advances once every six steps, so lap times and records stay in PAL game
+  time and are comparable with PAL.
+- The boot intro is a 320 × 200 screen shown the same way in both standards.
+- Computer Link timing requires PAL on both machines.
 
 ## Smoke and particles
 
@@ -163,9 +183,9 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 74,758 bytes of code and data,
+The editor is a separate relocatable module: 74,854 bytes of code and data,
 loaded from ADF offset `0x76000` in a 91,648-byte transfer that also carries
-the link module. Its bootstrap is 596 bytes at ADF offset `0xd800`. It reserves
+the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
 384 KiB of Fast RAM and 99,840 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
 arrow.
@@ -173,14 +193,15 @@ Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
 DF1 track disk supports import/export. See [editor controls](README.md#track-editor-beta).
 
-The bootstrap stores Exec `AttnFlags` in the module. After installing its game
+The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
 the CPU caches with the instructions of the detected processor.
 
 
 ## Boot intro
 
-The flag is drawn with edge markers and 32-bit fills, and only the changed
+The intro uses a 320 × 200 screen that fits both PAL and NTSC displays. The
+flag is drawn with edge markers and 32-bit fills, and only the changed
 areas are copied to the screen, so the wave and scroller update every frame.
 The flagpole is a shaded white Finnish pole with a gilded knob.
 Click a mouse button to continue to the game.
@@ -207,9 +228,9 @@ performance layer; its expected bytes refer to that intermediate disk. Words and
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `a656df90bcf632d2a83c28fbdb370a350153f5302aabcba765de9e801228a991` |
+| Boot | 320 | `b178776797c59302dd0f5afcdaf69ac3041b8641bcee4f07d7717fd3b971d9e7` |
 | Runtime | 6734 | `95ccd057ccbdd4edf0f83d74f8c15a44044948c0f56c97b42c348acd4bfeef44` |
-| Intro | 5848 | `e3cdca9d501ce365797c0399a2c45172da5c85ef7480ff3b7e9ac3b07bbaf1c1` |
+| Intro | 5818 | `02c83ae864acf7bde125d14d37026fa23d1b158edbb305aee29f653afa02f550` |
 
 ## Checksums
 
@@ -219,7 +240,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.7, up to 50 FPS Practice, computer-opponent and linked races) | `2c24230a2498da05c053ab3ae1a4a6c0f390883e297dde68bc01c764ebaaa976` |
+| Patched ADF (1.4.8, up to 50 FPS Practice, computer-opponent and linked races) | `284891af5536001f8bae2584cd792cc42adbad2be13983658fd4476ba8cd416c` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.
