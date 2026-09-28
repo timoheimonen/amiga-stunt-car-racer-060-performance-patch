@@ -1,4 +1,4 @@
-# Patch details — 1.4.8
+# Patch details — 1.4.9
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -183,15 +183,24 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 74,854 bytes of code and data,
-loaded from ADF offset `0x76000` in a 91,648-byte transfer that also carries
+The editor is a separate relocatable module: 77,190 bytes of code and data,
+loaded from ADF offset `0x76000` in a 93,696-byte transfer that also carries
 the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 99,840 bytes of persistent Chip RAM for loading, disk
+384 KiB of Fast RAM and 101,888 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
 arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
-DF1 track disk supports import/export. See [editor controls](README.md#track-editor-beta).
+DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
+
+The patched disk contains the Ready track BUILD in save slot 01, written as a
+first save (one record and both directory copies) without lap records.
+Append previews of straight sections with a height profile place the camera
+at the side. Q/W turn the endpoint view around the endpoint and the preview
+around its section in 45-degree steps; A/Z scale the endpoint camera's
+distance or the preview's focal length in five steps. The preview camera's
+height search ends on a narrow bracket and is bounded, so no view can stall
+the editor.
 
 The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
@@ -240,7 +249,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.8, up to 50 FPS Practice, computer-opponent and linked races) | `284891af5536001f8bae2584cd792cc42adbad2be13983658fd4476ba8cd416c` |
+| Patched ADF (1.4.9, up to 50 FPS Practice, computer-opponent and linked races) | `e4ce7a44c55b32c17a1a68406f667f4639732da6fd0142b0858da214aba93a0f` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.

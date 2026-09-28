@@ -6,7 +6,12 @@
 ; Oblique append preview: preceding-piece anchor, outside a turn, full context.
 ; Fit height/FOV within 256 units; retreat to keep downward pitch <= 45 degrees.
 ; Manual V, ordinary endpoint view and route/undo state remain independent.
+; Straight height profiles are viewed from their right side. Manual Q/W orbit
+; turns the eye around the fitted target; A/Z zoom scales the fitted FOV.
 preview_camera_prepare:
+        ; Start from the endpoint heading so a repeated render is idempotent.
+        move.w camera_heading_x(pc),camera_right_x-module_start(a5)
+        move.w camera_heading_z(pc),camera_right_z-module_start(a5)
         clr.w overview_first-module_start(a5)
         clr.w preview_camera_active-module_start(a5)
         move.l #2560,camera_back-module_start(a5)
@@ -18,14 +23,14 @@ preview_camera_prepare:
         tst.w overview_active-module_start(a5)
         bne overview_fit
         tst.w block_render_active-module_start(a5)
-        beq .done
+        beq view_endpoint
         cmpi.w #1,block_render_mode-module_start(a5)
-        bne .done
+        bne view_endpoint
         move.w block_insert(pc),d0
         cmp.w camera_endpoint(pc),d0
-        bne .done
+        bne view_endpoint
         subq.w #1,d0
-        bmi .done
+        bmi view_endpoint
         move.w d0,overview_first-module_start(a5)
         move.w #1,preview_camera_active-module_start(a5)
         move.w editor_track+28(pc),preview_fit_end-module_start(a5)
@@ -100,6 +105,9 @@ preview_camera_prepare:
         bgt.s .right_turn
         cmpi.l #-256,d0
         blt.s .left_turn
+        ; A straight hill keeps the positive offset: eye on the right side.
+        bsr preview_hill
+        bne.s .eye
         moveq #0,d2
         bra.s .eye
 .right_turn:
@@ -139,6 +147,19 @@ preview_camera_prepare:
         asr.l #7,d0
         asr.l #7,d0
         add.l d0,camera_z-module_start(a5)
+        ; Manual orbit: rotate the eye around the candidate's center.
+        move.w view_orbit(pc),d0
+        beq.s .look
+        move.l camera_x(pc),d1
+        sub.l preview_target_x(pc),d1
+        move.l camera_z(pc),d3
+        sub.l preview_target_z(pc),d3
+        bsr view_rotate
+        add.l preview_target_x(pc),d1
+        move.l d1,camera_x-module_start(a5)
+        add.l preview_target_z(pc),d3
+        move.l d3,camera_z-module_start(a5)
+.look:
         ; Look toward the candidate's center from this anchored eye.
         move.l preview_target_z(pc),d0
         sub.l camera_z(pc),d0
@@ -161,7 +182,12 @@ preview_camera_prepare:
         move.w #1,preview_fit_pass-module_start(a5)
         move.l #1792,preview_fit_low-module_start(a5)
         clr.l preview_fit_high-module_start(a5)
+        clr.w preview_fit_steps-module_start(a5)
 .retry:
+        ; Bounded search: a pathological view keeps its last fit.
+        addq.w #1,preview_fit_steps-module_start(a5)
+        cmpi.w #PREVIEW_FIT_MAX_STEPS,preview_fit_steps-module_start(a5)
+        bhi .focal
         move.l preview_target_distance(pc),d0
         move.l camera_y(pc),d1
         add.l camera_elevation(pc),d1
@@ -197,6 +223,16 @@ preview_camera_prepare:
         add.l d0,d0
         bra.s .retry_height
 .bisect:
+        ; When the bracket is already narrow, finish at its fitting height.
+        ; Otherwise a bracket such as 8191/8192 bisects to the failing low
+        ; height forever.
+        move.l preview_fit_high(pc),d0
+        sub.l preview_fit_low(pc),d0
+        cmpi.l #256,d0
+        bhi.s .midpoint
+        move.l preview_fit_high(pc),d0
+        bra.s .retry_height
+.midpoint:
         move.l preview_fit_low(pc),d0
         add.l preview_fit_high(pc),d0
         lsr.l #1,d0
@@ -204,8 +240,35 @@ preview_camera_prepare:
         move.l d0,camera_elevation-module_start(a5)
         bra .retry
 .focal:
-        move.l camera_focal_y(pc),camera_focal_x-module_start(a5)
+        ; Manual zoom scales the fitted focal length (4/numerator).
+        move.l camera_focal_y(pc),d0
+        lsl.l #2,d0
+        bsr view_zoom_numerator
+        divu.l d1,d0
+        move.l d0,camera_focal_y-module_start(a5)
+        move.l d0,camera_focal_x-module_start(a5)
 .done:  rts
+
+; Z=1 when the previewed block has a centre-line height profile.
+; D0 scratch, all other registers preserved.
+preview_hill:
+        movem.l d1/a0,-(sp)
+        move.w building_choice(pc),d0
+        add.w d0,d0
+        lea block_candidates(pc),a0
+        move.w (a0,d0.w),d0
+        lsr.w #2,d0
+        lsl.w #2,d0
+        lea block_heights(pc),a0
+        moveq #0,d1
+        cmpi.w #256,2(a0,d0.w)
+        bls.s .done
+        moveq #1,d1
+.done:
+        move.w d1,d0
+        movem.l (sp)+,d1/a0
+        tst.w d0
+        rts
 
 preview_camera_bounds:
         lea preview_bounds(pc),a0
@@ -462,6 +525,8 @@ preview_target_distance: dc.l 0
 preview_pitch_cos: dc.l 0
 preview_pitch_sin: dc.l 0
 
+PREVIEW_FIT_MAX_STEPS equ 48
+preview_fit_steps: dc.w 0
 preview_fit_low: dc.l 0
 preview_fit_high: dc.l 0
 

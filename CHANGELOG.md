@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.9 — 2026-09-28
+
+- Track Editor is no longer marked beta.
+- Editor: straight hills, ramps and crests are previewed from the side.
+- Editor: Q/W turn the view and A/Z zoom.
+- Editor: the building lines show the section's rise, the choice number, the
+  piece count, why a red section does not fit, and where the start line is
+  from the open end; a section that closes the track is marked.
+- Editor: fix a freeze of the append preview camera in some views.
+- The game disk includes the ready-to-drive track BUILD in save slot 01.
+
 ## 1.4.8 — 2026-09-26
 
 - PAL and NTSC
