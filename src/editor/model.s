@@ -116,21 +116,26 @@ editor_piece_geometry:
         add.l d3,d0
         add.l d4,d1
         cmpi.l #32768,d0
-        bhi.s .bad_pop
+        bhi.s .bad_map
         cmpi.l #32768,d1
-        bhi.s .bad_pop
+        bhi.s .bad_map
         move.w d0,(a1)+
         move.w (a4)+,d0
         ext.l d0
         add.l d7,d0
         cmpi.l #32767,d0
-        bhi.s .bad_pop
+        bhi.s .bad_height
         move.w d0,(a1)+
         move.w d1,(a1)+
         dbra d6,.point
         moveq #0,d0
         move.w (sp)+,d0
         bra.s .done
+.bad_map:
+        move.w #1,model_fail-module_start(a5)
+        bra.s .bad_pop
+.bad_height:
+        move.w #2,model_fail-module_start(a5)
 .bad_pop:
         addq.l #2,sp
 .bad:
@@ -358,6 +363,8 @@ editor_join:
 editor_model_view:
         bra editor_model_build
 model_refresh: dc.w 0
+; Last geometry failure for the HUD: 1 map edge, 2 height limit.
+model_fail: dc.w 0
 model_valid: dc.w 0
 model_row_counts: dcb.w 64,0
 model_geometry: dcb.b 64*EDITOR_GEOMETRY_STRIDE,0

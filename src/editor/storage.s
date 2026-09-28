@@ -470,12 +470,13 @@ editor_load:
 editor_storage_text:
         lea storage_help(pc),a0
         movea.l draw_surface(pc),a1
-        adda.w #322,a1
+        adda.w #82,a1
         bsr storage_text_line
-        bsr practice_text
+        lea storage_view_help(pc),a0
         movea.l draw_surface(pc),a1
-        adda.w #7682,a1
+        adda.w #482,a1
         bsr storage_text_line
+        bsr hud_status_line
         move.w storage_status(pc),d0
         lsl.w #5,d0
         lea storage_messages(pc),a0
@@ -487,8 +488,9 @@ editor_storage_text:
         lea storage_unsaved(pc),a0
 .status:
         movea.l draw_surface(pc),a1
-        adda.w #722,a1
-        bra storage_text_line
+        adda.w #882,a1
+        bsr storage_text_line
+        bra hud_piece_count
 storage_text_line:
         moveq #0,d0
         move.b (a0)+,d0
@@ -524,9 +526,9 @@ storage_text_line:
         bra.s storage_text_line
 .done:
         rts
-storage_help: dc.b 'S SAVE L LOAD N NEW V VIEW ESC EXIT',0
+storage_help: dc.b 'S SAVE L LOAD N NEW U UNDO BKSP DELETE',0
         even
-storage_edit_help: dc.b 'U UNDO  BACKSPACE DELETE LAST',0
+storage_view_help: dc.b 'V VIEW Q/W ROTATE A/Z ZOOM ESC EXIT',0
 storage_unsaved: dc.b 'UNSAVED CHANGES',0
         even
 storage_status: dc.w 0

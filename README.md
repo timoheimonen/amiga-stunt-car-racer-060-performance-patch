@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.4.8.** This release is primarily intended for emulation.
+**Version 1.4.9.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 
@@ -26,7 +26,7 @@ replace an existing output. The original disk is never overwritten.
 
 Boot the patched disk in DF0.
 
-## Track Editor (Beta)
+## Track Editor
 
 Build in the game's 3D view,
 with a 16 × 16 ground grid, up to 64 internal pieces and 33 section choices.
@@ -35,13 +35,24 @@ with a 16 × 16 ground grid, up to 64 internal pieces and 33 section choices.
 - **Left/Right** (joystick or cursor keys): browse pieces or compatible choices.
 - **Fire/Space:** preview, edit or confirm the selected section. After appending
   to an open track, the next press starts another addition.
+- **Q/W:** turn the view in 45-degree steps. **A/Z:** zoom in and out.
+  Straight hills, ramps and crests are previewed from the side.
 - **Esc:** cancel a preview or leave the editor. Unsaved changes offer Save,
   Discard or Cancel.
 - **Backspace:** remove the selected section. **U:** undo the latest edit.
 - **N:** start a new track after confirmation.
 - **S / L:** save or load a named track.
 
-The game disk has **32 save slots** on two pages. Draft tracks can be saved
+While choosing, the bottom lines show the section's name, its rise, the
+choice number and, for a red section, why it does not fit. On an open track
+the last line shows where the start line is from the open end, for example
+**START 3 RIGHT 3 FWD UP 2 FACE R90**: map squares to the side and ahead,
+height levels, and the start line's direction. A section that closes the
+track is marked.
+
+The game disk has **32 save slots** on two pages. Slot 01 contains the
+ready-to-drive example track **BUILD**; saving over it replaces it after
+confirmation. Draft tracks can be saved
 and resumed; only validated **Ready** tracks appear in **Practise**. The original
 eight tracks remain available. Custom tracks retain their own best times,
 separately for normal and super league. Record eligibility requires Game Speed

@@ -178,6 +178,7 @@ editor_enter:
         clr.w overview_key-module_start(a5)
         clr.l camera_route-module_start(a5)
         move.w #3,camera_buttons-module_start(a5)
+        bsr view_reset
         bsr editor_building_reset
         bsr editor_release_physical
         bsr editor_input_start
@@ -198,6 +199,7 @@ editor_loop:
 render_begin:
         bsr block_render_enter
         bsr editor_render_adapter
+        bsr hud_measure
         bsr block_render_exit
         bsr editor_storage_text
         bsr editor_building_text
@@ -321,6 +323,7 @@ saved_copper: dcb.l 8,0
         include "editing-data.s"
 
         include "src/editor/practice.s"
+        include "src/editor/hud-info.s"
 
         include "src/editor/game.s"
         include "src/editor/preview-arrow.s"

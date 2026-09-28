@@ -7,6 +7,7 @@
 ; camera_route retains the undo format (exclusive primitive endpoint *2048).
 editor_camera:
         bsr editor_view_key
+        bsr view_keys
         move.w editor_directions(pc),d0
         andi.w #3,d0
         move.w camera_buttons(pc),d1
@@ -122,6 +123,9 @@ editor_camera:
         neg.w d3
 .right_z:
         move.w d3,camera_right_z-module_start(a5)
+        move.w camera_right_x(pc),camera_heading_x-module_start(a5)
+        move.w d3,camera_heading_z-module_start(a5)
+        bsr view_context_check
 .done:
         rts
 
@@ -891,6 +895,7 @@ polygon_parent_rows equ $3f000
         include "src/editor/overview.s"
 
         include "src/editor/preview-camera.s"
+        include "src/editor/view-control.s"
 
 ; Anchored preview uses its own downward pitch; ordinary clipping is unchanged.
 preview_polygon:

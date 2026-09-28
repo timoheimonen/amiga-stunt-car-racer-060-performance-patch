@@ -135,6 +135,8 @@ block_options:
 ; Model validation checks every height and both edges, then footprint collision
 ; checks every section, including sections inside the same proposed block.
 block_make:
+        clr.w block_fail-module_start(a5)
+        clr.w model_fail-module_start(a5)
         move.w d0,block_variant-module_start(a5)
         bsr block_descriptor
         move.w (a4),d0
@@ -143,7 +145,7 @@ block_make:
         add.w block_original_track+28(pc),d0
         sub.w block_suffix(pc),d0
         cmpi.w #64,d0
-        bhi .bad
+        bhi .bad_limit
         move.w d0,editor_track+28-module_start(a5)
         lsl.w #3,d0
         addi.w #68,d0
@@ -196,11 +198,11 @@ block_make:
         move.w (a4)+,d0
         add.w d2,d0
         cmpi.w #15,d0
-        bhi .bad
+        bhi .bad_map
         move.w (a4)+,d1
         add.w d3,d1
         cmpi.w #15,d1
-        bhi .bad
+        bhi .bad_map
         lsl.w #4,d1
         or.w d1,d0
         move.b d0,(a1)+
@@ -217,10 +219,10 @@ block_make:
 .built:
         bsr editor_model_refresh
         tst.w d0
-        beq .bad
+        beq .bad_refresh
         bsr block_height_valid
         tst.w d0
-        beq .bad
+        beq .bad_low
         ; Replacement must not move the unchanged suffix vertically.
         move.w block_original_track+28(pc),d6
         sub.w block_suffix(pc),d6
@@ -249,7 +251,7 @@ block_make:
         subq.w #1,d0
 .suffix_point:
         cmpm.w (a0)+,(a1)+
-        bne .bad
+        bne .bad_next
         dbra d0,.suffix_point
         adda.w #EDITOR_GEOMETRY_STRIDE,a2
         adda.w #EDITOR_GEOMETRY_STRIDE,a3
@@ -265,13 +267,39 @@ block_make:
         move.l 4(a0,d0.w),building_probe+4-module_start(a5)
         bsr building_collision
         tst.w d0
-        beq .bad
+        beq .bad_overlap
         addq.w #1,building_selected-module_start(a5)
         move.w editor_track+28(pc),d0
         cmp.w building_selected(pc),d0
         bhi.s .collision
         moveq #1,d0
         rts
+; Reason codes for the HUD, see block_fail_texts.
+.bad_limit:
+        move.w #1,block_fail-module_start(a5)
+        bra.s .bad
+.bad_map:
+        move.w #2,block_fail-module_start(a5)
+        bra.s .bad
+.bad_refresh:
+        ; Geometry limits, otherwise the unchanged next section did not join.
+        move.w #5,block_fail-module_start(a5)
+        cmpi.w #1,model_fail-module_start(a5)
+        bne.s .height_limit
+        move.w #2,block_fail-module_start(a5)
+.height_limit:
+        cmpi.w #2,model_fail-module_start(a5)
+        bne.s .bad
+        move.w #3,block_fail-module_start(a5)
+        bra.s .bad
+.bad_low:
+        move.w #4,block_fail-module_start(a5)
+        bra.s .bad
+.bad_next:
+        move.w #5,block_fail-module_start(a5)
+        bra.s .bad
+.bad_overlap:
+        move.w #6,block_fail-module_start(a5)
 .bad:
         moveq #0,d0
         rts
@@ -464,27 +492,21 @@ block_text:
         lea block_add_text(pc),a0
         bra.s .draw
 .choosing:
-        lea block_rejected_text(pc),a0
+        ; Rejected choices keep their name; row 192 gives the reason.
+        lea block_none_text(pc),a0
         tst.w building_candidate_count-module_start(a5)
         beq.s .draw
-        tst.w block_preview_valid-module_start(a5)
-        beq.s .draw
-        move.w building_choice(pc),d0
-        add.w d0,d0
-        lea block_candidates(pc),a0
-        move.w (a0,d0.w),d0
-        bsr block_descriptor
-        movea.l a4,a0
-        adda.w 2(a4),a0
+        bsr hud_block_line
 .draw:
         movea.l draw_surface(pc),a1
         adda.w #7242,a1
         bra storage_text_line
-block_rejected_text: dc.b 'NO FIT: RED BLOCK CANNOT BE ADDED',0
+block_none_text: dc.b 'NO BLOCK FITS HERE  ESC BACK',0
 block_add_text: dc.b 'ADD BLOCK  FIRE/SPACE PREVIEW',0
 block_browse_text: dc.b 'BLOCKS L/R  FIRE/SPACE SELECT',0
         even
 block_preview_valid: dc.w 0
+block_fail: dc.w 0
 block_insert: dc.w 0
 block_suffix: dc.w 0
 block_count: dc.w 0

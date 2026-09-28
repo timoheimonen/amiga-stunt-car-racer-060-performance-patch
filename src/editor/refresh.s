@@ -46,6 +46,7 @@ editor_view_fields:
         dc.w building_dirty,3
         dc.w camera_route,2
         dc.w overview_active,1
+        dc.w view_orbit,2
         dc.w storage_status,1
         dc.w storage_page,1
         dc.w storage_slot,18

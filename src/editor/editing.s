@@ -116,10 +116,10 @@ editing_undo:
         rts
 editing_delete:
         cmpi.w #1,editor_track+28-module_start(a5)
-        bls.s .done
+        bls .done
         bsr editor_model_build
         tst.w d0
-        beq.s .done
+        beq .done
         move.w editor_track+28(pc),d0
         subq.w #1,d0
         lsl.w #3,d0
@@ -127,7 +127,7 @@ editing_delete:
         adda.w d0,a0
         move.l (a0),d0
         cmp.l editor_track+36(pc),d0
-        beq.s .done
+        beq .done
         bsr editing_backup
         move.w editor_track+28(pc),d0
         subq.w #1,d0
