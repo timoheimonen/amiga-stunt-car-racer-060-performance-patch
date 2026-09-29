@@ -1,4 +1,4 @@
-# Patch details — 1.4.9
+# Patch details — 1.5.0
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -215,6 +215,14 @@ areas are copied to the screen, so the wave and scroller update every frame.
 The flagpole is a shaded white Finnish pole with a gilded knob.
 Click a mouse button to continue to the game.
 
+On a 68060 whose FPU is enabled at boot, the intro is skipped and the game
+loads directly. Kickstart 3.1 cannot run the 68060 FPU safely without
+68060.library, which a floppy boot does not load; 68060 boards therefore
+disable the FPU at reset. The intro reads the processor configuration
+register and returns before any operating system call when the FPU is
+enabled. With the FPU disabled, and on processors without that register, the
+intro is shown as before.
+
 ## Player-name screen
 
 The prompt reads `NAME? OR PRESS FIRE TO CONTINUE`. Fire supplies `racer`
@@ -237,9 +245,9 @@ performance layer; its expected bytes refer to that intermediate disk. Words and
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `b178776797c59302dd0f5afcdaf69ac3041b8641bcee4f07d7717fd3b971d9e7` |
+| Boot | 320 | `10f67db818b945e70ebc2ed173584f016ca19e2cb5a253a5a83fed0c9457e453` |
 | Runtime | 6734 | `95ccd057ccbdd4edf0f83d74f8c15a44044948c0f56c97b42c348acd4bfeef44` |
-| Intro | 5818 | `02c83ae864acf7bde125d14d37026fa23d1b158edbb305aee29f653afa02f550` |
+| Intro | 5922 | `b7ad19f33e1debe3a5c231df6742479c01aecab0ab3b588c26b776a9e918f7ca` |
 
 ## Checksums
 
@@ -249,7 +257,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.4.9, up to 50 FPS Practice, computer-opponent and linked races) | `e4ce7a44c55b32c17a1a68406f667f4639732da6fd0142b0858da214aba93a0f` |
+| Patched ADF (1.5.0, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.

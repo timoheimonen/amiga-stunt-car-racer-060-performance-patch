@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0 — 2026-09-29
+
+- The boot intro is skipped on a 68060 whose FPU is enabled at boot
+
 ## 1.4.9 — 2026-09-28
 
 - Track Editor is no longer marked beta.

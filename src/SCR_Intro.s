@@ -11,6 +11,8 @@
 start:
         movem.l d0-d7/a0-a6,-(sp)
         lea start(pc),a5
+        bsr fpu060_enabled
+        bne cleanup             ; nothing opened yet: skip the intro
         move.l 4.w,a6
         lea intuition_name(pc),a1
         moveq #39,d0
@@ -136,6 +138,49 @@ read_vbl_count:
         lsl.l #8,d0
         move.b $bfe801,d0
         rts
+; D0 = 1 (Z clear) on a 68060 whose FPU is enabled (PCR DFP = 0), else 0.
+; Kickstart 3.1 without 68060.library cannot run that FPU safely, and
+; 060 boards disable it at reset; stay out of the OS when it is on.
+; A 68060 without its library reports 68040 in AttnFlags. MOVEC PCR is
+; illegal on the 68040 and on other CPUs without PCR, which reject the probe.
+; Uses D1/A0-A1.
+fpu060_enabled:
+        move.l a5,-(sp)
+        move.l 4.w,a6
+        moveq #0,d0
+        move.w 296(a6),d1       ; AttnFlags
+        andi.w #$0088,d1        ; AFF_68040 | AFF_68060
+        beq.s .done
+        lea .read_pcr(pc),a5
+        jsr -30(a6)             ; Supervisor: D0 = PCR, 0 if MOVEC PCR traps
+        move.l d0,d1
+        moveq #0,d0
+        btst #1,d1              ; DFP: FPU disabled
+        bne.s .done
+        swap d1
+        andi.w #$fffe,d1        ; $0430 68060, $0431 68EC/LC060
+        cmpi.w #$0430,d1
+        bne.s .done
+        moveq #1,d0
+.done:  move.l (sp)+,a5
+        tst.l d0
+        rts
+.read_pcr:
+        ori.w #$0700,sr
+        dc.l $4e7a8801          ; movec vbr,a0
+        move.l $10(a0),-(sp)    ; illegal instruction vector
+        lea .no_pcr(pc),a1
+        move.l a1,$10(a0)
+        movea.l sp,a1
+        moveq #0,d0
+        dc.l $4e7a0808          ; movec pcr,d0
+        bra.s .restore
+.no_pcr:movea.l a1,sp           ; drop the exception frame
+        moveq #0,d0
+.restore:
+        move.l (sp)+,$10(a0)
+        rte
+
 cleanup:
         move.l ibase-start(a5),a6
         move.l window-start(a5),d0

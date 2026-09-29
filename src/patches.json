@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.4.9",
+  "release_version": "1.5.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice, computer-opponent and linked two-player races",
   "target": "Emulation / PAL or NTSC / MC68060 / 2 MiB Chip / at least 1 MiB Fast RAM",
   "source": {
@@ -14,9 +14,9 @@
     }
   },
   "output": {
-    "name": "StuntCarRacer-Performance-v1.4.9.adf",
+    "name": "StuntCarRacer-Performance-v1.5.0.adf",
     "size": 901120,
-    "sha256": "e4ce7a44c55b32c17a1a68406f667f4639732da6fd0142b0858da214aba93a0f"
+    "sha256": "42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3"
   },
   "payloads": [
     {
@@ -25,7 +25,7 @@
       "adf_offset": "0x200",
       "boot_relative_base": "0x200",
       "size": 320,
-      "sha256": "b178776797c59302dd0f5afcdaf69ac3041b8641bcee4f07d7717fd3b971d9e7",
+      "sha256": "10f67db818b945e70ebc2ed173584f016ca19e2cb5a253a5a83fed0c9457e453",
       "expected_hex": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
       "includes": [
         "SCR_IntroBoot.s"
@@ -68,9 +68,9 @@
       "id": "intro",
       "source": "SCR_Intro.s",
       "adf_offset": "0x74000",
-      "size": 5818,
+      "size": 5922,
       "reserved_size": 8192,
-      "sha256": "02c83ae864acf7bde125d14d37026fa23d1b158edbb305aee29f653afa02f550",
+      "sha256": "b7ad19f33e1debe3a5c231df6742479c01aecab0ab3b588c26b776a9e918f7ca",
       "expected_sha256": "9f1dcbc35c350d6027f98be0f5c8b43b42ca52b7604459c0c42be3aa88913d47",
       "geometry_allocation_size": 198144,
       "backbuffer_allocation_size": 40960,
@@ -105,7 +105,7 @@
     {
       "adf_offset": "0x4",
       "expected_hex": "30ad90c0",
-      "replacement_hex": "c7fed99d",
+      "replacement_hex": "8c65670a",
       "description": "Recalculate Amiga bootblock checksum"
     },
     {
@@ -1583,7 +1583,7 @@
       "new": "3a35100038341000302b0022c1c5362b0020c7c4d0830680000100004840e240064000803b801000302b0022c1c4362b0020c7c590830680000100004840e2400640004039801000"
     }
   ],
-  "performance_sha256": "129019c2a02e048e1a78a230fb626652be69977d7c563e39b59dd3d3311607d1",
+  "performance_sha256": "faf083476265fe0a7230d7e6759a68ac1bbb2a34944a909c1f3cb03ba6b5288a",
   "editor": {
     "module_sha256": "9c419481bee69f064420a1f1cc5c7b445d71c68465c2d64aa6de43d23e292490",
     "payload_sha256": "fc427fc770c5faed709cb09ca2a7152038dcf296615f73955048312746eb0238",
@@ -1887,8 +1887,8 @@
       },
       {
         "adf_offset": 4,
-        "expected_hex": "c7fed99d",
-        "replacement_hex": "47191dd6",
+        "expected_hex": "8c65670a",
+        "replacement_hex": "0b7fab43",
         "reason": "Amiga boot checksum"
       }
     ],
