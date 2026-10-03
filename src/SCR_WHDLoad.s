@@ -3,13 +3,17 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Starts the patched game disk, installed as Disk.1, from a hard disk.
+; Starts the patched game disk, installed as the image StuntCarRacerPerf.disk,
+; from a hard disk. The slave, its icon, the image and the save files have
+; names of their own, so the install can share a directory with other
+; installs of the game, whose image is Disk.1.
 ;
 ; The slave runs the disk's own boot block with a minimal exec.library and
 ; trackdisk.device in front of it: the boot block, the performance runtime
 ; installer and the editor bootstrap allocate their memory and read the disk
 ; exactly as on floppy. Chip allocations come from BaseMem, Fast allocations
-; from ExpMem, and every read goes through resload_DiskLoad. The intro is
+; from ExpMem, and every read of the image goes through resload_LoadFileOffset
+; (resload_DiskLoad only reads images named Disk.N). The intro is
 ; skipped. Before the boot block enters the game's loader, the loader's floppy
 ; driver is replaced with the same reads; after the loader has read the main
 ; program, the game's own floppy driver is replaced as well.
@@ -20,7 +24,7 @@
 ; save index and saves. A file stands for its sectors in both copies the
 ; editor keeps on floppy; without the file, the disk's original sectors are
 ; read. Writes outside these areas are refused as on a write-protected disk,
-; so Disk.1 is never written.
+; so the image is never written.
 ;
 ; Addresses: boot block offsets are relative to the boot block, first-load
 ; offsets relative to the first-load allocation (A3 in the boot block), game
@@ -103,6 +107,8 @@ name:   dc.b "Stunt Car Racer",0
 copy:   dc.b "1989 Geoff Crammond, MicroStyle",0
 info:   dc.b "Performance Patch",10
         dc.b "by Timo Heimonen",0
+disk_name:
+        dc.b "StuntCarRacerPerf.disk",0
 exec_name:
         dc.b "exec.library",0
 trackdisk_name:
@@ -155,11 +161,11 @@ start:
         move.l a6,($4).w
 
         ; Read and check the boot block.
-        moveq #0,d0
-        move.l #$400,d1
-        moveq #1,d2
-        lea (BOOT_ADDR).l,a0
-        jsr resload_DiskLoad(a5)
+        move.l #$400,d0
+        moveq #0,d1
+        lea disk_name(pc),a0
+        lea (BOOT_ADDR).l,a1
+        jsr resload_LoadFileOffset(a5)
         lea (BOOT_ADDR).l,a0
         move.l #$400,d1
         bsr checksum
@@ -227,7 +233,7 @@ checksum:
 ; driver's error code with the flags set from it; preserves the other
 ; registers. Only the game disk in the standard format exists (DF1 has no
 ; disk). Reads and writes of the file_map areas go to their files, other
-; reads to Disk.1; other writes are refused as on a write-protected disk.
+; reads to the image; other writes are refused as on a write-protected disk.
 
 ERR_RANGE       equ 30                  ; the driver's errors
 ERR_NO_DISK     equ 29
@@ -327,19 +333,20 @@ disk_driver:
         bsr file_size
         bgt.s .load_file
         moveq #0,d4                     ; D4: the file exists
-        lea file_buffer(pc),a0          ; no file (or a damaged one): the
-        move.w file_blank(pc),d0        ; disk's sectors, or empty ones
-        bne.s .blank
-        move.l a3,d0
-        move.l d2,d1
-        lsl.l #8,d1
-        add.l d1,d1
+        move.w file_blank(pc),d0        ; no file (or a damaged one): the
+        bne.s .blank                    ; disk's sectors, or empty ones
+        move.l d2,d0
         lsl.l #8,d0
-        add.l d0,d0
-        moveq #1,d2
-        jsr resload_DiskLoad(a5)
+        add.l d0,d0                     ; size: the file's sectors
+        move.l a3,d1
+        lsl.l #8,d1
+        add.l d1,d1                     ; offset of its first copy
+        lea disk_name(pc),a0
+        lea file_buffer(pc),a1
+        jsr resload_LoadFileOffset(a5)
         bra.s .merge
-.blank: move.w #3*512/4-1,d0
+.blank: lea file_buffer(pc),a0
+        move.w #3*512/4-1,d0
 .empty: clr.l (a0)+
         dbra d0,.empty
         bra.s .merge
@@ -409,16 +416,17 @@ file_size:
 .ok:    moveq #1,d0
 .done:  rts
 
-; Read D5 sectors from sector D0 of Disk.1 to A4.
+; Read D5 sectors from sector D0 of the image to A4.
 disk_read:
-        lsl.l #8,d0
-        add.l d0,d0
-        move.l d5,d1
+        move.l d0,d1
         lsl.l #8,d1
-        add.l d1,d1
-        moveq #1,d2
-        movea.l a4,a0
-        jsr resload_DiskLoad(a5)
+        add.l d1,d1                     ; offset
+        move.l d5,d0
+        lsl.l #8,d0
+        add.l d0,d0                     ; size
+        lea disk_name(pc),a0
+        movea.l a4,a1
+        jsr resload_LoadFileOffset(a5)
         rts
 
 ; Finds the file of sector D0. Returns D0 = 0 (and Z) if the sector is in no
@@ -695,7 +703,7 @@ exec_allocabs:
 
 ; DoIO(A1 request) for trackdisk.device: CMD_READ and TD_MOTOR.
 exec_doio:
-        movem.l d1-d2/a0-a2,-(sp)
+        movem.l d1-d2/a0-a3,-(sp)
         movea.l a1,a2
         moveq #0,d0
         move.w IO_COMMAND(a2),d0
@@ -703,12 +711,12 @@ exec_doio:
         beq.s .ok
         cmp.w #CMD_READ,d0
         bne.s .unsupported
-        move.l IO_OFFSET(a2),d0
-        move.l IO_LENGTH(a2),d1
-        moveq #1,d2
-        movea.l IO_DATA(a2),a0
-        movea.l resload(pc),a1
-        jsr resload_DiskLoad(a1)
+        move.l IO_LENGTH(a2),d0
+        move.l IO_OFFSET(a2),d1
+        lea disk_name(pc),a0
+        movea.l IO_DATA(a2),a1
+        movea.l resload(pc),a3
+        jsr resload_LoadFileOffset(a3)
         cmpi.l #FIRST_OFFSET,IO_OFFSET(a2)
         bne.s .ok
         cmpi.l #FIRST_BYTES,IO_LENGTH(a2)
@@ -724,7 +732,7 @@ exec_doio:
         clr.l IO_ACTUAL(a2)
 .done:  clr.b IO_ERROR(a2)
         moveq #0,d0
-        movem.l (sp)+,d1-d2/a0-a2
+        movem.l (sp)+,d1-d2/a0-a3
         rts
 .unsupported:
         lea trackdisk_name(pc),a0

@@ -1,4 +1,4 @@
-# Patch details — 1.6.0
+# Patch details — 1.6.1
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -232,17 +232,23 @@ when the name is empty and preserves a typed name.
 
 ## WHDLoad install
 
-`patch.py --whdload DIRECTORY` writes the patched ADF as `Disk.1` together
-with a WHDLoad slave, a Workbench project icon and a drawer icon for the
-directory. Use: [WHDLoad install](WHDLOAD.md). Slave source:
+`patch.py --whdload [DIRECTORY]` (default: `StuntCarRacerPerf` beside the
+original ADF) writes the patched ADF as the disk image
+`StuntCarRacerPerf.disk` together with a WHDLoad slave, a Workbench project
+icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Slave source:
 [src/SCR_WHDLoad.s](src/SCR_WHDLoad.s).
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacer.slave` | 4464 | `9422e1fa72876d25e6a399c83d12f4c14efe8e00c24f86d3db22db53c37be59b` |
-| `StuntCarRacer.info` (project, default tool `WHDLoad`) | 297 | `58c9e8614a81d011b19d91e5b5fce328503c7c09165f4fb585c8e719e7a1197d` |
+| `StuntCarRacerPerf.slave` | 4500 | `edcc0f6f3980758c3e01c1590f3e179430a820fff37ac09498c882ca5a26767c` |
+| `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
-| `Disk.1` | 901,120 | the patched ADF, see [Checksums](#checksums) |
+| `StuntCarRacerPerf.disk` | 901,120 | the patched ADF, see [Checksums](#checksums) |
+
+The names differ from other WHDLoad installs of the game (`StuntCarRacer.slave`,
+`StuntCarRacer.info`, `Disk.1`; AmigaDOS names ignore case), so both can share
+one directory. `resload_DiskLoad` reads only images named `Disk.N`, so the
+slave reads its image with `resload_LoadFileOffset`.
 
 The slave (WHDLoad slave version 17, base memory `0x200000`, expansion memory
 `0xaa000`, quit key F10) runs the disk's own boot block on a minimal
@@ -261,7 +267,7 @@ call ends WHDLoad with an operating system emulation error naming the call.
   buffer takes the top of the base memory.
 - The slave checks the long-word sums of the boot block, the first load
   (`0x2c00`, `0xb000` bytes) and the main program (`0xdc00`, `0x64a00` bytes)
-  and the bytes at each place it patches. Any other `Disk.1` ends with
+  and the bytes at each place it patches. Any other image ends with
   WHDLoad's message about damaged files or an unsupported version.
 
 | Place | Original | WHDLoad |
@@ -275,7 +281,7 @@ The slave driver keeps the original interface: D0 drive (bits 0–1) and
 format (bit 15), D1 first sector, D2 sector count, D3 read or write, A0 data;
 D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range, or a
 save file of the wrong size). Only the game disk in DF0 in the standard format
-exists; DF1 returns 29. Reads go through `resload_DiskLoad`.
+exists; DF1 returns 29. Reads of the image go through `resload_LoadFileOffset`.
 
 The disk areas the game and the Track Editor write are files in the install
 directory. The editor's two copies of each area are one file.
@@ -290,7 +296,7 @@ directory. The editor's two copies of each area are one file.
 
 A write builds the whole file from its current contents, or from the disk
 without a file, and saves it with `resload_SaveFile`; an unchanged file is not
-written again. Writes elsewhere return error 28, so `Disk.1` is never written.
+written again. Writes elsewhere return error 28, so the image is never written.
 The season saves were on a separate formatted disk on floppy, so without a
 file they read as a new, empty save disk.
 
@@ -325,9 +331,10 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.6.0, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
+| Patched ADF (1.6.1, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
 
-The patched ADF is the same as in 1.5.0; the WHDLoad install uses it as `Disk.1`.
+The patched ADF is the same as in 1.5.0; the WHDLoad install uses it as
+`StuntCarRacerPerf.disk`.
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.

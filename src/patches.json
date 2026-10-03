@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.6.0",
+  "release_version": "1.6.1",
   "status": "50 Hz physics / 50 FPS rendering in Practice, computer-opponent and linked two-player races",
   "target": "Emulation / PAL or NTSC / MC68060 / 2 MiB Chip / at least 1 MiB Fast RAM",
   "source": {
@@ -14,7 +14,7 @@
     }
   },
   "output": {
-    "name": "StuntCarRacer-Performance-v1.6.0.adf",
+    "name": "StuntCarRacer-Performance-v1.6.1.adf",
     "size": 901120,
     "sha256": "42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3"
   },
@@ -1921,17 +1921,17 @@
   },
   "whdload": {
     "target": "MC68060 / 2 MiB Chip / at least 2 MiB Fast RAM / WHDLoad 17 or later",
-    "disk_image": "Disk.1",
+    "disk_image": "StuntCarRacerPerf.disk",
     "disk_image_sha256": "42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3",
     "slave": {
-      "name": "StuntCarRacer.slave",
+      "name": "StuntCarRacerPerf.slave",
       "source": "SCR_WHDLoad.s",
       "includes": [
         "SCR_WHDLoad.i"
       ],
       "format": "AmigaDOS executable, one code hunk",
-      "size": 4464,
-      "sha256": "9422e1fa72876d25e6a399c83d12f4c14efe8e00c24f86d3db22db53c37be59b",
+      "size": 4500,
+      "sha256": "edcc0f6f3980758c3e01c1590f3e179430a820fff37ac09498c882ca5a26767c",
       "ws_version": 17,
       "base_mem_size": "0x200000",
       "exp_mem_size": "0xaa000",
@@ -2045,13 +2045,13 @@
       }
     ],
     "icon": {
-      "name": "StuntCarRacer.info",
+      "name": "StuntCarRacerPerf.info",
       "type": "WBPROJECT",
-      "size": 297,
-      "sha256": "58c9e8614a81d011b19d91e5b5fce328503c7c09165f4fb585c8e719e7a1197d",
+      "size": 301,
+      "sha256": "f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca",
       "default_tool": "WHDLoad",
       "tool_types": [
-        "SLAVE=StuntCarRacer.slave",
+        "SLAVE=StuntCarRacerPerf.slave",
         "PRELOAD",
         "NOWRITECACHE",
         "(WRITEDELAY=25)"
@@ -2062,6 +2062,8 @@
       "type": "WBDRAWER",
       "size": 264,
       "sha256": "58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636"
-    }
+    },
+    "disk_image_reads": "resload_LoadFileOffset",
+    "default_directory": "StuntCarRacerPerf (beside the original ADF)"
   }
 }

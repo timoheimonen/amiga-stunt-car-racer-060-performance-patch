@@ -14,8 +14,13 @@ files in the install directory instead of disk sectors.
 ## Install
 
 ```sh
-python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload StuntCarRacer
+python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload
 ```
+
+Creates the install directory `StuntCarRacerPerf` and its drawer icon
+`StuntCarRacerPerf.info` beside the original disk image. To write them
+elsewhere, name the directory, for example
+`--whdload /path/to/Games/StuntCarRacerPerf`.
 
 `patch.py` accepts only the [supported original disk image](PATCH.md#checksums)
 and refuses an existing output directory or drawer icon; `--force` does not
@@ -24,27 +29,33 @@ FAT-formatted media. It writes:
 
 | File | Contents |
 | --- | --- |
-| `StuntCarRacer.slave` | The WHDLoad slave |
-| `Disk.1` | The patched game disk; WHDLoad only reads it |
-| `StuntCarRacer.info` | Workbench icon |
-| `<directory>.info` next to the directory | Drawer icon of the directory, for example `StuntCarRacer.info` |
+| `StuntCarRacerPerf.slave` | The WHDLoad slave |
+| `StuntCarRacerPerf.disk` | The patched game disk image; WHDLoad only reads it |
+| `StuntCarRacerPerf.info` | Workbench icon |
+| `StuntCarRacerPerf.info` next to the directory | Drawer icon of the directory, named after it |
 
 The game's saves are created next to these files (see [Saving](#saving)).
+
+The names differ from those of other WHDLoad installs of the game, which use
+`StuntCarRacer.slave`, `StuntCarRacer.info` and `Disk.1`, so the files can
+share one directory with such an install; each is started from its own icon.
+With `PRELOAD`, WHDLoad preloads every file of the directory, so a shared
+directory needs more memory.
 
 Copy the directory and its drawer icon to the Amiga, for example into a
 `Games` drawer. Open the drawer and double-click the game's icon, or start
 it from a shell:
 
 ```sh
-cd Games/StuntCarRacer
-WHDLoad StuntCarRacer.slave PRELOAD NOWRITECACHE
+cd Games/StuntCarRacerPerf
+WHDLoad StuntCarRacerPerf.slave PRELOAD NOWRITECACHE
 ```
 
 **F10** quits back to the system (WHDLoad's `QuitKey` option changes it).
 
-The slave starts only the disk it was made for. Any other `Disk.1`,
-including an unpatched one, ends with WHDLoad's message that the data files
-are damaged or an unsupported version.
+The slave starts only the disk it was made for. Any other
+`StuntCarRacerPerf.disk`, including an unpatched one, ends with WHDLoad's
+message that the data files are damaged or an unsupported version.
 
 ## Saving
 
@@ -64,6 +75,9 @@ All saves are files in the install directory:
   shown as UNREADABLE; move a track by loading it in the Track Editor and
   saving it into another slot. Copy files between installs under the same
   names.
+- An install made with version 1.6.0 used `StuntCarRacer.slave`,
+  `StuntCarRacer.info` and `Disk.1`. Its save files have the same names as
+  now: copy them into the new install.
 - If the index does not match the track files, for example after files were
   copied, the Track Editor shows `INDEX RECOVERED FROM RECORDS` and writes a
   new index with the next save.
@@ -102,7 +116,7 @@ The slave runs the disk's own boot block on a minimal `exec.library` and
 Computer Link module are installed exactly as from floppy: Chip memory comes
 from WHDLoad's base memory, Fast memory from its expansion memory. It skips
 the intro, and replaces the floppy driver of the game's loader and of the game
-with reads of `Disk.1`. The disk areas the game and the Track Editor write are
+with reads of `StuntCarRacerPerf.disk`. The disk areas the game and the Track Editor write are
 mapped to the files above; the Track Editor's two copies of each slot are one
-file. Other writes are refused, so `Disk.1` never changes. Technical details:
+file. Other writes are refused, so the disk image never changes. Technical details:
 [Patch details](PATCH.md#whdload-install).

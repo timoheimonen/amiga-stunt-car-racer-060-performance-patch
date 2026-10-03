@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.1 — 2026-10-03
+
+- WHDLoad install: the slave, its icon and the disk image are now
+  `StuntCarRacerPerf.slave`, `StuntCarRacerPerf.info` and
+  `StuntCarRacerPerf.disk`, so the install can share a directory with other
+  WHDLoad installs of the game, which use `StuntCarRacer.slave`,
+  `StuntCarRacer.info` and `Disk.1`. Save files keep their names: copy them
+  from a 1.6.0 install into the new one.
+- `--whdload` without a directory creates `StuntCarRacerPerf` and its drawer
+  icon `StuntCarRacerPerf.info` beside the original ADF.
+- The patched ADF is unchanged.
+
 ## 1.6.0 — 2026-10-03
 
 - WHDLoad install: `patch.py --whdload DIRECTORY` writes the slave, the

@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.6.0.** This release is primarily intended for emulation.
+**Version 1.6.1.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 The patcher also writes a [WHDLoad install](WHDLOAD.md) of the same game for a hard disk.
@@ -30,13 +30,15 @@ Boot the patched disk in DF0.
 ### WHDLoad
 
 ```sh
-python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload StuntCarRacer
+python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload
 ```
 
-Creates the new install directory `StuntCarRacer` and its drawer icon
-`StuntCarRacer.info` beside it. Copy both to the Amiga and start the game from
-its icon. The intro is skipped, and custom tracks, records and season saves
-are files in the install directory. Requires WHDLoad 17 or later and at least
+Creates the new install directory `StuntCarRacerPerf` and its drawer icon
+`StuntCarRacerPerf.info` beside the original; `--whdload DIRECTORY` chooses
+another place. Copy both to the Amiga and start the game from its icon,
+`StuntCarRacerPerf`. The intro is skipped, and custom tracks, records
+and season saves are files in the install directory. The install's own file
+names let it share a directory with other WHDLoad installs of the game. Requires WHDLoad 17 or later and at least
 2 MiB Fast RAM; see [WHDLoad install](WHDLOAD.md).
 
 ## Track Editor
