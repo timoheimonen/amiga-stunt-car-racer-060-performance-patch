@@ -21,7 +21,6 @@ resload_LoadFile        equ $08
 resload_SaveFile        equ $0c
 resload_FlushCache      equ $20
 resload_GetFileSize     equ $24
-resload_DiskLoad        equ $28
 resload_Control         equ $34
 resload_LoadFileOffset  equ $4c
 
