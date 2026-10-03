@@ -1,4 +1,4 @@
-# Patch details — 1.5.0
+# Patch details — 1.6.0
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -15,6 +15,8 @@ This release is primarily intended for emulation with PAL or NTSC timing, a 6806
   halts boot with a red screen. The Track Editor and Computer Link need
   416 KiB of Fast RAM; the angle tables use another 256 KiB when available.
   See [Loader and memory](#loader-and-memory).
+- The [WHDLoad install](#whdload-install) needs a 68060, 2 MiB Chip RAM, at
+  least 2 MiB Fast RAM and WHDLoad 17 or later.
 - Keep DF0 writable for the editor's 32 track slots and custom-track records.
   For Save/Load → Disk, enable a second floppy drive and insert a separate
   writable ADF in DF1. The editor initializes a track disk only after
@@ -228,6 +230,70 @@ intro is shown as before.
 The prompt reads `NAME? OR PRESS FIRE TO CONTINUE`. Fire supplies `racer`
 when the name is empty and preserves a typed name.
 
+## WHDLoad install
+
+`patch.py --whdload DIRECTORY` writes the patched ADF as `Disk.1` together
+with a WHDLoad slave, a Workbench project icon and a drawer icon for the
+directory. Use: [WHDLoad install](WHDLOAD.md). Slave source:
+[src/SCR_WHDLoad.s](src/SCR_WHDLoad.s).
+
+| File | Size | SHA-256 |
+| --- | ---: | --- |
+| `StuntCarRacer.slave` | 4464 | `9422e1fa72876d25e6a399c83d12f4c14efe8e00c24f86d3db22db53c37be59b` |
+| `StuntCarRacer.info` (project, default tool `WHDLoad`) | 297 | `58c9e8614a81d011b19d91e5b5fce328503c7c09165f4fb585c8e719e7a1197d` |
+| `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
+| `Disk.1` | 901,120 | the patched ADF, see [Checksums](#checksums) |
+
+The slave (WHDLoad slave version 17, base memory `0x200000`, expansion memory
+`0xaa000`, quit key F10) runs the disk's own boot block on a minimal
+`exec.library` and `trackdisk.device`. The boot code, the runtime installer
+and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
+`AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
+`CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
+call ends WHDLoad with an operating system emulation error naming the call.
+
+- Chip memory comes from the base memory: ordinary allocations from
+  `0x80000` below the boot block at `0x8c000`, `MEMF_REVERSE` allocations from
+  the top down to `0x190000`, and `AllocAbs` reserves the runtime at
+  `0x181000`. Fast memory comes from the expansion memory: 256 KiB angle
+  tables, the 384 KiB Track Editor and the 32 KiB Computer Link module. Its
+  last 8 KiB are the slave's stack during the boot, as the editor's Chip
+  buffer takes the top of the base memory.
+- The slave checks the long-word sums of the boot block, the first load
+  (`0x2c00`, `0xb000` bytes) and the main program (`0xdc00`, `0x64a00` bytes)
+  and the bytes at each place it patches. Any other `Disk.1` ends with
+  WHDLoad's message about damaged files or an unsupported version.
+
+| Place | Original | WHDLoad |
+| --- | --- | --- |
+| Boot block `+0x340` | call of the intro (`+0x286`) | call of the runtime installer (`+0x24c`); the intro is skipped |
+| Boot block `+0x7c` | `LEA +0x200,SP` / `JMP (A3)` | jump to the slave, which replaces the loader's driver and then sets the same stack and jumps |
+| First load `+0x570` (loader `0x44f8`) | loader floppy driver | slave driver |
+| `0x62e86` | game floppy driver | slave driver, installed after the loader has read and checked the main program |
+
+The slave driver keeps the original interface: D0 drive (bits 0–1) and
+format (bit 15), D1 first sector, D2 sector count, D3 read or write, A0 data;
+D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range, or a
+save file of the wrong size). Only the game disk in DF0 in the standard format
+exists; DF1 returns 29. Reads go through `resload_DiskLoad`.
+
+The disk areas the game and the Track Editor write are files in the install
+directory. The editor's two copies of each area are one file.
+
+| Disk area (sectors) | File | Size | Without the file |
+| --- | --- | ---: | --- |
+| Editor slot *n* = 0–31: track `1210+4n`, copy `1342+4n` | `TrackNN.sct` (NN = *n*+1) | 1024 | game disk sectors |
+| Records of slot *n*: `1212+4n`, copy `1344+4n` | `TrackNN.rec` | 1024 | game disk sectors |
+| Editor slot index: `1474`, copy `1485` | `TrackIndex` | 1536 | game disk sectors |
+| Season save index: `22` | `SaveIndex` | 512 | empty sectors |
+| Season save *k* = 0–29: `23+k` | `SaveNN` (NN = *k*+1) | 512 | empty sectors |
+
+A write builds the whole file from its current contents, or from the disk
+without a file, and saves it with `resload_SaveFile`; an unchanged file is not
+written again. Writes elsewhere return error 28, so `Disk.1` is never written.
+The season saves were on a separate formatted disk on floppy, so without a
+file they read as a new, empty save disk.
+
 ## Address mapping and patches
 
 The main game block loads from ADF `0xdc00` to address `0xe700`.
@@ -240,8 +306,10 @@ runtime address = extracted game-block offset + 0xe700
 [src/patches.json](src/patches.json) lists the 108 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. The `editor.changes` list is applied after the guarded
-performance layer; its expected bytes refer to that intermediate disk. Words and longwords use big-endian encoding.
-[patch.py](patch.py) embeds the boot, runtime, intro and editor/link overlay for standalone use.
+performance layer; its expected bytes refer to that intermediate disk. The
+`whdload` section describes the WHDLoad install. Words and longwords use big-endian encoding.
+[patch.py](patch.py) embeds the boot, runtime, intro, editor/link overlay and
+the WHDLoad slave and icons for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
@@ -257,7 +325,9 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.5.0, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
+| Patched ADF (1.6.0, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
+
+The patched ADF is the same as in 1.5.0; the WHDLoad install uses it as `Disk.1`.
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.
@@ -266,9 +336,10 @@ dump, modified save disk, truncated image or already-patched disk is rejected.
 
 ## Included sources
 
-`src/` contains the assembly sources and patch manifest. Applying the patch
-requires only `patch.py`, Python 3.8+ and the supported original ADF;
-no assembler is needed.
+`src/` contains the assembly sources, including the WHDLoad slave, and the
+patch manifest. Applying the patch or writing the WHDLoad install requires
+only `patch.py`, Python 3.8+ and the supported original ADF; no assembler is
+needed.
 
 ## Output protection and rollback
 
@@ -277,6 +348,10 @@ boot checksum and complete output hash. It reads back a temporary output
 before publishing it atomically. Existing output requires `--force` to replace.
 The source file and its aliases are protected; symbolic-link output paths
 are rejected.
+
+A WHDLoad install is written only to a new directory and a new drawer icon:
+both are created exclusively, never replacing an existing file or directory,
+and a failed install removes what it created. `--force` does not apply.
 
 To restore the original game, quit the patched session and boot the untouched
 original ADF with fresh emulator state. A save state containing patched RAM

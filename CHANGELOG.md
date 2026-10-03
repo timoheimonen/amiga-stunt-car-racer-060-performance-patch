@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.0 — 2026-10-03
+
+- WHDLoad install: `patch.py --whdload DIRECTORY` writes the slave, the
+  patched disk as `Disk.1`, a Workbench icon and a drawer icon for starting
+  the game from a hard disk without the intro. Custom tracks, records and
+  season saves are files in the install directory. See [WHDLoad install](WHDLOAD.md).
+- The patched ADF is unchanged from 1.5.0.
+
 ## 1.5.0 — 2026-09-29
 
 - The boot intro is skipped on a 68060 whose FPU is enabled at boot

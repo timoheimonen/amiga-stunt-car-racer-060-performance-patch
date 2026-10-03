@@ -1,6 +1,6 @@
 {
   "format_version": 1,
-  "release_version": "1.5.0",
+  "release_version": "1.6.0",
   "status": "50 Hz physics / 50 FPS rendering in Practice, computer-opponent and linked two-player races",
   "target": "Emulation / PAL or NTSC / MC68060 / 2 MiB Chip / at least 1 MiB Fast RAM",
   "source": {
@@ -14,7 +14,7 @@
     }
   },
   "output": {
-    "name": "StuntCarRacer-Performance-v1.5.0.adf",
+    "name": "StuntCarRacer-Performance-v1.6.0.adf",
     "size": 901120,
     "sha256": "42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3"
   },
@@ -1918,5 +1918,150 @@
         "lap_records": false
       }
     ]
+  },
+  "whdload": {
+    "target": "MC68060 / 2 MiB Chip / at least 2 MiB Fast RAM / WHDLoad 17 or later",
+    "disk_image": "Disk.1",
+    "disk_image_sha256": "42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3",
+    "slave": {
+      "name": "StuntCarRacer.slave",
+      "source": "SCR_WHDLoad.s",
+      "includes": [
+        "SCR_WHDLoad.i"
+      ],
+      "format": "AmigaDOS executable, one code hunk",
+      "size": 4464,
+      "sha256": "9422e1fa72876d25e6a399c83d12f4c14efe8e00c24f86d3db22db53c37be59b",
+      "ws_version": 17,
+      "base_mem_size": "0x200000",
+      "exp_mem_size": "0xaa000",
+      "quit_key": "0x59",
+      "checked_areas": [
+        {
+          "id": "boot_block",
+          "adf_offset": "0x0",
+          "size": 1024,
+          "long_sum": "0xffffffd8"
+        },
+        {
+          "id": "first_load",
+          "adf_offset": "0x2c00",
+          "size": 45056,
+          "long_sum": "0x53363e9b"
+        },
+        {
+          "id": "main_program",
+          "adf_offset": "0xdc00",
+          "size": 412160,
+          "long_sum": "0xdc240844"
+        }
+      ]
+    },
+    "runtime_patches": [
+      {
+        "where": "boot block +0x340",
+        "expected_hex": "6100ff44",
+        "replacement_hex": "6100ff0a",
+        "reason": "Call the runtime installer (+0x24c) instead of the intro (+0x286)"
+      },
+      {
+        "where": "boot block +0x7c",
+        "expected_hex": "4ffa01824ed3",
+        "replacement": "JMP enter_loader",
+        "reason": "Replace the loader driver, then set the same stack and jump into the first load"
+      },
+      {
+        "where": "first load +0x570 (loader 0x44f8)",
+        "expected_hex": "48e77ffc4e56ffdc",
+        "replacement": "JMP loader_driver",
+        "reason": "Loader reads through resload_DiskLoad"
+      },
+      {
+        "where": "runtime 0x62e86",
+        "expected_hex": "48e77ffc4e56ffdc",
+        "replacement": "JMP disk_driver",
+        "reason": "Game driver, installed after the loader has read and checked the main program"
+      }
+    ],
+    "exec_functions": [
+      "Forbid",
+      "Permit",
+      "SuperState",
+      "AllocMem",
+      "AllocAbs",
+      "FreeMem",
+      "DoIO",
+      "CacheClearU"
+    ],
+    "trackdisk_commands": [
+      "CMD_READ",
+      "TD_MOTOR"
+    ],
+    "save_files": [
+      {
+        "name": "Track%02d.sct",
+        "first_sector": 1210,
+        "sectors": 2,
+        "files": 32,
+        "stride": 4,
+        "second_copy_offset": 132,
+        "without_file": "game disk sectors"
+      },
+      {
+        "name": "Track%02d.rec",
+        "first_sector": 1212,
+        "sectors": 2,
+        "files": 32,
+        "stride": 4,
+        "second_copy_offset": 132,
+        "without_file": "game disk sectors"
+      },
+      {
+        "name": "TrackIndex",
+        "first_sector": 1474,
+        "sectors": 3,
+        "files": 1,
+        "stride": 3,
+        "second_copy_offset": 11,
+        "without_file": "game disk sectors"
+      },
+      {
+        "name": "SaveIndex",
+        "first_sector": 22,
+        "sectors": 1,
+        "files": 1,
+        "stride": 1,
+        "second_copy_offset": 0,
+        "without_file": "empty sectors"
+      },
+      {
+        "name": "Save%02d",
+        "first_sector": 23,
+        "sectors": 1,
+        "files": 30,
+        "stride": 1,
+        "second_copy_offset": 0,
+        "without_file": "empty sectors"
+      }
+    ],
+    "icon": {
+      "name": "StuntCarRacer.info",
+      "type": "WBPROJECT",
+      "size": 297,
+      "sha256": "58c9e8614a81d011b19d91e5b5fce328503c7c09165f4fb585c8e719e7a1197d",
+      "default_tool": "WHDLoad",
+      "tool_types": [
+        "SLAVE=StuntCarRacer.slave",
+        "PRELOAD",
+        "NOWRITECACHE",
+        "(WRITEDELAY=25)"
+      ]
+    },
+    "drawer_icon": {
+      "name": "<directory>.info",
+      "type": "WBDRAWER",
+      "size": 264,
+      "sha256": "58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636"
+    }
   }
 }
