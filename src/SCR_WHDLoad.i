@@ -6,7 +6,8 @@
 ; The parts of the WHDLoad slave interface the slave uses, as described in the
 ; WHDLoad autodoc and include file: slave flags, termination reasons, the
 ; offsets of the resload functions from the resload base passed to the slave
-; in A0, and the resload_Control tag for the CPU flags.
+; in A0, and the resload_Control tags for the CPU flags and the ButtonWait
+; option.
 
 WHDLF_NoError           equ 1<<1        ; resload errors quit with a requester
 WHDLF_EmulTrap          equ 1<<2        ; forward TRAP #n to the program's vectors
@@ -23,5 +24,7 @@ resload_FlushCache      equ $20
 resload_GetFileSize     equ $24
 resload_Control         equ $34
 resload_LoadFileOffset  equ $4c
+resload_Delay           equ $54
 
 WHDLTAG_ATTNFLAGS_GET   equ $88000000   ; TAG_USER+$8000000: exec AttnFlags
+WHDLTAG_BUTTONWAIT_GET  equ $88000006   ; option ButtonWait/S: -1 or 0

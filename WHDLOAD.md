@@ -3,7 +3,7 @@
 The patched game, installed to a hard disk and started with
 [WHDLoad](https://www.whdload.de/). The game, the Track Editor and the
 Computer Link behave as on floppy. The intro is not shown; the game starts at
-its loading screen. Custom tracks, their records and the season saves are
+its loading picture. Custom tracks, their records and the season saves are
 files in the install directory instead of disk sectors.
 
 ## Requirements
@@ -53,6 +53,15 @@ WHDLoad StuntCarRacerPerf.slave PRELOAD NOWRITECACHE
 
 **F10** quits back to the system (WHDLoad's `QuitKey` option changes it).
 
+## Loading picture
+
+The game's loading picture stays on the screen for 3 seconds; a mouse button,
+fire or a key continues at once. With WHDLoad's `ButtonWait` option the
+picture stays until the left mouse button or the joystick fire is pressed.
+Enable it with the tool type `BUTTONWAIT`, the `ButtonWait` checkbox in
+WHDLoad's start window, or `BUTTONWAIT` on the shell command line. The quit
+key may not respond while the picture waits.
+
 The slave starts only the disk it was made for. Any other
 `StuntCarRacerPerf.disk`, including an unpatched one, ends with WHDLoad's
 message that the data files are damaged or an unsupported version.
@@ -83,8 +92,8 @@ All saves are files in the install directory:
   new index with the next save.
 - The Track Editor's DISK transfer uses a track disk in DF1 and is not
   available under WHDLoad; copy the track files instead.
-- For a season save or load, the game still asks for a formatted save disk:
-  press any key. Without season save files, the save disk is empty.
+- Season Load and Save open the list of season saves directly; the game does
+  not ask for a save disk. Without season save files, the list is empty.
 
 The icon's tool types are `SLAVE=` the slave, `PRELOAD`, `NOWRITECACHE` and
 the disabled `(WRITEDELAY=25)`. With `NOWRITECACHE`, WHDLoad writes every save
@@ -118,5 +127,6 @@ from WHDLoad's base memory, Fast memory from its expansion memory. It skips
 the intro, and replaces the floppy driver of the game's loader and of the game
 with reads of `StuntCarRacerPerf.disk`. The disk areas the game and the Track Editor write are
 mapped to the files above; the Track Editor's two copies of each slot are one
-file. Other writes are refused, so the disk image never changes. Technical details:
+file. Other writes are refused, so the disk image never changes. The game's
+request for a season save disk is skipped. Technical details:
 [Patch details](PATCH.md#whdload-install).

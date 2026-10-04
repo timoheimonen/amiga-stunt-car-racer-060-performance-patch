@@ -41,6 +41,17 @@ custom_install_hooks:
 .next:  dbra d7,.loop
         rts
 
+; The game's CIA setup ($ee8a) stops CIA-B timer B, whose interrupt ends a
+; keyboard acknowledge and clears its busy flag $f0a8. A key acknowledged
+; just before a setup, for example one pressed during loading, would leave
+; the flag set and no later key acknowledged. The setup has already released
+; the acknowledge line, so clear the flag; SF keeps the setup's flags.
+custom_cia_setup:
+        lea $bfe001,a0
+        jsr $ee90.l
+        sf $f0a8.l
+        rts
+
 custom_select:
         tst.b $5eb76
         bne .legacy

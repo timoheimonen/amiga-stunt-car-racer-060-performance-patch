@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.6.2 — 2026-10-04
+
+- WHDLoad install: season Load and Save no longer ask for a formatted save
+  disk or warn that a new save disk has not been used for saving; season
+  saves are files.
+- WHDLoad install: the loading picture stays on the screen for 3 seconds, or
+  with WHDLoad's ButtonWait option until the left mouse button or fire is
+  pressed. See [WHDLoad install](WHDLOAD.md#loading-picture).
+- Player name: an empty Return or keypad Enter gives the name `racer` like
+  Fire. The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`.
+- **Experimental:** keyboard CIA fix. A key pressed while the game was
+  loading could stop the keyboard from responding in the menus. A hook after
+  the game's CIA setup clears the keyboard acknowledge state; the setup itself
+  is unchanged. Applies to both the ADF and the WHDLoad install.
+
 ## 1.6.1 — 2026-10-03
 
 - WHDLoad install: the slave, its icon and the disk image are now

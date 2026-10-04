@@ -24,7 +24,11 @@
 ; save index and saves. A file stands for its sectors in both copies the
 ; editor keeps on floppy; without the file, the disk's original sectors are
 ; read. Writes outside these areas are refused as on a write-protected disk,
-; so the image is never written.
+; so the image is never written. The game's request for a season save disk
+; before a season load or save, and its warning that a new save disk has not
+; been used for saving, are skipped. The loading picture, which the fast load
+; would only flash, stays for 3 seconds or, with the ButtonWait option, until
+; a button is pressed.
 ;
 ; Addresses: boot block offsets are relative to the boot block, first-load
 ; offsets relative to the first-load allocation (A3 in the boot block), game
@@ -60,6 +64,8 @@ MAIN_ADDR       equ $e700               ; loader's main program read
 MAIN_SECTOR     equ $6e
 MAIN_SECTORS    equ $325
 GAME_DRIVER     equ $62e86              ; game's floppy driver
+SAVE_PROMPT     equ $62754              ; game's request for a season save disk
+SAVE_WARNING    equ $62c88              ; its warning about a new save disk
 LOADER_DRIVER   equ $570                ; loader's driver in the first load
 
 ; exec.library and trackdisk.device values used by the boot code
@@ -69,6 +75,7 @@ MEMF_CHIP       equ 1<<1
 MEMF_FAST       equ 1<<2
 MEMF_CLEAR      equ 1<<16
 MEMF_REVERSE    equ 1<<18
+CIAA_PRA        equ $bfe001             ; active-low LMB (bit 6) and fire (bit 7)
 IO_COMMAND      equ $1c
 IO_ERROR        equ $1f
 IO_ACTUAL       equ $20
@@ -101,12 +108,13 @@ expmem:
         dc.w 0                          ; ws_kickname: no kickstart image
         dc.l 0                          ; ws_kicksize
         dc.w 0                          ; ws_kickcrc
-        dc.w 0                          ; ws_config
+        dc.w config-base                ; ws_config: ButtonWait in the splash window
 
 name:   dc.b "Stunt Car Racer",0
 copy:   dc.b "1989 Geoff Crammond, MicroStyle",0
 info:   dc.b "Performance Patch",10
         dc.b "by Timo Heimonen",0
+config: dc.b "BW",0
 disk_name:
         dc.b "StuntCarRacerPerf.disk",0
 exec_name:
@@ -126,10 +134,13 @@ chip_next:
 chip_top:
         dc.l BASEMEM
 
-attn_tags:
+control_tags:
         dc.l WHDLTAG_ATTNFLAGS_GET
 attn_flags:
         dc.l 0
+        dc.l WHDLTAG_BUTTONWAIT_GET
+button_wait:
+        dc.l 0                          ; -1 with the ButtonWait option
         dc.l 0                          ; TAG_DONE
 
 io_request:
@@ -154,7 +165,7 @@ start:
         add.l #STACK_BYTES,d0
         movea.l d0,sp
 
-        lea attn_tags(pc),a0
+        lea control_tags(pc),a0
         jsr resload_Control(a5)
         lea exec_base(pc),a6
         move.w attn_flags+2(pc),ATTNFLAGS(a6)
@@ -566,6 +577,14 @@ loader_driver:
         bne.s .done
         cmpa.l #MAIN_ADDR,a0
         bne.s .done
+        bsr.s install_game
+        tst.l d0
+.done:  rts
+
+; The main program has been read to A0: check it, replace the game's driver,
+; skip the game's floppy messages around season saves and keep the loading
+; picture on the screen.
+install_game:
         movem.l d0-d1/a0-a1,-(sp)
         move.l #MAIN_SECTORS*512,d1
         bsr checksum
@@ -579,11 +598,49 @@ loader_driver:
         lea disk_driver(pc),a1
         move.w #$4ef9,(a0)+
         move.l a1,(a0)
+        ; Season saves are files, so the game's "Insert formatted game save
+        ; disc ... Press any key to continue" is not shown: BRA.S over its
+        ; MOVE.W #$12A,D1 / JSR print / JSR wait_key.
+        lea (SAVE_PROMPT).l,a0
+        cmpi.l #$323c012a,(a0)
+        bne wrong_version
+        cmpi.l #$00059846,12(a0)
+        bne wrong_version
+        move.w #$600e,(a0)
+        ; Without SaveIndex the save index reads as a new disk. Instead of
+        ; "Warning: this disc has not been used for game saving" and a key,
+        ; a save starts the empty index at once, as the game does after the
+        ; key: BRA.S from MOVE.W #$F0,D1 / JSR print to its empty index.
+        lea (SAVE_WARNING).l,a0
+        cmpi.l #$323c00f0,(a0)
+        bne wrong_version
+        cmpi.l #$4eb90001,4(a0)
+        bne wrong_version
+        move.w #$6068,(a0)
         movea.l resload(pc),a0
         jsr resload_FlushCache(a0)
-        movem.l (sp)+,d0-d1/a0-a1
-        tst.l d0
-.done:  rts
+        ; The loader shows the game's loading picture while it reads the main
+        ; program, which takes a moment from the hard disk. Keep the picture
+        ; for 3 seconds or until a button or key, or with the ButtonWait
+        ; option until the left mouse button or the joystick fire.
+        move.l button_wait(pc),d0
+        bne.s .button
+        moveq #30,d0
+        movea.l resload(pc),a0
+        jsr resload_Delay(a0)
+        bra.s .shown
+.button:
+        btst #6,CIAA_PRA                ; left mouse button (port 0)
+        beq.s .release
+        btst #7,CIAA_PRA                ; fire (port 1)
+        bne.s .button
+.release:
+        move.b CIAA_PRA,d0              ; until both are released
+        and.b #$c0,d0
+        cmp.b #$c0,d0
+        bne.s .release
+.shown: movem.l (sp)+,d0-d1/a0-a1
+        rts
 
 ;============================================================================
 ; exec.library for the boot code. Every jump table slot calls exec_dispatch,
