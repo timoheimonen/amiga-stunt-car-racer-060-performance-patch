@@ -1,4 +1,4 @@
-# Patch details — 1.6.2
+# Patch details — 1.6.3
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -185,7 +185,7 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 77,228 bytes of code and data,
+The editor is a separate relocatable module: 77,268 bytes of code and data,
 loaded from ADF offset `0x76000` in a 93,696-byte transfer that also carries
 the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
 384 KiB of Fast RAM and 101,888 bytes of persistent Chip RAM for loading, disk
@@ -194,6 +194,9 @@ arrow.
 Track projects use two guarded storage banks with 32 slots each. Draft/Ready
 state, names and custom-track records persist on the game disk. A separate
 DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
+Practise shows Custom Tracks and Track Editor only in single-player games:
+with more drivers (`0x5eb76`) or a Computer Link role (`0x57c3c`) the original
+division menu remains.
 
 The patched disk contains the Ready track BUILD in save slot 01, written as a
 first save (one record and both directory copies) without lap records.
@@ -206,7 +209,10 @@ the editor.
 
 The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
-the CPU caches with the instructions of the detected processor.
+the CPU caches with the instructions of the detected processor. After each
+transfer it queues the key changes its own input layer has not seen, so a key
+marked up while WHDLoad showed the system (see [WHDLoad install](#whdload-install))
+ends its hold and its next press counts. From floppy there are none.
 
 
 ## Boot intro
@@ -253,7 +259,7 @@ icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Sl
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4636 | `b3ae1109a16a47154d5a1d75cef216b58384084ffaccdb6f4356d1b6dfb8cb81` |
+| `StuntCarRacerPerf.slave` | 4712 | `45a537eedfc996c55dba0b8a609002def5e13c9eabe3e4fd9cb98d06ca4e56f7` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
 | `StuntCarRacerPerf.disk` | 901,120 | the patched ADF, see [Checksums](#checksums) |
@@ -289,13 +295,13 @@ call ends WHDLoad with an operating system emulation error naming the call.
 | Boot block `+0x7c` | `LEA +0x200,SP` / `JMP (A3)` | jump to the slave, which replaces the loader's driver and then sets the same stack and jumps |
 | First load `+0x570` (loader `0x44f8`) | loader floppy driver | slave driver |
 | `0x62e86` | game floppy driver | slave driver, installed after the loader has read and checked the main program |
-| `0x62754` | request for a formatted season save disk and a key | `BRA.S` over the request |
+| `0x62754` | request for a formatted season save disk and a key, whose wait first takes the keys still held | the same taking of the keys (`JSR 0x5985c` / `BCC.S` back), then `BRA.S` over the request and the key |
 | `0x62c88` | warning that a new save disk has not been used for saving, and a key | `BRA.S` to the game's empty save index, as after the key |
 
 The slave driver keeps the original interface: D0 drive (bits 0–1) and
 format (bit 15), D1 first sector, D2 sector count, D3 read or write, A0 data;
 D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range, or a
-save file of the wrong size). Only the game disk in DF0 in the standard format
+Track Editor file of the wrong size). Only the game disk in DF0 in the standard format
 exists; DF1 returns 29. Reads of the image go through `resload_LoadFileOffset`.
 
 The loader shows the game's loading picture while it reads the main program.
@@ -320,8 +326,18 @@ A write builds the whole file from its current contents, or from the disk
 without a file, and saves it with `resload_SaveFile`; an unchanged file is not
 written again. Writes elsewhere return error 28, so the image is never written.
 The season saves were on a separate formatted disk on floppy, so without a
-file they read as a new, empty save disk. The game's request for that disk
-and its warning about a new save disk are skipped.
+file they read as a new, empty save disk; a season save file of the wrong
+size reads as empty too. The game's request for that disk and its warning
+about a new save disk are skipped. Menus read keys without taking them, so
+the request's taking of the keys still held stays: otherwise the Return or
+fire that chose Load or Save would choose in the save list at once.
+
+A write, or a read of a file WHDLoad has not cached, shows the system for a
+moment, and a key released meanwhile goes to the system. On each return to
+the game WHDLoad calls a slave function (`WHDLTAG_CBSWITCH_SET`), installed
+once the main program is checked, that marks all 128 key states of the game
+at `0xead6` up. Otherwise the game would see such a key held until it is
+pressed again.
 
 ## Address mapping and patches
 
@@ -354,7 +370,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.6.2, up to 50 FPS Practice, computer-opponent and linked races) | `5fcb370d59c05c3090d7ea040c031817a707eb7c037f3e8254aa83b6d636d200` |
+| Patched ADF (1.6.3, up to 50 FPS Practice, computer-opponent and linked races) | `4165f8b56cac59dbd05ee60532cb6dfb52b27513a0788fba8d556547f898a211` |
 
 The WHDLoad install uses the patched ADF as `StuntCarRacerPerf.disk`.
 

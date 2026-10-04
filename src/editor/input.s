@@ -62,6 +62,24 @@ editor_input_vbl:
         move.w (sp)+,sr
 .done: rts
 
+; After a disk access, with interrupts masked. Under WHDLoad a file access
+; may give the keyboard to the system; the slave then marks every key up in
+; the game's table without a keyboard interrupt. Queue the transitions the
+; captured state missed, so that a key released meanwhile ends its
+; suppression and its next press counts. From floppy nothing differs.
+editor_input_resync:
+        movem.l d0-d3/a0,-(sp)
+        tst.w editor_input_enabled-module_start(a5)
+        beq.s .done
+        moveq #95,d0
+.key:   lea $ead6.l,a0
+        moveq #0,d1
+        move.b (a0,d0.w),d1
+        bsr.s editor_input_capture
+        dbra d0,.key
+.done:  movem.l (sp)+,d0-d3/a0
+        rts
+
 ; D0 index, D1 value. Interrupts masked for both producers and consumer.
 editor_input_capture:
         lea editor_input_captured(a5),a0

@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.6.2.** This release is primarily intended for emulation.
+**Version 1.6.3.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 The patcher also writes a [WHDLoad install](WHDLOAD.md) of the same game for a hard disk.

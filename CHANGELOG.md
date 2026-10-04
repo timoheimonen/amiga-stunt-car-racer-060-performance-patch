@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.6.3 — 2026-10-04
+
+- WHDLoad install: season Load no longer loads a save by itself. The Return
+  or fire that chose Load or Save was taken as the choice in the list; the
+  keys still held are now cleared first, as on floppy. The same applied to
+  the save name.
+- WHDLoad install: a key released while the display is blanked for a save no
+  longer stays held for the game. The Track Editor left with Esc only after
+  Return was pressed again, and its first key press after a save was ignored.
+- WHDLoad install: a season save file of the wrong size reads as empty
+  instead of stopping every season Load and Save with a disk error; the next
+  save replaces it.
+- Practise keeps Custom Tracks and Track Editor after a season save or load.
+  The original menu remains for multiplayer and Computer Link games. Applies
+  to both the ADF and the WHDLoad install.
+
 ## 1.6.2 — 2026-10-04
 
 - WHDLoad install: season Load and Save no longer ask for a formatted save
