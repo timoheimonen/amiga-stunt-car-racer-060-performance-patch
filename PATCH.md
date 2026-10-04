@@ -1,4 +1,4 @@
-# Patch details — 1.6.1
+# Patch details — 1.6.2
 
 This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
 2 MiB Chip RAM and at least 1 MiB Fast RAM.
@@ -104,7 +104,7 @@ Infinite Boost No and Disable Damage No. See [controls](README.md#settings).
 Five guarded runtime entry overlays dispatch to the speed routines. The yaw
 instruction overlay preserves the existing damping continuation. Six menu
 hooks, two AI hooks, one boost hook and five damage hooks install the Settings
-features. Two player-name hooks add Fire continuation and the name-screen text.
+features. Two player-name hooks add the default name and the name-screen text.
 `src/patches.json` records their expected and replacement bytes.
 
 ## Computer Link
@@ -185,7 +185,7 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 77,190 bytes of code and data,
+The editor is a separate relocatable module: 77,228 bytes of code and data,
 loaded from ADF offset `0x76000` in a 93,696-byte transfer that also carries
 the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
 384 KiB of Fast RAM and 101,888 bytes of persistent Chip RAM for loading, disk
@@ -227,8 +227,21 @@ intro is shown as before.
 
 ## Player-name screen
 
-The prompt reads `NAME? OR PRESS FIRE TO CONTINUE`. Fire supplies `racer`
-when the name is empty and preserves a typed name.
+The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`. Fire, Return or the
+keypad Enter supplies `racer` when the name is empty and preserves a typed
+name.
+
+## Keyboard acknowledge
+
+The game acknowledges each key from the CIA-A serial interrupt: it holds the
+acknowledge line, starts CIA-B timer B and marks the acknowledge busy at
+`0xf0a8`; the timer interrupt releases the line and clears the mark. The
+game's CIA setup at `0xee8a` releases the line and stops timer B. A key
+pressed while the game loads is acknowledged as soon as interrupts are
+enabled, just before that setup runs, so the mark stayed set and no later
+key was acknowledged: the keyboard no longer responded in the menus. A module
+hook at `0xee8a` runs the original setup unchanged and then clears the mark.
+The disk bytes at `0xee8a` are unchanged.
 
 ## WHDLoad install
 
@@ -240,7 +253,7 @@ icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Sl
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4500 | `edcc0f6f3980758c3e01c1590f3e179430a820fff37ac09498c882ca5a26767c` |
+| `StuntCarRacerPerf.slave` | 4636 | `b3ae1109a16a47154d5a1d75cef216b58384084ffaccdb6f4356d1b6dfb8cb81` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
 | `StuntCarRacerPerf.disk` | 901,120 | the patched ADF, see [Checksums](#checksums) |
@@ -276,12 +289,21 @@ call ends WHDLoad with an operating system emulation error naming the call.
 | Boot block `+0x7c` | `LEA +0x200,SP` / `JMP (A3)` | jump to the slave, which replaces the loader's driver and then sets the same stack and jumps |
 | First load `+0x570` (loader `0x44f8`) | loader floppy driver | slave driver |
 | `0x62e86` | game floppy driver | slave driver, installed after the loader has read and checked the main program |
+| `0x62754` | request for a formatted season save disk and a key | `BRA.S` over the request |
+| `0x62c88` | warning that a new save disk has not been used for saving, and a key | `BRA.S` to the game's empty save index, as after the key |
 
 The slave driver keeps the original interface: D0 drive (bits 0–1) and
 format (bit 15), D1 first sector, D2 sector count, D3 read or write, A0 data;
 D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range, or a
 save file of the wrong size). Only the game disk in DF0 in the standard format
 exists; DF1 returns 29. Reads of the image go through `resload_LoadFileOffset`.
+
+The loader shows the game's loading picture while it reads the main program.
+After that read the slave keeps the picture for 3 seconds with
+`resload_Delay`, which a mouse button, fire or a key ends early. With the
+ButtonWait option (`WHDLTAG_BUTTONWAIT_GET`; `ws_config` offers it in
+WHDLoad's start window) it waits for the left mouse button or the joystick
+fire (CIA-A `0xbfe001` bits 6 and 7) and their release.
 
 The disk areas the game and the Track Editor write are files in the install
 directory. The editor's two copies of each area are one file.
@@ -298,7 +320,8 @@ A write builds the whole file from its current contents, or from the disk
 without a file, and saves it with `resload_SaveFile`; an unchanged file is not
 written again. Writes elsewhere return error 28, so the image is never written.
 The season saves were on a separate formatted disk on floppy, so without a
-file they read as a new, empty save disk.
+file they read as a new, empty save disk. The game's request for that disk
+and its warning about a new save disk are skipped.
 
 ## Address mapping and patches
 
@@ -320,7 +343,7 @@ the WHDLoad slave and icons for standalone use.
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
 | Boot | 320 | `10f67db818b945e70ebc2ed173584f016ca19e2cb5a253a5a83fed0c9457e453` |
-| Runtime | 6734 | `95ccd057ccbdd4edf0f83d74f8c15a44044948c0f56c97b42c348acd4bfeef44` |
+| Runtime | 6734 | `254b9d11ef787180c23864c43abf582648ca07678bc672a7b9f96fa48f08a0cd` |
 | Intro | 5922 | `b7ad19f33e1debe3a5c231df6742479c01aecab0ab3b588c26b776a9e918f7ca` |
 
 ## Checksums
@@ -331,10 +354,9 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.6.1, up to 50 FPS Practice, computer-opponent and linked races) | `42c6e282926e785453d05bef51b71c0baf9b6c167e3fcb7296e1afe99f426ac3` |
+| Patched ADF (1.6.2, up to 50 FPS Practice, computer-opponent and linked races) | `5fcb370d59c05c3090d7ea040c031817a707eb7c037f3e8254aa83b6d636d200` |
 
-The patched ADF is the same as in 1.5.0; the WHDLoad install uses it as
-`StuntCarRacerPerf.disk`.
+The WHDLoad install uses the patched ADF as `StuntCarRacerPerf.disk`.
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and whole output.
