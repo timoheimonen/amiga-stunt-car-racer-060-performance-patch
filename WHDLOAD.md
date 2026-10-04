@@ -94,6 +94,10 @@ All saves are files in the install directory:
   available under WHDLoad; copy the track files instead.
 - Season Load and Save open the list of season saves directly; the game does
   not ask for a save disk. Without season save files, the list is empty.
+  A season save file of the wrong size reads as empty; the next save
+  replaces it.
+- Season Load also records the loaded position in `SaveIndex`, so even
+  loading writes to the install directory: keep it on a writable volume.
 
 The icon's tool types are `SLAVE=` the slave, `PRELOAD`, `NOWRITECACHE` and
 the disabled `(WRITEDELAY=25)`. With `NOWRITECACHE`, WHDLoad writes every save
@@ -114,6 +118,10 @@ disabled:
 | `PRELOAD` `NOWRITECACHE` (default) | At once | Blanked for a few seconds |
 | `PRELOAD` `NOWRITECACHE` `WRITEDELAY=25` | At once | Blanked for a shorter time; a reset right after a save may leave the file incomplete |
 | `PRELOAD` `(NOWRITECACHE)` | When WHDLoad quits | No noticeable pause |
+
+While the display is blanked, the system has the keyboard: keys pressed
+then do not reach the game. A key released then counts as released when the
+game continues.
 
 If a write fails, for example on a full or write-protected volume, WHDLoad
 ends the game with an error requester.

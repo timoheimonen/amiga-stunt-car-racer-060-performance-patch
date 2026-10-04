@@ -52,10 +52,13 @@ custom_cia_setup:
         sf $f0a8.l
         rts
 
+; Custom tracks are for single-player Practice: the original menu stays for
+; more players ($5eb76) and for a link role ($57c3c). $1ca31 is only the
+; direction of the last season or link transfer and stays set after a save.
 custom_select:
         tst.b $5eb76
         bne .legacy
-        tst.b $1ca31
+        tst.b $57c3c
         bne .legacy
 .divisions:
         lea module_start(pc),a5

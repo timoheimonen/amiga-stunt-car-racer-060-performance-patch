@@ -80,6 +80,7 @@ storage_io:
         move.w d0,$dff096
         bsr cache_flush
         jsr $ee8a             ; original I/O return's CIA timer/IRQ setup
+        bsr editor_input_resync
         move.l (sp)+,d0
         move.w (sp)+,sr
         movem.l (sp)+,d1-d7/a0-a6

@@ -26,7 +26,10 @@
 ; read. Writes outside these areas are refused as on a write-protected disk,
 ; so the image is never written. The game's request for a season save disk
 ; before a season load or save, and its warning that a new save disk has not
-; been used for saving, are skipped. The loading picture, which the fast load
+; been used for saving, are skipped; the keys still down are taken as the
+; request's key wait took them. A save file of the wrong size reads as empty.
+; Keys released while WHDLoad shows the system for a file access are marked
+; up when the game continues. The loading picture, which the fast load
 ; would only flash, stays for 3 seconds or, with the ButtonWait option, until
 ; a button is pressed.
 ;
@@ -66,6 +69,8 @@ MAIN_SECTORS    equ $325
 GAME_DRIVER     equ $62e86              ; game's floppy driver
 SAVE_PROMPT     equ $62754              ; game's request for a season save disk
 SAVE_WARNING    equ $62c88              ; its warning about a new save disk
+KEY_POLL        equ $5985c              ; game's key read: takes a key, CC if one
+KEY_STATES      equ $ead6               ; game's 128 raw key states: nonzero while down
 LOADER_DRIVER   equ $570                ; loader's driver in the first load
 
 ; exec.library and trackdisk.device values used by the boot code
@@ -141,6 +146,12 @@ attn_flags:
         dc.l WHDLTAG_BUTTONWAIT_GET
 button_wait:
         dc.l 0                          ; -1 with the ButtonWait option
+        dc.l 0                          ; TAG_DONE
+
+switch_tags:
+        dc.l WHDLTAG_CBSWITCH_SET
+switch_function:
+        dc.l 0                          ; key_switch, set when the game is in
         dc.l 0                          ; TAG_DONE
 
 io_request:
@@ -291,7 +302,14 @@ disk_driver:
         bsr chunk                       ; D5 sectors of this file
         bsr file_size
         beq.s .read_original
-        bmi .bad_file
+        bpl.s .read_present
+        ; A save file of the wrong size reads as empty, as the write path
+        ; treats it: a damaged SaveIndex would otherwise stop every season
+        ; load and save with "Disc error". Other files stay unreadable.
+        move.w file_blank(pc),d0
+        bne.s .read_blank
+        bra .bad_file
+.read_present:
         move.l d5,d0
         lsl.l #8,d0
         add.l d0,d0                     ; size
@@ -598,15 +616,29 @@ install_game:
         lea disk_driver(pc),a1
         move.w #$4ef9,(a0)+
         move.l a1,(a0)
+        ; From now on the game's key states are in place: mark the keys up
+        ; on each return from the system.
+        lea key_switch(pc),a1
+        lea switch_function(pc),a0
+        move.l a1,(a0)
+        lea switch_tags(pc),a0
+        movea.l resload(pc),a1
+        jsr resload_Control(a1)
         ; Season saves are files, so the game's "Insert formatted game save
-        ; disc ... Press any key to continue" is not shown: BRA.S over its
-        ; MOVE.W #$12A,D1 / JSR print / JSR wait_key.
+        ; disc ... Press any key to continue" is not shown. Its wait for a
+        ; key first took the keys still down, among them the Return or fire
+        ; that chose Load or Save; the save list would take that as a choice
+        ; of its first position. Keep that part in place of MOVE.W #$12A,D1 /
+        ; JSR print / JSR wait_key: JSR KEY_POLL / BCC.S back while a key is
+        ; taken / BRA.S over the rest.
         lea (SAVE_PROMPT).l,a0
         cmpi.l #$323c012a,(a0)
         bne wrong_version
         cmpi.l #$00059846,12(a0)
         bne wrong_version
-        move.w #$600e,(a0)
+        move.w #$4eb9,(a0)+
+        move.l #KEY_POLL,(a0)+
+        move.l #$64f86006,(a0)
         ; Without SaveIndex the save index reads as a new disk. Instead of
         ; "Warning: this disc has not been used for game saving" and a key,
         ; a save starts the empty index at once, as the game does after the
@@ -641,6 +673,22 @@ install_game:
         bne.s .release
 .shown: movem.l (sp)+,d0-d1/a0-a1
         rts
+
+; WHDLoad calls this each time it returns from the system to the game, with
+; interrupts and DMA off; it may change only D0-D1, uses no stack and returns
+; through A0. A file access that is not cached shows the system, and a key
+; released meanwhile goes to the system, so the game would see the key down
+; until it is pressed again: the track editor does not leave and the menus
+; wait for the release. On floppy the game saw every release. Mark all keys
+; up; the keyboard sends no key that is still held down again.
+key_switch:
+        move.l a0,d1
+        lea (KEY_STATES).l,a0
+        moveq #128/4-1,d0
+.clear: clr.l (a0)+
+        dbra d0,.clear
+        movea.l d1,a0
+        jmp (a0)
 
 ;============================================================================
 ; exec.library for the boot code. Every jump table slot calls exec_dispatch,
