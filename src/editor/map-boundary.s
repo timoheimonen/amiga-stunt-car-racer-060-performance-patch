@@ -8,7 +8,14 @@
 ; 2048-unit subdivisions bound near-plane intersection products on 68060.
 editor_map_boundary:
         move.w #543,d7       ; 30 inner lines * 16 segments + 64 border segments
+        cmpi.w #FREE_WIRE_OUTLINE,free_wire-module_start(a5)
+        bne.s .segment
+        moveq #63,d7
 .segment:
+        tst.b ui_yield_flag(pc)
+        beq.s .segment_go
+        bsr ui_yield
+.segment_go:
         bsr map_boundary_segment
         movem.l d7/a4,-(sp)
         lea map_boundary_view(pc),a1
@@ -37,10 +44,10 @@ editor_map_boundary:
         tst.w overview_active-module_start(a5)
         bne.s .store
         move.l 4(a0),d2
-        muls.l camera_focal_x(pc),d0
+        muls.l #FREE_FOCAL,d0
         divs.l d2,d0
         addi.l #160,d0
-        muls.l camera_focal_y(pc),d1
+        muls.l #FREE_FOCAL,d1
         divs.l d2,d1
         addi.l #100,d1
 .store:
@@ -140,38 +147,26 @@ map_boundary_project:
         add.l d1,d0
         asr.l #7,d0
         asr.l #7,d0
-        add.l camera_back(pc),d0
         move.l camera_y(pc),d1
-        add.l camera_elevation(pc),d1
-        tst.w preview_camera_active-module_start(a5)
-        bne.s .preview
-        move.l d0,d2
-        add.l d2,d2
-        add.l d1,d2
-        move.l d2,(a1)+
-        add.l d1,d1
-        sub.l d0,d1
-        move.l d1,(a1)+
-        rts
-.preview:
+        sub.l wire_y(pc),d1
         ; Split Q14 products keep high cameras over Y=0 inside 32-bit math.
-        ; Ground can be much farther below the eye than any fitted road.
+        ; Ground can be much farther below the eye than any road.
         move.l d0,d5
         move.l d1,d6
-        move.l preview_pitch_cos(pc),d1
+        move.l view_pitch_cos(pc),d1
         bsr map_boundary_mul_q14
         move.l d0,d4
         move.l d6,d0
-        move.l preview_pitch_sin(pc),d1
+        move.l view_pitch_sin(pc),d1
         bsr map_boundary_mul_q14
         add.l d4,d0
         move.l d0,(a1)+
         move.l d6,d0
-        move.l preview_pitch_cos(pc),d1
+        move.l view_pitch_cos(pc),d1
         bsr map_boundary_mul_q14
         move.l d0,d4
         move.l d5,d0
-        move.l preview_pitch_sin(pc),d1
+        move.l view_pitch_sin(pc),d1
         bsr map_boundary_mul_q14
         sub.l d0,d4
         move.l d4,(a1)+
@@ -349,29 +344,52 @@ map_boundary_draw:
         add.l d3,d1
         bra.s .pixel
 .done:  rts
+; D0 x, D1 y. The grid comes first on the cleared surface, colour 9 with planes
+; 0 and 3 set, and the border follows, so plane 0 stays set and plane 2 needs no
+; clearing. A bit number on memory counts modulo 8, so NOT x gives 7-x%8.
+; Uses A1-A3. D2 and D3 are preserved.
 map_boundary_pixel:
-        movem.l d0-d3/a0,-(sp)
+        movea.l d2,a2
+        movea.l d3,a3
         move.l d1,d2
         mulu.w #40,d2
         move.l d0,d3
         lsr.l #3,d3
         add.l d3,d2
-        andi.w #7,d0
-        moveq #7,d3
-        sub.w d0,d3
-        movea.l draw_surface(pc),a0
-        adda.l d2,a0
-        bset d3,(a0)
-        bset d3,8000(a0)
+        movea.l draw_surface(pc),a1
+        adda.l d2,a1
+        move.l d0,d3
+        not.l d3
+        cmpi.w #PLACE_OFF,map_boundary_color-module_start(a5)
+        beq.s .refused
+        cmpi.w #PLACE_ON,map_boundary_color-module_start(a5)
+        beq.s .ghost
+        bset d3,8000(a1)
         cmpi.w #15,map_boundary_color-module_start(a5)
         beq.s .border
-        bclr d3,16000(a0)
-        bclr d3,24000(a0)
-        bra.s .done
+        bclr d3,24000(a1)
+        move.l a2,d2
+        move.l a3,d3
+        rts
 .border:
-        bset d3,16000(a0)
-        bset d3,24000(a0)
-.done:  movem.l (sp)+,d0-d3/a0
+        bset d3,16000(a1)
+        bset d3,24000(a1)
+        move.l a2,d2
+        move.l a3,d3
+        rts
+; Lines of the start page cross the grid, so these set every plane.
+.refused:
+        bclr d3,8000(a1)
+        bset d3,16000(a1)
+        bset d3,24000(a1)
+        move.l a2,d2
+        move.l a3,d3
+        rts
+.ghost: bclr d3,8000(a1)
+        bclr d3,16000(a1)
+        bclr d3,24000(a1)
+        move.l a2,d2
+        move.l a3,d3
         rts
 
 map_boundary_world: dcb.w 4,0

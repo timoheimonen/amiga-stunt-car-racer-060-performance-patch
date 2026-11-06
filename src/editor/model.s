@@ -123,6 +123,7 @@ editor_piece_geometry:
         move.w (a4)+,d0
         ext.l d0
         add.l d7,d0
+        bmi.s .bad_below
         cmpi.l #32767,d0
         bhi.s .bad_height
         move.w d0,(a1)+
@@ -136,6 +137,9 @@ editor_piece_geometry:
         bra.s .bad_pop
 .bad_height:
         move.w #2,model_fail-module_start(a5)
+        bra.s .bad_pop
+.bad_below:
+        move.w #3,model_fail-module_start(a5)
 .bad_pop:
         addq.l #2,sp
 .bad:
@@ -361,6 +365,7 @@ editor_join:
         rts
 
 editor_model_view:
+        move.w #1,ui_map_dirty-module_start(a5)
         bra editor_model_build
 model_refresh: dc.w 0
 ; Last geometry failure for the HUD: 1 map edge, 2 height limit.

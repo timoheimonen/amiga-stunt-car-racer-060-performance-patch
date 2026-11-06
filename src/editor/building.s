@@ -6,6 +6,7 @@
 ; Browse=0, Append=1, Edit=2. Modal prompts are independent.
 ; Preview owns separate bytes/geometry; only commit changes SCTR.
 editor_building_reset:
+        bsr place_leave
         clr.w building_mode-module_start(a5)
         clr.w building_selected-module_start(a5)
         cmpi.l #3,editor_track+24-module_start(a5)
@@ -19,7 +20,13 @@ editor_building_reset:
         clr.w building_fire-module_start(a5)
         clr.w building_arrow-module_start(a5)
         clr.w building_exit-module_start(a5)
-        rts
+        clr.l field_key-module_start(a5)
+        ; Only the start line: the track begins by placing it.
+        cmpi.w #1,editor_track+28-module_start(a5)
+        bne.s .done
+        cmpi.l #3,editor_track+24-module_start(a5)
+        bhs place_enter
+.done:  rts
 
 editor_building_keys:
         tst.w storage_modal-module_start(a5)
@@ -27,6 +34,8 @@ editor_building_keys:
         clr.w building_exit-module_start(a5)
         tst.w editing_prompt-module_start(a5)
         bne editing_prompt_keys
+        tst.w place_active-module_start(a5)
+        bne place_keys
         bsr editing_keys
         tst.w d0
         bne .done
@@ -120,20 +129,7 @@ editor_building_keys:
 .move:
         tst.w building_mode-module_start(a5)
         bne.s .candidate
-        move.w building_selected(pc),d0
-        cmpi.l #3,editor_track+24-module_start(a5)
-        blo.s .single_step
-        bsr block_browse_step
-        bra.s .stepped
-.single_step:
-        add.w d4,d0
-.stepped:
-        bmi.s .done
-        move.w editor_track+28(pc),d1
-        sub.w editor_track+30(pc),d1
-        cmp.w d1,d0
-        bhi.s .done
-        move.w d0,building_selected-module_start(a5)
+        bsr building_step
         bra.s .done
 .candidate:
         move.w building_candidate_count(pc),d1
@@ -149,8 +145,35 @@ editor_building_keys:
         clr.w d0
 .choice:
         move.w d0,building_choice-module_start(a5)
-        bsr building_preview
+        move.w #1,building_preview_due-module_start(a5)
 .done:
+        rts
+
+; D4 direction: the next selection. Z set when there is none.
+building_step:
+        move.w building_selected(pc),d0
+        cmpi.l #3,editor_track+24-module_start(a5)
+        blo.s .single
+        bsr block_browse_step
+        bra.s .stepped
+.single:
+        add.w d4,d0
+.stepped:
+        tst.w d0               ; block_browse_step leaves stale flags
+        bpl.s .in_range
+        ; Left from the finish wraps to the last block.
+        move.w editor_track+28(pc),d0
+        subq.w #1,d0
+        bsr block_group_start
+.in_range:
+        move.w editor_track+28(pc),d1
+        sub.w editor_track+30(pc),d1
+        cmp.w d1,d0
+        bhi.s .none
+        move.w d0,building_selected-module_start(a5)
+        moveq #1,d0
+        rts
+.none:  moveq #0,d0
         rts
 
 ; A0 piece -> D0 surface variant (kind-1)*4+rotation. Preserves A0.
@@ -165,6 +188,7 @@ building_variant:
         rts
 
 building_options:
+        clr.w storage_status-module_start(a5)   ; Choose speaks for itself now
         cmpi.l #3,editor_track+24-module_start(a5)
         bhs block_options
         clr.w building_candidate_count-module_start(a5)
@@ -439,14 +463,30 @@ building_commit:
         rts
 
 editor_building_text:
-        cmpi.l #3,editor_track+24-module_start(a5)
-        bhs block_text
+        tst.w place_active-module_start(a5)
+        beq.s .track
         tst.w editing_prompt-module_start(a5)
         bne editing_prompt_text
-        lea building_browse_text(pc),a0
+        lea place_text_name(pc),a0
+        bra ui_name_put
+.track: tst.w overview_active-module_start(a5)
+        bne hud_track_name
+        tst.w editing_prompt-module_start(a5)
+        bne editing_prompt_text
+        tst.w building_mode-module_start(a5)
+        bne.s .building
+        cmpi.w #1,editor_track+28-module_start(a5)
+        bne.s .building
+        tst.w building_dirty-module_start(a5)
+        bne.s .building
+        lea building_new_text(pc),a0
+        bra ui_name_put
+.building:
+        cmpi.l #3,editor_track+24-module_start(a5)
+        bhs block_text
+        lea building_edit_text(pc),a0
         tst.w building_mode-module_start(a5)
         beq.s .browse
-        lea building_edit_text(pc),a0
         cmpi.w #2,building_mode-module_start(a5)
         bne.s .append_text
         tst.w building_selected-module_start(a5)
@@ -463,21 +503,39 @@ editor_building_text:
         lea building_limit_text(pc),a0
         bra.s .draw
 .browse:
+        lea building_add_text(pc),a0
         move.w building_selected(pc),d0
         cmp.w editor_track+28(pc),d0
-        blo.s .draw
-        lea building_add_text(pc),a0
+        bhs.s .draw
+        lea hud_line(pc),a1
+        lea building_piece_text(pc),a0
+        bsr hud_put_text
+        move.w building_selected(pc),d0
+        addq.w #1,d0
+        bsr hud_put_decimal
+        lea hud_of_text(pc),a0
+        bsr hud_put_text
+        move.w editor_track+28(pc),d0
+        bsr hud_put_decimal
+        clr.b (a1)
+        lea hud_line(pc),a0
 .draw:
-        movea.l draw_surface(pc),a1
-        adda.w #7242,a1      ; row 181, 16px margin
-        bra storage_text_line
-building_browse_text: dc.b 'BROWSE  LEFT/RIGHT  FIRE/SPACE EDIT',0
-building_add_text: dc.b 'ADD PIECE  FIRE/SPACE PREVIEW',0
-building_append_text: dc.b 'APPEND L/R  FIRE/SPACE OK  ESC BACK',0
-building_finish_text: dc.b 'FINISH FIXED  ESC BACK',0
-building_edit_text: dc.b 'EDIT L/R  FIRE/SPACE OK  ESC BACK',0
-building_blocked_text: dc.b 'NO FIT: MAP EDGE OR ROAD OVERLAP',0
-building_limit_text: dc.b 'NO FIT: CLOSED, FULL OR INVALID',0
+        bra ui_name_put
+; L1 of the Overview.
+hud_track_name:
+        lea editor_track+40(pc),a0
+        tst.b (a0)
+        bne ui_name_put
+        lea storage_untitled(pc),a0
+        bra ui_name_put
+building_new_text: dc.b 'New track',0
+building_add_text: dc.b 'Add here',0
+building_piece_text: dc.b 'Piece ',0
+building_append_text: dc.b 'Append a piece',0
+building_finish_text: dc.b 'Finish is fixed',0
+building_edit_text: dc.b 'Edit this piece',0
+building_blocked_text: dc.b 'No fit: map edge or road overlap',0
+building_limit_text: dc.b 'No fit: closed, full or invalid',0
         even
 building_mode: dc.w 0
 building_selected: dc.w 0

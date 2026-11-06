@@ -48,6 +48,57 @@ block_descriptor:
 block_options:
         clr.w building_candidate_count-module_start(a5)
         clr.w building_choice-module_start(a5)
+        bsr block_context
+        tst.w d0
+        beq .done
+        bsr field_refresh
+        bsr block_socket
+        move.l a0,block_list-module_start(a5)
+        move.w d0,block_left-module_start(a5)
+.scan:
+        tst.b ui_yield_flag(pc)
+        beq.s .scan_go
+        bsr ui_yield
+.scan_go:
+        movea.l block_list(pc),a0
+        moveq #0,d0
+        move.b (a0)+,d0
+        move.l a0,block_list-module_start(a5)
+        move.w d0,block_scan-module_start(a5)
+        bsr block_make
+        bsr field_info
+        tst.w d0
+        bne.s .offer
+        bsr block_restore
+        bsr block_ghost
+        tst.w d0
+        beq.s .next
+.offer:
+        move.w building_candidate_count(pc),d0
+        lea block_info(pc),a0
+        move.b field_value+1(pc),(a0,d0.w)
+        add.w d0,d0
+        lea block_candidates(pc),a0
+        move.w block_scan(pc),(a0,d0.w)
+        addq.w #1,building_candidate_count-module_start(a5)
+.next:
+        bsr block_restore
+        subq.w #1,block_left-module_start(a5)
+        bne .scan
+        bsr ui_axes
+        move.w block_mode(pc),building_mode-module_start(a5)
+        move.w block_selected(pc),building_selected-module_start(a5)
+        tst.w building_candidate_count-module_start(a5)
+        beq .done
+        bsr ui_default_pick
+        clr.w building_reason-module_start(a5)
+        bsr block_preview
+.done:
+        rts
+
+; Everything an offer or a commit needs before a candidate is built.
+; D0=0 when nothing can be built here.
+block_context:
         clr.w block_preview_valid-module_start(a5)
         clr.w building_rows-module_start(a5)
         move.w #1,building_reason-module_start(a5)
@@ -101,34 +152,52 @@ block_options:
         beq.s .group_ready
         move.l d0,block_group-module_start(a5)
 .group_ready:
-        clr.w block_scan-module_start(a5)
-.scan:
-        move.w block_scan(pc),d0
-        bsr block_make
-        tst.w d0
-        bne.s .offer
-        bsr block_restore
-        bsr block_ghost
-        tst.w d0
-        beq.s .next
-.offer:
-        move.w building_candidate_count(pc),d0
-        add.w d0,d0
-        lea block_candidates(pc),a0
-        move.w block_scan(pc),(a0,d0.w)
-        addq.w #1,building_candidate_count-module_start(a5)
-.next:
-        bsr block_restore
-        addq.w #1,block_scan-module_start(a5)
-        cmpi.w #BLOCK_VARIANT_COUNT,block_scan-module_start(a5)
-        blo .scan
-        move.w block_mode(pc),building_mode-module_start(a5)
-        move.w block_selected(pc),building_selected-module_start(a5)
-        tst.w building_candidate_count-module_start(a5)
-        beq .done
-        clr.w building_reason-module_start(a5)
-        bsr block_preview
+        moveq #1,d0
+        rts
 .done:
+        moveq #0,d0
+        rts
+
+; Last row of the section before block_insert -> A0.
+block_tail_row:
+        move.w block_insert(pc),d0
+        bra.s piece_tail_row
+; Last row of the model -> A0.
+model_tail_row:
+        move.w editor_track+28(pc),d0
+; D0 piece -> A0 the last row before it.
+piece_tail_row:
+        subq.w #1,d0
+        move.w d0,d1
+        add.w d1,d1
+        lea model_row_counts(pc),a0
+        move.w (a0,d1.w),d1
+        subq.w #1,d1
+        mulu.w #12,d1
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        add.w d1,d0
+        lea model_geometry(pc),a0
+        adda.w d0,a0
+        rts
+
+; Variants that enter along the tail's heading -> A0 list, D0 count.
+; Every list keeps ascending variant order, so offers keep their order.
+block_socket:
+        bsr block_tail_row
+        move.w 6(a0),d1
+        sub.w (a0),d1
+        move.w 10(a0),d2
+        sub.w 4(a0),d2
+        bsr view_axis_index
+        lea block_sockets(pc),a0
+        moveq #7,d0
+        btst #0,d1
+        bne.s .count
+        moveq #26,d0
+.count:
+        move.b (a0,d1.w),d1
+        andi.w #255,d1
+        adda.w d1,a0
         rts
 
 ; Build a candidate in borrowed model storage; callers restore or commit it.
@@ -152,18 +221,7 @@ block_make:
         move.w d0,editor_track+6-module_start(a5)
         clr.w editor_track+30-module_start(a5)
         ; Align the entry to the actual predecessor's left endpoint.
-        move.w block_insert(pc),d0
-        subq.w #1,d0
-        move.w d0,d1
-        add.w d1,d1
-        lea model_row_counts(pc),a0
-        move.w (a0,d1.w),d1
-        subq.w #1,d1
-        mulu.w #12,d1
-        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        add.w d1,d0
-        lea model_geometry(pc),a0
-        adda.w d0,a0
+        bsr block_tail_row
         moveq #0,d2
         move.w (a0),d2
         move.w 4(a4),d0
@@ -289,8 +347,12 @@ block_make:
         move.w #2,block_fail-module_start(a5)
 .height_limit:
         cmpi.w #2,model_fail-module_start(a5)
-        bne.s .bad
+        bne.s .below_zero
         move.w #3,block_fail-module_start(a5)
+.below_zero:
+        cmpi.w #3,model_fail-module_start(a5)
+        bne.s .bad
+        move.w #7,block_fail-module_start(a5)
         bra.s .bad
 .bad_low:
         move.w #4,block_fail-module_start(a5)
@@ -305,6 +367,7 @@ block_make:
         rts
 
 block_preview:
+        move.w #1,ui_map_dirty-module_start(a5)
         clr.w block_preview_valid-module_start(a5)
         clr.w block_preview_visible-module_start(a5)
         lea block_offsets(pc),a0
@@ -341,13 +404,17 @@ block_preview:
         move.w block_selected(pc),building_selected-module_start(a5)
         rts
 
+; The candidate list of the open Choose still holds, so no scan runs here.
 block_commit:
-        move.w building_choice(pc),-(sp)
-        bsr block_options
-        move.w (sp)+,d0
+        bsr block_context
+        tst.w d0
+        beq .done
+        clr.w building_reason-module_start(a5)
+        move.w block_mode(pc),building_mode-module_start(a5)
+        move.w block_selected(pc),building_selected-module_start(a5)
+        move.w building_choice(pc),d0
         cmp.w building_candidate_count(pc),d0
         bhs .done
-        move.w d0,building_choice-module_start(a5)
         bsr block_preview
         tst.w block_preview_valid-module_start(a5)
         beq .done
@@ -372,7 +439,6 @@ block_commit:
         lea editor_track(pc),a1
         move.w #580,d0
         bsr storage_copy
-        bsr preview_camera_follow
         move.w block_insert(pc),building_selected-module_start(a5)
         ; An open-track append leaves Space ready to add the next block.
         cmpi.w #1,building_mode-module_start(a5)
@@ -481,29 +547,27 @@ block_browse_step:
         bra block_group_start
 
 block_text:
-        tst.w editing_prompt-module_start(a5)
-        bne editing_prompt_text
-        lea block_browse_text(pc),a0
         tst.w building_mode-module_start(a5)
         bne.s .choosing
+        lea building_add_text(pc),a0
         move.w building_selected(pc),d0
         cmp.w editor_track+28(pc),d0
-        bne.s .draw
-        lea block_add_text(pc),a0
+        bhs.s .draw
+        bsr hud_section_line
         bra.s .draw
 .choosing:
-        ; Rejected choices keep their name; row 192 gives the reason.
+        lea hud_keys_text(pc),a0
+        moveq #UI_SAY_HINT,d0
+        bsr ui_status_put
+        ; Rejected choices keep their name; L2 gives the reason.
         lea block_none_text(pc),a0
         tst.w building_candidate_count-module_start(a5)
         beq.s .draw
         bsr hud_block_line
 .draw:
-        movea.l draw_surface(pc),a1
-        adda.w #7242,a1
-        bra storage_text_line
-block_none_text: dc.b 'NO BLOCK FITS HERE  ESC BACK',0
-block_add_text: dc.b 'ADD BLOCK  FIRE/SPACE PREVIEW',0
-block_browse_text: dc.b 'BLOCKS L/R  FIRE/SPACE SELECT',0
+        bra ui_name_put
+block_none_text: dc.b 'No block fits here',0
+hud_keys_text: dc.b 'Left/Right picks. Fire or Space places.',0
         even
 block_preview_valid: dc.w 0
 block_fail: dc.w 0
@@ -512,6 +576,8 @@ block_suffix: dc.w 0
 block_count: dc.w 0
 block_variant: dc.w 0
 block_scan: dc.w 0
+block_left: dc.w 0
+block_list: dc.l 0
 block_mode: dc.w 0
 block_selected: dc.w 0
 block_group: dc.l 0
@@ -603,18 +669,7 @@ block_ghost:
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         ; Predecessor endpoint in the authoritative cache.
-        move.w block_insert(pc),d0
-        subq.w #1,d0
-        move.w d0,d1
-        add.w d1,d1
-        lea model_row_counts(pc),a0
-        move.w (a0,d1.w),d1
-        subq.w #1,d1
-        mulu.w #12,d1
-        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        add.w d1,d0
-        lea model_geometry(pc),a0
-        adda.w d0,a0
+        bsr block_tail_row
         move.l a0,block_ghost_join-module_start(a5)
         moveq #0,d2
         move.w (a0),d2
@@ -770,6 +825,38 @@ block_ghost:
 .bad:
         moveq #0,d0
         rts
+
+; D1/D2 quantized axis X/Z signs -> D1 direction index 0..7 (45-degree
+; steps, increasing to the left). D0 preserved.
+view_axis_index:
+        movem.l d0/d2,-(sp)
+        moveq #1,d0
+        tst.w d1
+        beq.s .x_ready
+        bmi.s .x_negative
+        moveq #2,d0
+        bra.s .x_ready
+.x_negative:
+        moveq #0,d0
+.x_ready:
+        mulu.w #3,d0
+        tst.w d2
+        beq.s .z_zero
+        bmi.s .lookup
+        addq.w #2,d0
+        bra.s .lookup
+.z_zero:
+        addq.w #1,d0
+.lookup:
+        move.b view_sign_index(pc,d0.w),d1
+        ext.w d1
+        movem.l (sp)+,d0/d2
+        rts
+view_sign_index: dc.b 5,4,3,6,0,2,7,0,1
+        even
+view_axes:
+        dc.w 16384,0,11585,11585,0,16384,-11585,11585
+        dc.w -16384,0,-11585,-11585,0,-16384,11585,-11585
 
 block_preview_visible: dc.w 0
 block_ghost_x: dc.w 0
