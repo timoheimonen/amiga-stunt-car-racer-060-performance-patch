@@ -16,6 +16,7 @@ editor_input_start:
         clr.w editor_input_head-module_start(a5)
         clr.w editor_input_tail-module_start(a5)
         clr.w editor_input_blocked-module_start(a5)
+        clr.w editor_input_holdoff-module_start(a5)
         clr.l editor_input_overflows-module_start(a5)
         lea editor_input_keys(a5),a0
         moveq #95,d0
@@ -43,12 +44,13 @@ editor_keyboard:
 .done:
         move.w (sp)+,sr
         movem.l (sp)+,d0-d3/a0-a2/a5
-        jmp $f06a
+        jmp $f06a.l
 
 editor_input_vbl:
         lea module_start(pc),a5
         tst.w editor_input_enabled-module_start(a5)
         beq.s .done
+        bsr ui_mouse_vbl
         bsr editor_read_joystick
         btst #7,$bfe001
         bne.s .fire
@@ -71,6 +73,8 @@ editor_input_resync:
         movem.l d0-d3/a0,-(sp)
         tst.w editor_input_enabled-module_start(a5)
         beq.s .done
+        ; JOY0DAT ran on: the next count is not a movement.
+        move.w #1,ui_baseline-module_start(a5)
         moveq #95,d0
 .key:   lea $ead6.l,a0
         moveq #0,d1
@@ -86,7 +90,11 @@ editor_input_capture:
         cmp.b (a0,d0.w),d1
         beq.s .done
         move.b d1,(a0,d0.w)
-        tst.w editor_input_blocked-module_start(a5)
+        ; A key or the stick takes over from the mouse.
+        tst.b d1
+        beq.s .queue
+        move.w #1,ui_ptr_hide-module_start(a5)
+.queue: tst.w editor_input_blocked-module_start(a5)
         bne.s .done
         move.w editor_input_head(pc),d2
         move.w d2,d3
@@ -106,12 +114,15 @@ editor_input_capture:
         addq.l #1,editor_input_overflows-module_start(a5)
         rts
 
+EDITOR_INPUT_HOLDOFF equ 12
 editor_input_next:
         movem.l d0-d3/a0-a1,-(sp)
         move.w sr,-(sp)
         ori.w #$0700,sr
         tst.w editor_input_blocked-module_start(a5)
         bne.s .blocked
+        tst.w editor_input_holdoff-module_start(a5)
+        bne .flush
         move.w editor_input_tail(pc),d2
         cmp.w editor_input_head(pc),d2
         beq.s .done
@@ -151,6 +162,63 @@ editor_input_next:
         dbra d0,.reset
         clr.w editor_input_blocked-module_start(a5)
         bra.s .done
+; A catalog scan just ended. The first poll comes after the list is published,
+; and the flush repeats for EDITOR_INPUT_HOLDOFF polls, because the keyboard
+; hands over its backlog only after the masked spans end. Dropped releases
+; never reach the loop above, so suppressed must equal captured: OR would keep
+; a key released during the scan suppressed and swallow its next press. A key
+; still held stays suppressed until its own release.
+.flush:
+        subq.w #1,editor_input_holdoff-module_start(a5)
+        move.w editor_input_head(pc),editor_input_tail-module_start(a5)
+        lea editor_input_keys(a5),a0
+        moveq #96,d0
+.key:
+        clr.b (a0)
+        move.b $80(a0),$100(a0)
+        addq.l #1,a0
+        dbra d0,.key
+        bra.s .done
+
+; After a handler pass. Z clear: the next queued event gets its pass before this
+; frame, so taps during a slow render do not wait for a frame each. An event
+; that may change the track waits for a frame of its own, and acts on what the
+; frame shows. Releases never stop the drain.
+editor_input_more:
+        tst.w editor_input_blocked-module_start(a5)
+        bne.s .stop
+        tst.w editor_input_holdoff-module_start(a5)
+        bne.s .stop
+        move.w building_mode(pc),d1
+        cmp.w editor_pass_mode(pc),d1
+        bne.s .stop
+        move.w editor_input_tail(pc),d1
+        cmp.w editor_input_head(pc),d1
+        beq.s .stop
+        lea EDITOR_INPUT_QUEUE(a5),a0
+        move.b 1(a0,d1.w),d2
+        beq.s .more
+        move.b (a0,d1.w),d1
+        cmpi.b #96,d1
+        bne.s .key
+        btst #4,d2
+        bne.s .stop
+        bra.s .more
+.key:   lea editor_commit_keys(pc),a0
+.scan:  move.b (a0)+,d0
+        beq.s .more
+        cmp.b d0,d1
+        bne.s .scan
+.stop:  moveq #0,d0
+        rts
+.more:  moveq #1,d0
+        rts
+; Space, Backspace, Return, Esc, U, R, N, L, T, F1, and the held camera keys
+; W, S, A, D, Q, Z: a tap must still be down when the pass reads it.
+editor_commit_keys:
+        dc.b $40,$41,$44,$45,$16,$13,$36,$28,$14,$50
+        dc.b $11,$21,$20,$22,$10,$31,0
+        even
 
 editor_sample_directions:
         moveq #0,d0
@@ -186,7 +254,6 @@ editor_release:
         clr.w editor_directions-module_start(a5)
         clr.w building_fire-module_start(a5)
         clr.w building_arrow-module_start(a5)
-        clr.w camera_buttons-module_start(a5)
         clr.w overview_key-module_start(a5)
         movem.l (sp)+,d0-d1/a0-a1
         rts
@@ -195,4 +262,7 @@ editor_input_enabled: dc.w 0
 editor_input_head: dc.w 0
 editor_input_tail: dc.w 0
 editor_input_blocked: dc.w 0
+editor_input_holdoff: dc.w 0
+editor_pass_mode: dc.w 0
+building_preview_due: dc.w 0
 editor_input_overflows: dc.l 0

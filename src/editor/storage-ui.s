@@ -38,6 +38,7 @@ storage_update_entry:
 
 storage_catalog_scan:
         clr.w editor_view_valid-module_start(a5)
+        move.w #EDITOR_INPUT_HOLDOFF,editor_input_holdoff-module_start(a5)
         bsr storage_backup
         bsr storage_identity
         bne .wrong
@@ -170,8 +171,6 @@ storage_open_load:
         clr.w storage_continue-module_start(a5)
         moveq #2,d6
 storage_open:
-        clr.w disk_mode-module_start(a5)
-        bsr disk_detect
         clr.w building_mode-module_start(a5)
         clr.w building_candidate_count-module_start(a5)
         clr.w storage_status-module_start(a5)
@@ -183,6 +182,9 @@ storage_open:
         move.w storage_active_slot(pc),d0
         bpl.s .select
         moveq #0,d0
+        cmpi.w #1,d6
+        bne.s .select
+        bsr.s storage_first_empty
 .select:
         move.w d0,storage_slot-module_start(a5)
         andi.w #16,d0
@@ -190,9 +192,20 @@ storage_open:
 .done:
         rts
 
+; A track without a slot saves to the first free one, else to the first.
+storage_first_empty:
+        moveq #0,d0
+        lea storage_catalog(pc),a0
+.free:  tst.w 32(a0)
+        beq.s .found
+        adda.w #64,a0
+        addq.w #1,d0
+        cmpi.w #32,d0
+        blo.s .free
+        moveq #0,d0
+.found: rts
+
 storage_modal_keys:
-        cmpi.w #5,storage_modal-module_start(a5)
-        bhs disk_modal_keys
         cmpi.b #$b3,editor_input_keys+$45(a5)
         beq .cancel
         cmpi.w #3,storage_modal-module_start(a5)
@@ -222,16 +235,9 @@ storage_modal_keys:
         bra.s .advance
 .action_row:
         subi.w #16,d0
-        tst.w disk_mode-module_start(a5)
-        beq.s .advance
-        subq.w #1,d0             ; DF1 has no Disk row
 .advance:
         add.w d4,d0
-        moveq #19,d1
-        tst.w disk_mode-module_start(a5)
-        beq.s .limit
-        subq.w #1,d1
-.limit:
+        moveq #18,d1
         tst.w d0
         bpl.s .upper
         move.w d1,d0
@@ -247,25 +253,17 @@ storage_modal_keys:
         bra.s .store
 .action_slot:
         addi.w #16,d0
-        tst.w disk_mode-module_start(a5)
-        beq.s .store
-        addq.w #1,d0
 .store:
         move.w d0,storage_slot-module_start(a5)
         bra editor_release
 .confirm:
         bsr editor_release
-        cmpi.w #33,storage_slot-module_start(a5)
-        beq .previous_page
-        cmpi.w #34,storage_slot-module_start(a5)
-        beq .next_page
         cmpi.w #32,storage_slot-module_start(a5)
-        beq disk_open
-        tst.w disk_mode-module_start(a5)
-        bne.s .allow_slot
+        beq .previous_page
+        cmpi.w #33,storage_slot-module_start(a5)
+        beq .next_page
         tst.w disk_game_error-module_start(a5)
         bne .done
-.allow_slot:
         cmpi.w #4,storage_modal-module_start(a5)
         beq storage_begin_name
         bsr storage_entry
@@ -280,8 +278,6 @@ storage_modal_keys:
         move.w #4,storage_modal-module_start(a5)
         rts
 .load:
-        tst.w disk_mode-module_start(a5)
-        bne disk_load
         bsr editor_load
         cmpi.w #2,storage_status-module_start(a5)
         bne.s .done
@@ -300,8 +296,6 @@ storage_modal_keys:
 .done:
         rts
 .cancel:
-        tst.w disk_mode-module_start(a5)
-        bne disk_cancel
         bsr editor_release
         clr.w storage_modal-module_start(a5)
         clr.w storage_continue-module_start(a5)
@@ -323,6 +317,34 @@ storage_begin_name:
         blo.s .length
 .ready:
         move.w d0,storage_name_length-module_start(a5)
+        clr.w storage_name_default-module_start(a5)
+        tst.w d0
+        beq.s .default
+        lea storage_name(pc),a0
+        lea storage_untitled(pc),a1
+.same:  cmpm.b (a0)+,(a1)+
+        bne.s .named
+        tst.b -1(a1)
+        bne.s .same
+.default:
+        lea storage_name(pc),a1
+        lea storage_track_text(pc),a0
+        moveq #5,d0
+.word:  move.b (a0)+,(a1)+
+        dbra d0,.word
+        moveq #0,d0
+        move.w storage_slot(pc),d0
+        addq.w #1,d0
+        divu.w #10,d0
+        addi.b #48,d0
+        move.b d0,(a1)+
+        swap d0
+        addi.b #48,d0
+        move.b d0,(a1)+
+        clr.b (a1)
+        move.w #8,storage_name_length-module_start(a5)
+        move.w #1,storage_name_default-module_start(a5)
+.named:
         move.w #3,storage_modal-module_start(a5)
         rts
 storage_name_keys:
@@ -341,6 +363,16 @@ storage_name_keys:
         moveq #0,d5
         move.b (a0,d4.w),d5
         beq.s .next
+        ; The first typed character replaces a default name.
+        tst.w storage_name_default-module_start(a5)
+        beq.s .typed
+        clr.w storage_name_default-module_start(a5)
+        clr.w storage_name_length-module_start(a5)
+        lea storage_name(pc),a0
+        moveq #5,d0
+.wipe:  clr.l (a0)+
+        dbra d0,.wipe
+.typed:
         move.w storage_name_length(pc),d0
         cmpi.w #24,d0
         bhs editor_release
@@ -354,6 +386,7 @@ storage_name_keys:
         blo.s .search
         rts
 .backspace:
+        clr.w storage_name_default-module_start(a5)
         move.w storage_name_length(pc),d0
         beq editor_release
         subq.w #1,d0
@@ -362,8 +395,6 @@ storage_name_keys:
         clr.b (a0,d0.w)
         bra editor_release
 storage_name_commit:
-        tst.w disk_mode-module_start(a5)
-        bne disk_name_commit
         bsr editor_release
         tst.w storage_name_length-module_start(a5)
         beq .done
@@ -416,8 +447,6 @@ storage_name_commit:
 
 ; Opaque modal screen, 16 rows at 8 pixels/row. 40 columns, ASCII 5x7.
 storage_modal_text:
-        cmpi.w #5,storage_modal-module_start(a5)
-        bhs disk_modal_text
         tst.w storage_modal-module_start(a5)
         beq .done
         movea.l draw_surface(pc),a0
@@ -425,21 +454,7 @@ storage_modal_text:
 .clear:
         clr.l (a0)+
         dbra d0,.clear
-        lea storage_save_title(pc),a0
-        cmpi.w #2,storage_modal-module_start(a5)
-        bne.s .title
-        lea storage_load_title(pc),a0
-.title:
-        tst.w disk_mode-module_start(a5)
-        beq.s .draw_title
-        lea disk_save_title(pc),a0
-        cmpi.w #2,disk_mode-module_start(a5)
-        bne.s .draw_title
-        lea disk_load_title(pc),a0
-.draw_title:
-        movea.l draw_surface(pc),a1
-        adda.w #322,a1
-        bsr storage_text_line
+        bsr storage_page_text
         move.w storage_slot(pc),-(sp)
         move.w storage_page(pc),storage_slot-module_start(a5)
 .row:
@@ -506,7 +521,7 @@ storage_modal_text:
         move.w storage_slot(pc),d4
         sub.w storage_page(pc),d4
         mulu.w #320,d4
-        addi.w #962,d4
+        addi.w #1442,d4
         movea.l draw_surface(pc),a1
         adda.w d4,a1
         bsr storage_text_line
@@ -516,8 +531,6 @@ storage_modal_text:
         cmpi.w #16,d0
         blo .row
         move.w (sp)+,storage_slot-module_start(a5)
-        bsr storage_page_text
-        bsr disk_button_text
         lea storage_list_help(pc),a0
         cmpi.w #4,storage_modal-module_start(a5)
         bne.s .name_prompt
@@ -527,107 +540,58 @@ storage_modal_text:
         bne.s .help
         lea storage_name_help(pc),a0
 .help:
-        movea.l draw_surface(pc),a1
-        adda.w #7202,a1
+        moveq #UI_SAY_PROMPT,d0
+        bsr ui_status_put
         cmpi.w #3,storage_modal-module_start(a5)
-        beq.s .compact_help
-        cmpi.w #4,storage_modal-module_start(a5)
-        bne.s .draw_help
-.compact_help:
-        suba.w #800,a1
-.draw_help:
-        bsr storage_text_line
-        cmpi.w #3,storage_modal-module_start(a5)
-        bne.s .message
+        bne.s .done
         lea storage_name(pc),a0
-        movea.l draw_surface(pc),a1
-        adda.w #6802,a1
-        bsr storage_text_line
-.message:
-        move.w storage_status(pc),d0
-        lsl.w #5,d0
-        lea storage_messages(pc),a0
-        adda.w d0,a0
-        movea.l draw_surface(pc),a1
-        adda.w #7522,a1
-        bsr storage_text_line
-.done:
-        rts
-storage_page_text:
-        lea storage_page_label(pc),a0
-        move.b #49,5(a0)
-        tst.w storage_page-module_start(a5)
-        beq.s .label
-        move.b #50,5(a0)
-.label:
-        movea.l draw_surface(pc),a1
-        adda.w #642,a1
-        bsr storage_text_line
-        cmpi.w #3,storage_modal-module_start(a5)
-        beq.s .done
-        cmpi.w #4,storage_modal-module_start(a5)
-        beq.s .done
-        lea storage_previous(pc),a0
-        move.b #32,(a0)
-        cmpi.w #33,storage_slot-module_start(a5)
-        bne.s .previous
-        move.b #62,(a0)
-.previous:
-        movea.l draw_surface(pc),a1
-        adda.w #6402,a1
-        bsr storage_text_line
-        lea storage_next(pc),a0
-        move.b #32,(a0)
-        cmpi.w #34,storage_slot-module_start(a5)
-        bne.s .next
-        move.b #62,(a0)
-.next:
         movea.l draw_surface(pc),a1
         adda.w #6722,a1
         bsr storage_text_line
-.done:  rts
-storage_page_label: dc.b 'PAGE 1/2',0
-storage_previous: dc.b '  PREVIOUS PAGE',0
-storage_next: dc.b '  NEXT PAGE',0
-        even
-storage_page: dc.w 0
-storage_save_title: dc.b 'SAVE TRACK - SELECT SLOT',0
-storage_load_title: dc.b 'LOAD TRACK - SELECT SLOT',0
-storage_list_help: dc.b 'JOY SELECT  FIRE/SPACE OK  ESC CANCEL',0
-storage_overwrite: dc.b 'OVERWRITE? FIRE/SPACE YES  ESC CANCEL',0
-storage_name_help: dc.b 'NAME: ENTER/FIRE SAVE / ESC CANCEL',0
+.done:
+        rts
+; L1 in a list: "Save track, page 1".
+storage_page_text:
+        lea hud_line(pc),a1
+        lea storage_save_title(pc),a0
+        cmpi.w #2,storage_modal-module_start(a5)
+        bne.s .title
+        lea storage_load_title(pc),a0
+.title: bsr hud_put_text
+        lea storage_page_label(pc),a0
+        bsr hud_put_text
+        moveq #'1',d0
+        tst.w storage_page-module_start(a5)
+        beq.s .page
+        moveq #'2',d0
+.page:  move.b d0,(a1)+
+        clr.b (a1)
+        lea hud_line(pc),a0
+        bra ui_name_put
+storage_page_label: dc.b ', page ',0
+storage_save_title: dc.b 'Save track',0
+storage_load_title: dc.b 'Load track',0
+storage_list_help: dc.b 'Pick a slot: Up/Down, Fire or Space.',0
+storage_overwrite: dc.b 'Replace this track? Fire or Space.',0
+storage_name_help: dc.b 'Type a name. Return or Fire saves it.',0
 storage_empty: dc.b 'EMPTY',0
 storage_damaged: dc.b 'UNREADABLE',0
 storage_draft: dc.b 'DRAFT',0
 storage_ready: dc.b 'READY',0
 storage_invalid: dc.b 'INVALID',0
         even
+storage_page: dc.w 0
 storage_slot: dc.w 0
 storage_active_slot: dc.w -1
 storage_saved_slot: dc.w -1
 storage_modal: dc.w 0
 storage_continue: dc.w 0
 storage_name_length: dc.w 0
+storage_name_default: dc.w 0
 storage_name: dcb.b 24,0
         dc.b 0,0
 storage_line: dcb.b 40,0
 storage_catalog: dcb.b 2048,0
 storage_ui_backup: dcb.b 580,0
         include "storage-keymap.s"
-
-; External state is independent of the selected DF0 slot. Buffers are private
-; Fast scratch at +$50000, outside module, screen backup and renderer caches.
-disk_state:
-disk_mode: dc.w 0
-disk_available: dc.w 0
 disk_game_error: dc.w 0
-disk_choice: dc.w 0
-disk_progress: dc.w 0
-disk_io_active: dc.w 0
-disk_error: dc.w 0
-disk_game_slot: dc.w 0
-disk_game_page: dc.w 0
-disk_game_generation: dc.l 0
-disk_free_slot: dc.w 0
-disk_match_slot: dc.w 0
-disk_state_end:

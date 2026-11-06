@@ -20,6 +20,8 @@ editor_view_key:
         beq.s .done
         tst.w d1
         bne.s .done
+        tst.w place_active-module_start(a5)
+        bne.s .done
         eori.w #1,overview_active-module_start(a5)
 .done:  rts
 
@@ -31,17 +33,13 @@ overview_fit:
         move.l #-32768,overview_min_v-module_start(a5)
         move.l #32768,overview_max_x-module_start(a5)
         clr.l overview_max_v-module_start(a5)
+        tst.w place_active-module_start(a5)
+        bne .fit_ready
         lea model_geometry(pc),a0
         lea model_row_counts(pc),a1
         move.w editor_track+28(pc),d6
-        move.w overview_first(pc),d0
-        sub.w d0,d6
         subq.w #1,d6
-        move.w d0,render_piece-module_start(a5)
-        add.w d0,d0
-        adda.w d0,a1
-        mulu.w #EDITOR_GEOMETRY_STRIDE/2,d0
-        adda.w d0,a0
+        clr.w render_piece-module_start(a5)
 .piece:
         bsr block_render_offset
         movea.l a0,a2
@@ -69,6 +67,7 @@ overview_fit:
         adda.w #EDITOR_GEOMETRY_STRIDE,a0
         addq.w #1,render_piece-module_start(a5)
         dbra d6,.piece
+.fit_ready:
         move.l overview_max_x(pc),d0
         sub.l overview_min_x(pc),d0
         addq.l #1,d0

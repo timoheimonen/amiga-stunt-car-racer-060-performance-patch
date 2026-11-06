@@ -1,26 +1,20 @@
-# Patch details — 1.6.3
+# Patch details - 2.0.0
 
-This release is primarily intended for emulation with PAL or NTSC timing, a 68060 CPU,
-2 MiB Chip RAM and at least 1 MiB Fast RAM.
+This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
+with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
 
 ## Requirements
 
-- Primarily for emulation: PAL or NTSC, a 68060 CPU, 2 MiB Chip RAM and at least 1 MiB Fast RAM.
-  Computer Link needs PAL on both machines.
+- Primarily for emulation: PAL or NTSC, a 68060 CPU, 2 MiB Chip RAM, at least 2 MiB Fast RAM
+  and WHDLoad 17 or later. Computer Link needs PAL on both machines.
 - Adjust Game Speed in Settings if the frame rate drops.
-- On real hardware the release has been tested working on at least an
+- On real hardware, earlier releases have been tested working on at least an
   Amiga 1200 + PiStorm32 Lite + Raspberry Pi 4B 1.8 GHz + Emu68 1.1 beta.1.
-- The patcher checks the disk, not the machine configuration. The runtime
-  needs its fixed 8 KiB Chip allocation at `0x181000`; allocation failure
-  halts boot with a red screen. The Track Editor and Computer Link need
-  416 KiB of Fast RAM; the angle tables use another 256 KiB when available.
-  See [Loader and memory](#loader-and-memory).
-- The [WHDLoad install](#whdload-install) needs a 68060, 2 MiB Chip RAM, at
-  least 2 MiB Fast RAM and WHDLoad 17 or later.
-- Keep DF0 writable for the editor's 32 track slots and custom-track records.
-  For Save/Load → Disk, enable a second floppy drive and insert a separate
-  writable ADF in DF1. The editor initializes a track disk only after
-  confirmation; initialization erases that disk. Keep the game disk in DF0.
+- The patcher checks the disk image, not the machine configuration. WHDLoad
+  provides the memory and stops if it cannot. See
+  [Loader and memory](#loader-and-memory).
+- Keep the install directory on a writable volume for the editor's 32 track
+  slots and custom-track records.
 
 ## Physics and rendering
 
@@ -72,7 +66,6 @@ video standard the machine was started in.
   second, about 20% faster than PAL in real time. The lap clock still
   advances once every six steps, so lap times and records stay in PAL game
   time and are comparable with PAL.
-- The boot intro is a 320 × 200 screen shown the same way in both standards.
 - Computer Link timing requires PAL on both machines.
 
 ## Smoke and particles
@@ -161,75 +154,77 @@ physics angle and distance routines keep their existing arithmetic.
 
 ## Loader and memory
 
-The patcher modifies the game's raw-loader ADF at fixed offsets.
+The patcher modifies the game's raw-loader ADF at fixed offsets. The result is
+the disk image of the [WHDLoad install](#whdload-install), and the slave runs
+its boot block.
 
 Boot retains the operating system's boot-task stack for OS calls, avoiding
-the small stack area inside the bootblock. The intro uses its own stack
-and restores the boot-task stack when it returns; the game's later stack
-switches are unchanged.
+the small stack area inside the bootblock. The game's later stack switches are
+unchanged.
 
-A 320-byte boot extension at `0x200` installs the game runtime and loads the
-intro. The 6734-byte runtime is stored at ADF offset `0xb720` and copied into
+A 320-byte boot extension at `0x200` installs the game runtime. The 6734-byte
+runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial load at ADF offset `0x2c00` to a
 `0xb000`-byte Chip allocation. The loader clears
 the CPU caches before executing copied code.
 
 The runtime and optional 256 KiB Fast angle tables remain allocated for the
 session. The Track Editor and Computer Link modules need 384 KiB and 32 KiB of
-Fast RAM; without them the game runs without the editor and the link. All
-Fast RAM is allocated at boot, 672 KiB in total. Failure of a required game
-Chip allocation halts boot with a red screen. Restart with the documented
-memory configuration.
+Fast RAM. All Fast RAM is allocated at boot, 672 KiB in total, from WHDLoad's
+expansion memory. Failure of a required game Chip allocation halts boot with a
+red screen. Restart with the documented memory configuration.
 
 The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 77,268 bytes of code and data,
-loaded from ADF offset `0x76000` in a 93,696-byte transfer that also carries
+The editor is a separate relocatable module: 89,608 bytes of code and data,
+loaded from ADF offset `0x76000` in a 106,496-byte transfer that also carries
 the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 101,888 bytes of persistent Chip RAM for loading, disk
+384 KiB of Fast RAM and 114,688 bytes of persistent Chip RAM for loading, disk
 I/O and display support. The track preview marks the finish row with a small
-arrow.
-Track projects use two guarded storage banks with 32 slots each. Draft/Ready
-state, names and custom-track records persist on the game disk. A separate
-DF1 track disk supports import/export. See [editor controls](README.md#track-editor).
+arrow. Use: [Track Editor manual](docs/track-editor.md).
+Track projects use two guarded storage banks with 32 slots each, which the
+install keeps as one file per slot. Draft/Ready state, names and custom-track
+records persist in those files.
 Practise shows Custom Tracks and Track Editor only in single-player games:
 with more drivers (`0x5eb76`) or a Computer Link role (`0x57c3c`) the original
 division menu remains.
 
-The patched disk contains the Ready track BUILD in save slot 01, written as a
+The disk image contains the Ready track BUILD in save slot 01, written as a
 first save (one record and both directory copies) without lap records.
-Append previews of straight sections with a height profile place the camera
-at the side. Q/W turn the endpoint view around the endpoint and the preview
-around its section in 45-degree steps; A/Z scale the endpoint camera's
-distance or the preview's focal length in five steps. The preview camera's
-height search ends on a narrow bracket and is bounded, so no view can stall
-the editor.
+
+The 3D view shows rows 32-175 of its surface at the top of the screen. Below it
+a Copper tail shows the bar, a bitmap of its own in Chip RAM. Three moves at the
+end of the game's list jump to the tail, and they change only between frames.
+The bar is one table of pages and rows, and a paint draws only the rows that
+changed.
+
+The vertical blank keeps the mouse pointer and records one left press. The main
+loop acts on the press, so a click runs the same handlers as its key, and it
+cannot overtake a key that is already queued. A click during a long redraw is
+dropped.
+
+The camera is an eye and two angles, 512 steps a turn, and only the player moves
+it. While it moves, the view is drawn as road edges and the map outline. A
+piece with every vertex outside one side of the view is skipped. A 2048-byte
+field, built from the start piece, holds a distance to the start line for every
+heading and cell, and the choice lines read it. A test drive runs a Practise
+race on the track in memory, without its menus, and writes no file and no lap
+record.
 
 The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
 the CPU caches with the instructions of the detected processor. After each
 transfer it queues the key changes its own input layer has not seen, so a key
 marked up while WHDLoad showed the system (see [WHDLoad install](#whdload-install))
-ends its hold and its next press counts. From floppy there are none.
+ends its hold and its next press counts.
 
 
 ## Boot intro
 
-The intro uses a 320 × 200 screen that fits both PAL and NTSC displays. The
-flag is drawn with edge markers and 32-bit fills, and only the changed
-areas are copied to the screen, so the wave and scroller update every frame.
-The flagpole is a shaded white Finnish pole with a gilded knob.
-Click a mouse button to continue to the game.
-
-On a 68060 whose FPU is enabled at boot, the intro is skipped and the game
-loads directly. Kickstart 3.1 cannot run the 68060 FPU safely without
-68060.library, which a floppy boot does not load; 68060 boards therefore
-disable the FPU at reset. The intro reads the processor configuration
-register and returns before any operating system call when the FPU is
-enabled. With the FPU disabled, and on processors without that register, the
-intro is shown as before.
+The disk image still holds the boot intro of the performance layer, but the
+WHDLoad slave does not call it: the game starts at its loading picture.
 
 ## Player-name screen
 
@@ -251,18 +246,18 @@ The disk bytes at `0xee8a` are unchanged.
 
 ## WHDLoad install
 
-`patch.py --whdload [DIRECTORY]` (default: `StuntCarRacerPerf` beside the
-original ADF) writes the patched ADF as the disk image
+`patch.py ORIGINAL [DIRECTORY]` (default: `StuntCarRacerPerf` beside the
+original ADF) writes the patched game as the disk image
 `StuntCarRacerPerf.disk` together with a WHDLoad slave, a Workbench project
 icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Slave source:
 [src/SCR_WHDLoad.s](src/SCR_WHDLoad.s).
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4712 | `45a537eedfc996c55dba0b8a609002def5e13c9eabe3e4fd9cb98d06ca4e56f7` |
+| `StuntCarRacerPerf.slave` | 4712 | `b2b86657869041a5a38cdf0abca364eb0b6b717abfeb6dcea6688488e35c7f6f` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
-| `StuntCarRacerPerf.disk` | 901,120 | the patched ADF, see [Checksums](#checksums) |
+| `StuntCarRacerPerf.disk` | 901,120 | see [Checksums](#checksums) |
 
 The names differ from other WHDLoad installs of the game (`StuntCarRacer.slave`,
 `StuntCarRacer.info`, `Disk.1`; AmigaDOS names ignore case), so both can share
@@ -364,40 +359,34 @@ the WHDLoad slave and icons for standalone use.
 
 ## Checksums
 
-Both ADFs are 901,120 bytes. The identified source dump shows QUARTEX text in
+The original ADF and the disk image are 901,120 bytes. The identified source dump shows QUARTEX text in
 the track introduction; support is limited to the exact checksum below.
 
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| Patched ADF (1.6.3, up to 50 FPS Practice, computer-opponent and linked races) | `4165f8b56cac59dbd05ee60532cb6dfb52b27513a0788fba8d556547f898a211` |
-
-The WHDLoad install uses the patched ADF as `StuntCarRacerPerf.disk`.
+| `StuntCarRacerPerf.disk` (2.0.0, up to 50 FPS Practice, computer-opponent and linked races) | `376b9a8cc3cf6ac0176463dde80b3a4fb2064b6cf3dc1869876ba02653e70762` |
 
 The patcher verifies the whole original disk, displaced instructions,
-embedded payloads, loader-tail contents, boot checksum and whole output.
-It reads back the complete temporary file before publishing it. A different
-dump, modified save disk, truncated image or already-patched disk is rejected.
+embedded payloads, loader-tail contents, boot checksum and the whole disk
+image. A different dump, modified save disk, truncated image or already-patched
+disk is rejected.
 
 ## Included sources
 
 `src/` contains the assembly sources, including the WHDLoad slave, and the
-patch manifest. Applying the patch or writing the WHDLoad install requires
-only `patch.py`, Python 3.8+ and the supported original ADF; no assembler is
-needed.
+patch manifest. Writing the install requires only `patch.py`, Python 3.8+ and
+the supported original ADF; no assembler is needed.
 
 ## Output protection and rollback
 
 The patcher verifies the source disk, replacement locations, embedded code,
-boot checksum and complete output hash. It reads back a temporary output
-before publishing it atomically. Existing output requires `--force` to replace.
-The source file and its aliases are protected; symbolic-link output paths
-are rejected.
+boot checksum and complete disk image hash. It only reads the source.
 
-A WHDLoad install is written only to a new directory and a new drawer icon:
-both are created exclusively, never replacing an existing file or directory,
-and a failed install removes what it created. `--force` does not apply.
+An install is written only to a new directory and a new drawer icon: both are
+created exclusively, never replacing an existing file or directory, and a
+failed install removes what it created.
 
-To restore the original game, quit the patched session and boot the untouched
+To restore the original game, quit WHDLoad and boot the untouched
 original ADF with fresh emulator state. A save state containing patched RAM
 continues to use the patch regardless of the inserted floppy.

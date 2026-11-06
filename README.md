@@ -1,16 +1,20 @@
 # Stunt Car Racer Performance patcher
 
-**Version 1.6.3.** This release is primarily intended for emulation.
+**Version 2.0.0.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
-The patcher also writes a [WHDLoad install](WHDLOAD.md) of the same game for a hard disk.
+
+The patcher writes a [WHDLoad install](WHDLOAD.md) of the game for a hard disk.
+From this version on, releases are WHDLoad installs only. The previous version,
+[1.6.3](https://github.com/timoheimonen/amiga-stunt-car-racer-060-performance-patch/tree/Release/1.6.3), still includes the disk version.
 
 ## Requirements
 
-- Python 3.8+; no additional packages or assembler needed to patch a disk.
+- Python 3.8+; no additional packages or assembler needed to write the install.
 - Primarily an emulated Amiga with PAL or NTSC, MC68060, 2 MiB Chip RAM and at least
-  1 MiB Fast RAM ([requirements](PATCH.md#requirements)). Lower frame rates may call
+  2 MiB Fast RAM ([requirements](PATCH.md#requirements)). Lower frame rates may call
   for adjusting **Game Speed** in [Settings](#settings).
+- [WHDLoad](https://www.whdload.de/) 17 or later.
 - Your own original Stunt Car Racer ADF matching the
   [supported checksum](PATCH.md#checksums), and your own Kickstart ROM.
 
@@ -20,70 +24,52 @@ The patcher also writes a [WHDLoad install](WHDLOAD.md) of the same game for a h
 python3 patch.py "/path/to/Stunt Car Racer.adf"
 ```
 
-Creates `StuntCarRacer-Performance-v<version>.adf` beside the original.
-Use `--output /path/to/output.adf` to choose a location and `--force` to
-replace an existing output. The original disk is never overwritten.
-`python3 patch.py --version` prints the package version.
-
-Boot the patched disk in DF0.
-
-### WHDLoad
+Creates the new install directory `StuntCarRacerPerf` and its drawer icon
+`StuntCarRacerPerf.info` beside the original. To write them elsewhere, name
+the directory after the ADF:
 
 ```sh
-python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload
+python3 patch.py "/path/to/Stunt Car Racer.adf" /path/to/Games/StuntCarRacerPerf
 ```
 
-Creates the new install directory `StuntCarRacerPerf` and its drawer icon
-`StuntCarRacerPerf.info` beside the original; `--whdload DIRECTORY` chooses
-another place. Copy both to the Amiga and start the game from its icon,
-`StuntCarRacerPerf`. The intro is skipped, the loading picture stays for
-3 seconds (or with WHDLoad's ButtonWait option until a button is pressed),
-and custom tracks, records and season saves are files in the install directory. The install's own file
-names let it share a directory with other WHDLoad installs of the game. Requires WHDLoad 17 or later and at least
-2 MiB Fast RAM; see [WHDLoad install](WHDLOAD.md).
+Nothing is replaced: an existing directory or drawer icon stops the patcher,
+and the original ADF is only read. `python3 patch.py --version` prints the
+package version.
+
+Copy the directory and its drawer icon to the Amiga and start the game from
+its icon, `StuntCarRacerPerf`. The intro is skipped, the loading picture stays
+for 3 seconds (or with WHDLoad's ButtonWait option until a button is pressed),
+and custom tracks, records and season saves are files in the install
+directory. The install's own file names let it share a directory with other
+WHDLoad installs of the game. See [WHDLoad install](WHDLOAD.md).
 
 ## Track Editor
 
-Build in the game's 3D view,
-with a 16 × 16 ground grid, up to 64 internal pieces and 33 section choices.
-**V** toggles an overview of the whole track and building area.
+![The Track Editor](screenshots/SCR-Performance_v2.0.0.png)
 
-- **Left/Right** (joystick or cursor keys): browse pieces or compatible choices.
-- **Fire/Space:** preview, edit or confirm the selected section. After appending
-  to an open track, the next press starts another addition.
-- **Q/W:** turn the view in 45-degree steps. **A/Z:** zoom in and out.
-  Straight hills, ramps and crests are previewed from the side.
-- **Esc:** cancel a preview or leave the editor. Unsaved changes offer Save,
-  Discard or Cancel.
-- **Backspace:** remove the selected section. **U:** undo the latest edit.
-- **N:** start a new track after confirmation.
-- **S / L:** save or load a named track.
+Build your own circuits inside the game from complete sections of the original
+tracks. The [Track Editor manual](docs/track-editor.md) has a first track step
+by step, every control and every message.
 
-While choosing, the bottom lines show the section's name, its rise, the
-choice number and, for a red section, why it does not fit. On an open track
-the last line shows where the start line is from the open end, for example
-**START 3 RIGHT 3 FWD UP 2 FACE R90**: map squares to the side and ahead,
-height levels, and the start line's direction. A section that closes the
-track is marked.
+- **A bar of buttons** sits below the 3D view and shows every command. A mouse
+  in port 1 clicks them, and the keyboard and the joystick still work. A dimmed
+  button says why on the line below.
+- **A new track** starts on the map: put the start line down, then add sections
+  by turn, slope and kind. Line 2 says how far the start is and which section
+  closes the track.
+- **Hold the right mouse button and drag** to look around. **W A S D** move the
+  camera and **Q Z** raise and lower it. **V** shows the whole track.
+- **Test** drives the track in memory; nothing is saved. **Undo** and **Redo**
+  reach back 16 steps.
+- **New** can also start from a ready-made track.
 
-The game disk has **32 save slots** on two pages. Slot 01 contains the
-ready-to-drive example track **BUILD**; saving over it replaces it after
-confirmation. Draft tracks can be saved
-and resumed; only validated **Ready** tracks appear in **Practise**. The original
-eight tracks remain available. Custom tracks retain their own best times,
-separately for normal and super league. Record eligibility requires Game Speed
-at 100%, Infinite Boost No and Disable Damage No.
-
-Save/Load → **Disk** exports or imports tracks using **DF1**. Enable a second
-floppy drive and insert a writable ADF for track storage. Initializing that
-disk erases its contents after confirmation. It provides another 32 slots;
-records are not exported to DF1. DF0 stays the game disk. Under WHDLoad,
-tracks are files that can be copied instead.
-
-Keep the patched game disk writable to retain tracks and records. Back it up
-before replacing it with a newly patched image; patching the original creates
-a fresh disk and does not transfer saved tracks. Export tracks to DF1 first
-and import them into the new game disk through the editor.
+The track list has **32 save slots** on two pages, and each slot is a file in
+the install directory. Slot 01 contains the ready-to-drive example track
+**BUILD**; saving over it replaces it after confirmation. Draft tracks can be
+saved and resumed; only validated **Ready** tracks appear in **Practise**. The
+original eight tracks remain available. Custom tracks retain their own best
+times, separately for normal and super league. Record eligibility requires
+Game Speed at 100%, Infinite Boost No and Disable Damage No.
 
 ## Computer Link (Beta)
 
@@ -99,7 +85,7 @@ machine runs its own 50 Hz physics; car positions are exchanged 20 times per
 second and the other car is shown smoothly with a short delay. Cars pass
 through each other. Pause, leaving the race, wrecks, results and points are
 shared. A tie is awarded to the Host. Link races do not change the records on
-either disk.
+either machine.
 
 The link championship runs four seasons through Divisions 4, 3, 2 and 1, the
 last one being the FINAL SEASON. Points accumulate over all four seasons and
@@ -117,7 +103,8 @@ championship starts in Division 4.
 
 
 [Changelog](CHANGELOG.md) · [Checksums](PATCH.md#checksums) ·
-[Patch details](PATCH.md) · [WHDLoad install](WHDLOAD.md) · [Assembly sources](src)
+[Patch details](PATCH.md) · [WHDLoad install](WHDLOAD.md) ·
+[Track Editor manual](docs/track-editor.md) · [Assembly sources](src)
 
 Timo Heimonen (timo.heimonen@proton.me) · [MIT License](LICENSE)
 

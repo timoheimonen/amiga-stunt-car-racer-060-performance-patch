@@ -1,10 +1,9 @@
 # WHDLoad install
 
 The patched game, installed to a hard disk and started with
-[WHDLoad](https://www.whdload.de/). The game, the Track Editor and the
-Computer Link behave as on floppy. The intro is not shown; the game starts at
+[WHDLoad](https://www.whdload.de/). The intro is not shown; the game starts at
 its loading picture. Custom tracks, their records and the season saves are
-files in the install directory instead of disk sectors.
+files in the install directory.
 
 ## Requirements
 
@@ -14,18 +13,17 @@ files in the install directory instead of disk sectors.
 ## Install
 
 ```sh
-python3 patch.py "/path/to/Stunt Car Racer.adf" --whdload
+python3 patch.py "/path/to/Stunt Car Racer.adf"
 ```
 
 Creates the install directory `StuntCarRacerPerf` and its drawer icon
 `StuntCarRacerPerf.info` beside the original disk image. To write them
-elsewhere, name the directory, for example
-`--whdload /path/to/Games/StuntCarRacerPerf`.
+elsewhere, name the directory after the disk image, for example
+`/path/to/Games/StuntCarRacerPerf`.
 
 `patch.py` accepts only the [supported original disk image](PATCH.md#checksums)
-and refuses an existing output directory or drawer icon; `--force` does not
-apply to an install. It can write directly to
-FAT-formatted media. It writes:
+and refuses an existing output directory or drawer icon. It can write directly
+to FAT-formatted media. It writes:
 
 | File | Contents |
 | --- | --- |
@@ -84,14 +82,13 @@ All saves are files in the install directory:
   shown as UNREADABLE; move a track by loading it in the Track Editor and
   saving it into another slot. Copy files between installs under the same
   names.
-- An install made with version 1.6.0 used `StuntCarRacer.slave`,
-  `StuntCarRacer.info` and `Disk.1`. Its save files have the same names as
-  now: copy them into the new install.
+- Save files keep their names and format between versions: copy them from an
+  earlier install into the new one. An install made with version 1.6.0 used
+  `StuntCarRacer.slave`, `StuntCarRacer.info` and `Disk.1`, but its save files
+  have the same names as now.
 - If the index does not match the track files, for example after files were
   copied, the Track Editor shows `INDEX RECOVERED FROM RECORDS` and writes a
   new index with the next save.
-- The Track Editor's DISK transfer uses a track disk in DF1 and is not
-  available under WHDLoad; copy the track files instead.
 - Season Load and Save open the list of season saves directly; the game does
   not ask for a save disk. Without season save files, the list is empty.
   A season save file of the wrong size reads as empty; the next save
@@ -128,10 +125,10 @@ ends the game with an error requester.
 
 ## How it works
 
-The slave runs the disk's own boot block on a minimal `exec.library` and
-`trackdisk.device`, so the performance runtime, the Track Editor and the
-Computer Link module are installed exactly as from floppy: Chip memory comes
-from WHDLoad's base memory, Fast memory from its expansion memory. It skips
+The slave runs the disk image's own boot block on a minimal `exec.library`
+and `trackdisk.device`, and that boot code installs the performance runtime,
+the Track Editor and the Computer Link module: Chip memory comes from
+WHDLoad's base memory, Fast memory from its expansion memory. It skips
 the intro, and replaces the floppy driver of the game's loader and of the game
 with reads of `StuntCarRacerPerf.disk`. The disk areas the game and the Track Editor write are
 mapped to the files above; the Track Editor's two copies of each slot are one

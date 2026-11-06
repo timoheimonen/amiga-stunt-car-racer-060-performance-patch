@@ -139,12 +139,18 @@ title_editor_label: dc.b 'Track Editor',0
 
 ; C=1 selects the original title-menu loop.
 ; Preserve all registers and all other CCR bits. No OS allocation in game.
+EDITOR_STACK_TOP equ $5a000
 editor_enter:
         move.w ccr,-(sp)
         movem.l d0-d7/a0-a6,-(sp)
         lea module_start(pc),a5
         move.b #1,editor_active-module_start(a5)
         addq.l #1,entry_count-module_start(a5)
+        ; The editor runs on its own stack in Fast. A5 stays the module base.
+        move.l sp,editor_saved_sp-module_start(a5)
+        movea.l a5,a0
+        adda.l #EDITOR_STACK_TOP,a0
+        movea.l a0,sp
         move.w $dff002,d0
         andi.w #$2f,d0
         move.w d0,saved_audio_dma-module_start(a5)
@@ -167,52 +173,85 @@ editor_enter:
         dbra d0,.save_display
         move.l $1b812,saved_publication-module_start(a5)
         move.b $1b816,saved_pending-module_start(a5)
-        lea $e74e.l,a0
-        lea saved_copper(pc),a1
-        moveq #7,d0
-.save_copper:
-        move.l (a0)+,(a1)+
-        dbra d0,.save_copper
+        lea COPPER_LIST.l,a0
+        lea SAVED_COPPER_FULL(a5),a1
+        move.w #COPPER_LIST_BYTES,d0
+        bsr storage_copy
         bsr editor_model_view
         clr.w overview_active-module_start(a5)
         clr.w overview_key-module_start(a5)
-        clr.l camera_route-module_start(a5)
-        move.w #3,camera_buttons-module_start(a5)
-        bsr view_reset
+        move.w #1,free_open_due-module_start(a5)
         bsr editor_building_reset
         bsr editor_release_physical
         bsr editor_input_start
         clr.w editor_view_valid-module_start(a5)
+        bsr ui_display_enter
 editor_loop:
         bsr editor_wait_vbl
         addq.l #1,editor_poll_count-module_start(a5)
+        tst.w test_request-module_start(a5)
+        beq.s .no_test
+        bsr test_drive
+.no_test:
+        move.w building_mode(pc),editor_pass_mode-module_start(a5)
+.pass:
         bsr editor_input_next
+        bsr ui_begin
         bsr editor_sample_directions
         move.w d0,editor_directions-module_start(a5)
         bsr editor_building_keys
         bsr editor_storage_keys
-        bsr editor_camera
+        bsr editor_view_key
+        bsr ui_end
         tst.w building_exit-module_start(a5)
         bne editor_leave
+        bsr editor_input_more
+        bne.s .pass
+        tst.w building_preview_due-module_start(a5)
+        beq.s .fresh
+        clr.w building_preview_due-module_start(a5)
+        tst.w building_mode-module_start(a5)
+        beq.s .fresh
+        bsr building_preview
+.fresh:
+        bsr ui_paint
+        bsr ui_status_tick
+        bsr free_open_step
         bsr editor_view_changed
         beq editor_loop
 render_begin:
+        ; Words before pixels: the name and the reason show before the ghost is
+        ; drawn. A dialog writes its words in its own drawing.
         bsr block_render_enter
-        bsr editor_render_adapter
         bsr hud_measure
         bsr block_render_exit
         bsr editor_storage_text
         bsr editor_building_text
+        bsr ui_map_update
+        tst.w storage_modal-module_start(a5)
+        bne.s .render
+        bsr ui_status_flush
+.render:
+        bsr block_render_enter
+        bsr editor_render_adapter
+        bsr block_render_exit
+        tst.w storage_modal-module_start(a5)
+        beq.s render_end
         bsr storage_modal_text
+        bsr ui_status_flush
 render_end:
-        ; Use original publication, but do not call gameplay's swap wrapper.
+        ; The view starts at row 32 of the surface. Not gameplay's swap wrapper.
         move.l $6a588,d0
         move.l $6a58c,$6a588
         move.l d0,$6a58c
-        jsr $1b7b6
+        move.l $6a588,d0
+        addi.l #VIEW_FIRST_ROW*40,d0
+        move.l d0,$1b812
+        move.b #$80,$1b816
 .wait_publication:
         tst.b $1b816
         bne.s .wait_publication
+        bsr ui_after_render
         tst.w building_exit-module_start(a5)
         beq editor_loop
 editor_leave:
@@ -234,17 +273,13 @@ editor_exit:
         dbra d0,.restore_display
         move.l saved_publication(pc),$1b812
         move.b saved_pending(pc),$1b816
-        lea saved_copper(pc),a0
-        lea $e74e.l,a1
-        moveq #7,d0
-.restore_copper:
-        move.l (a0)+,(a1)+
-        dbra d0,.restore_copper
+        bsr ui_display_exit
         move.w saved_audio_dma(pc),d0
         ori.w #$8000,d0
         move.w d0,$dff096
         clr.b editor_active-module_start(a5)
         addq.l #1,exit_count-module_start(a5)
+        movea.l editor_saved_sp(pc),sp
         movem.l (sp)+,d0-d7/a0-a6
         move.w (sp)+,ccr
         ori.b #1,ccr
@@ -297,6 +332,7 @@ editor_active: dc.b 0
 editor_ticks: dc.w 0
 saved_audio_dma: dc.w 0
 saved_screen: dc.l 0
+editor_saved_sp: dc.l 0
 entry_count: dc.l 0
 exit_count: dc.l 0
 
@@ -304,7 +340,6 @@ saved_display: dcb.l 4,0
 saved_publication: dc.l 0
 saved_pending: dc.b 0
         even
-saved_copper: dcb.l 8,0
         include "src/editor/input.s"
         include "src/editor/refresh.s"
         include "src/editor/render.s"
@@ -319,6 +354,9 @@ saved_copper: dcb.l 8,0
         include "building-data.s"
         include "src/editor/blocks.s"
         include "block-data.s"
+        include "palette-data.s"
+        include "src/editor/field.s"
+        include "field-data.s"
         include "src/editor/editing.s"
         include "editing-data.s"
 
@@ -326,6 +364,7 @@ saved_copper: dcb.l 8,0
         include "src/editor/hud-info.s"
 
         include "src/editor/game.s"
+        include "src/editor/test-drive.s"
         include "src/editor/preview-arrow.s"
         include "src/editor/auto-frame.s"
         include "src/editor/hud-copy.s"
@@ -374,4 +413,16 @@ editor_physical_arrows:
 .done:  rts
 editor_directions: dc.w 0
 
-        include "src/editor/disk.s"
+        include "src/editor/ui-equ.i"
+        include "src/editor/ui-display.s"
+        include "src/editor/ui-status.s"
+        include "src/editor/ui-paint.s"
+        include "src/editor/ui-mouse.s"
+        include "src/editor/ui-request.s"
+        include "src/editor/ui-camera.s"
+        include "src/editor/ui-pick.s"
+        include "src/editor/ui-map.s"
+        include "src/editor/ui-place.s"
+        include "src/editor/ui_service.s"
+        even
+        include "ui-data.s"

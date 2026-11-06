@@ -217,6 +217,24 @@ custom_prepare:
         move.l d4,records_project_generation-module_start(a5)
         move.l 1020(a4),records_project_crc-module_start(a5)
         bsr records_key_build
+        bsr custom_compile
+        beq .restore
+        ; Keep checked description for verification and future identity binding.
+        lea practice_runtime(pc),a0
+        lea custom_runtime(pc),a1
+        move.w #1040,d0
+        bsr storage_copy
+        move.w #1,custom_prepared-module_start(a5)
+.restore:
+        bsr storage_restore
+.done:
+        bsr editor_model_view
+        move.w custom_prepared(pc),d0
+        rts
+
+; Game record and name from the checked practice_runtime. D0=1 and Z=0 on
+; success, D0=0 and Z=1 when the crane exclusions do not fit.
+custom_compile:
         move.l editor_track+24(pc),custom_geometry_revision-module_start(a5)
         lea practice_runtime(pc),a0
         lea custom_record(pc),a1
@@ -258,7 +276,7 @@ custom_prepare:
         tst.w 14(a0)
         bne.s .safe
         cmpi.b #32,(a2)
-        bhs .restore
+        bhs.s .fail
         move.b d6,(a1)+
         addq.b #1,(a2)
 .safe:
@@ -269,17 +287,9 @@ custom_prepare:
         lea custom_track_name(pc),a1
         moveq #24,d0
         bsr storage_copy
-        ; Retain the validated track description.
-        lea practice_runtime(pc),a0
-        lea custom_runtime(pc),a1
-        move.w #1040,d0
-        bsr storage_copy
-        move.w #1,custom_prepared-module_start(a5)
-.restore:
-        bsr storage_restore
-.done:
-        bsr editor_model_view
-        move.w custom_prepared(pc),d0
+        moveq #1,d0
+        rts
+.fail:  moveq #0,d0
         rts
 
 custom_menu_row:
@@ -492,7 +502,10 @@ custom_save_times:
         dbra d0,.names
         move.b #9,(a0)
         move.b #9,16(a0)
-        bra records_begin
+        tst.w test_mode(pc)
+        beq records_begin
+        clr.l records_allowed-module_start(a5)
+        rts
 custom_times_load:
         tst.w custom_active(pc)
         beq.s .original

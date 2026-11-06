@@ -7,16 +7,17 @@
 ; Banks begin on physical tracks 110 and 122 (11 sectors/track), slot stride 4.
 ; The game driver uses disk DMA AND blitter decoding: both A0 and A1 are Chip.
 editor_storage_keys:
-        cmpi.w #7,storage_modal-module_start(a5)
-        beq disk_initialize_step
         tst.w storage_modal-module_start(a5)
         bne storage_modal_keys
         tst.w editing_prompt-module_start(a5)
         bne.s .done
         tst.w building_exit-module_start(a5)
         bne.s .done
-        cmpi.b #$b3,editor_input_keys+$21(a5)
+        tst.w place_active-module_start(a5)
+        bne.s .load_key
+        cmpi.b #$b3,editor_input_keys+$50(a5)       ; F1
         beq.s .save
+.load_key:
         cmpi.b #$b3,editor_input_keys+$28(a5)
         beq.s .load
 .done:
@@ -47,25 +48,8 @@ storage_io:
         movea.l 28(a5),a1
         lea 16384(a1),a0
         bsr cache_flush
-        moveq #0,d0           ; DF0 unless a scoped external operation
-        tst.w disk_io_active-module_start(a5)
-        beq.s .drive_ready
-        bsr disk_status
-        btst #2,d0
-        bne.s .external_present
-        moveq #29,d0
-        bra.s .io_result
-.external_present:
-        tst.w d3
-        beq.s .external_drive
-        bsr disk_write_guard
-        tst.l d0
-        bne.s .io_result
-.external_drive:
-        moveq #1,d0           ; DF1 only, never fallback
-.drive_ready:
-        jsr $62e86            ; exclude game's sound/gameplay wrapper
-.io_result:
+        moveq #0,d0           ; DF0
+        jsr $62e86.l          ; exclude game's sound/gameplay wrapper
         move.l d0,storage_io_error-module_start(a5)
         move.l d0,-(sp)
         move.w #$7fff,$dff09e
@@ -79,7 +63,7 @@ storage_io:
         andi.w #$0050,d0
         move.w d0,$dff096
         bsr cache_flush
-        jsr $ee8a             ; original I/O return's CIA timer/IRQ setup
+        jsr $ee8a.l           ; original I/O return's CIA timer/IRQ setup
         bsr editor_input_resync
         move.l (sp)+,d0
         move.w (sp)+,sr
@@ -88,8 +72,6 @@ storage_io:
         rts
 
 storage_identity:
-        tst.w disk_io_active-module_start(a5)
-        bne disk_identity
         move.w #1200,d1
         moveq #1,d2
         moveq #0,d3
@@ -331,11 +313,6 @@ editor_save:
         cmp.l 4(a3),d0
         bne storage_save_done
 .same_slot:
-        tst.w disk_io_active-module_start(a5)
-        beq.s .identity_checked
-        bsr disk_identity
-        bne storage_save_wrong
-.identity_checked:
         addq.l #1,d4
         beq storage_save_done
         lea storage_pending(pc),a0
@@ -391,11 +368,8 @@ storage_write_end:
         bne storage_save_done
         dbra d0,.compare
         move.l d4,storage_generation-module_start(a5)
-        tst.w disk_io_active-module_start(a5)
-        bne.s .external_saved
         bsr editing_mark_saved
         move.w storage_slot(pc),storage_active_slot-module_start(a5)
-.external_saved:
         move.w #1,storage_status-module_start(a5)
         bsr storage_update_entry
         bsr storage_directories_write
@@ -425,35 +399,16 @@ editor_load:
         move.l 1020(a4),d0
         cmp.l 4(a3),d0
         bne .done
-        tst.w disk_io_active-module_start(a5)
-        beq.s .identity_checked
-        bsr disk_identity
-        bne .wrong
-.identity_checked:
         lea 32(a4),a0
         lea editor_track(pc),a1
         move.w #580,d0
         bsr storage_copy
         move.l d4,storage_generation-module_start(a5)
-        tst.w disk_io_active-module_start(a5)
-        beq .game_slot
-        move.w #-1,storage_active_slot-module_start(a5)
-        move.w #-1,storage_saved_slot-module_start(a5)
-        bra.s .slot_ready
-.game_slot:
         move.w storage_slot(pc),storage_active_slot-module_start(a5)
-.slot_ready:
         bsr editor_building_reset
-        clr.w editing_undo_valid-module_start(a5)
-        clr.l camera_route-module_start(a5)
-        tst.w disk_io_active-module_start(a5)
-        beq .mark_game_saved
-        clr.w editing_saved_track+6-module_start(a5)
-        move.w #1,building_dirty-module_start(a5)
-        bra.s .loaded
-.mark_game_saved:
+        clr.l editing_undo_count-module_start(a5)
+        move.w #1,free_open_due-module_start(a5)
         bsr editing_mark_saved
-.loaded:
         addq.l #1,building_revision-module_start(a5)
         move.w #2,storage_status-module_start(a5)
         bra.s .done
@@ -469,29 +424,29 @@ editor_load:
 
 ; Independent 8x7 CPU text into four Chip bitplanes; no game font globals.
 editor_storage_text:
-        lea storage_help(pc),a0
-        movea.l draw_surface(pc),a1
-        adda.w #82,a1
-        bsr storage_text_line
-        lea storage_view_help(pc),a0
-        movea.l draw_surface(pc),a1
-        adda.w #482,a1
-        bsr storage_text_line
         bsr hud_status_line
-        move.w storage_status(pc),d0
-        lsl.w #5,d0
-        lea storage_messages(pc),a0
-        adda.w d0,a0
+        bsr hud_count_line
         tst.w storage_status-module_start(a5)
-        bne.s .status
+        bne.s .result
         tst.w building_dirty-module_start(a5)
-        beq.s .status
+        beq.s .done
         lea storage_unsaved(pc),a0
-.status:
-        movea.l draw_surface(pc),a1
-        adda.w #882,a1
-        bsr storage_text_line
-        bra hud_piece_count
+        moveq #UI_SAY_UNSAVED,d0
+        bra ui_status_put
+.result:
+        bsr storage_message
+        moveq #UI_SAY_RESULT,d0
+        bra ui_status_put
+.done:  rts
+
+; storage_status -> A0 text.
+storage_message:
+        move.w storage_status(pc),d0
+        add.w d0,d0
+        lea storage_messages(pc),a0
+        adda.w (a0,d0.w),a0
+        rts
+
 storage_text_line:
         moveq #0,d0
         move.b (a0)+,d0
@@ -527,10 +482,9 @@ storage_text_line:
         bra.s storage_text_line
 .done:
         rts
-storage_help: dc.b 'S SAVE L LOAD N NEW U UNDO BKSP DELETE',0
-        even
-storage_view_help: dc.b 'V VIEW Q/W ROTATE A/Z ZOOM ESC EXIT',0
-storage_unsaved: dc.b 'UNSAVED CHANGES',0
+storage_untitled: dc.b 'Untitled',0
+storage_track_text: dc.b 'TRACK ',0
+storage_unsaved: dc.b 'Unsaved changes.',0
         even
 storage_status: dc.w 0
 storage_target: dc.w 0

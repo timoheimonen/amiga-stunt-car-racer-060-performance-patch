@@ -112,17 +112,17 @@ preview_arrow_capture:
         addq.w #2,d2            ; right edge
         cmp.w d0,d2
         bhs.s .done
-        lea $1be70,a0
+        lea $1be70.l,a0
         tst.w (a0,d1.w)
         bmi.s .done
         tst.w (a0,d2.w)
         bmi.s .done
-        lea $1bfb0,a0
+        lea $1bfb0.l,a0
         move.w (a0,d1.w),d0
         add.w (a0,d2.w),d0
         asr.w #1,d0
         move.w d0,(a1)
-        lea $1c0f0,a0
+        lea $1c0f0.l,a0
         move.w (a0,d1.w),d0
         add.w (a0,d2.w),d0
         asr.w #1,d0

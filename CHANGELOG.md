@@ -1,5 +1,43 @@
 # Changelog
 
+## 2.0.0 - 2026-11-06
+
+- **WHDLoad only.** `patch.py` writes the WHDLoad install and nothing else:
+  `python3 patch.py ORIGINAL [DIRECTORY]`. There is no patched ADF any more,
+  and `--whdload`, `--output` and `--force` are gone. Releases from now on are
+  WHDLoad installs only; [1.6.3](https://github.com/timoheimonen/amiga-stunt-car-racer-060-performance-patch/tree/Release/1.6.3) still includes the disk version.
+- The requirements are now those of the install: a 68060, 2 MiB Chip RAM, at
+  least 2 MiB Fast RAM and WHDLoad 17 or later.
+- **Track Editor overhaul**, with a new [manual](docs/track-editor.md):
+  - A bar of buttons below the 3D view shows every command, and a dimmed button
+    says why on the line below. A mouse in port 1 clicks them; the keyboard and
+    the joystick still work.
+  - The camera is free and only the player moves it: hold the right mouse button
+    and drag to look around, **W A S D** move it, **Q Z** raise and lower it. A
+    track opens on its start piece. While the camera moves the view is drawn as
+    road edges. The old **Q/W** view turns and **A/Z** zoom are gone.
+  - A new track starts on the map, where the start line takes a square and a
+    heading.
+  - Sections are chosen by turn, slope and kind. Buttons that close the track
+    are green, and line 2 says how many sections the start is away.
+  - A map of the whole track sits at the right edge of the bar.
+  - **Test** drives the track in memory without writing anything.
+  - **New** offers three ready-made tracks: Banked Loop, Small Hills and Ramp
+    and Hills.
+  - **Undo** and the new **Redo** reach back 16 steps. **Cut** removes a section
+    in the middle and everything after it. **F1** saves, as **S** now moves the
+    camera.
+  - Rejections are plain sentences, the rise is shown in eighths of a level, and
+    the first Save selects the first free row and offers the name `TRACK nn`.
+  - The editor responds about three times faster on a long track, and quick taps
+    are read before it draws.
+- A Return or Fire pressed while the track list opens no longer changes a save
+  or closes the list. Left now moves in the editor on tracks built from whole
+  sections.
+- The track disk in DF1 is gone. Tracks are files: copy them. Save files from an
+  earlier WHDLoad install work as they are. Tracks saved on a patched ADF or a
+  DF1 track disk stay on that disk.
+
 ## 1.6.3 — 2026-10-04
 
 - WHDLoad install: season Load no longer loads a save by itself. The Return

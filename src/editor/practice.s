@@ -337,12 +337,12 @@ practice_text:
 practice_messages:
         dc.w .ready-practice_messages,.draft-practice_messages,.short-practice_messages
         dc.w .overlap-practice_messages,.start-practice_messages,.runtime-practice_messages,.legacy-practice_messages,.clearance-practice_messages
-.ready: dc.b 'READY',0
-.draft: dc.b 'DRAFT: CLOSE BOTH ROAD EDGES',0
-.short: dc.b 'CLOSED: ROAD TOO SHORT',0
-.overlap: dc.b 'CLOSED: ROAD OVERLAP',0
-.start: dc.b 'CLOSED: INVALID START AREA',0
-.runtime: dc.b 'CLOSED: RUNTIME CHECK FAILED',0
-.clearance: dc.b 'CLOSED: ROAD BELOW SIDE BASE',0
-.legacy: dc.b 'DRAFT: LEGACY UNBANKED GEOMETRY',0
+.ready: dc.b 'Ready to drive. Test it, or Edit a section.',0
+.draft: dc.b 'Draft: close both road edges.',0
+.short: dc.b 'Closed: road too short.',0
+.overlap: dc.b 'Closed: road overlap.',0
+.start: dc.b 'Closed: invalid start area.',0
+.runtime: dc.b 'Closed: runtime check failed.',0
+.clearance: dc.b 'Closed: road below side base.',0
+.legacy: dc.b 'Draft: legacy unbanked geometry.',0
         even

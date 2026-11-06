@@ -7,14 +7,15 @@
 ; This snapshot describes the published front surface. The back surface is
 ; rebuilt in full only when these inputs change; an idle loop never swaps it.
 EDITOR_VIEW_SNAPSHOT equ $3f900
+; Bytes before storage_status in the snapshot: the fields ahead of it below.
+VIEW_SNAPSHOT_STATUS equ (290+6+3+1)*2
 editor_view_changed:
         lea editor_view_fields(pc),a0
         lea EDITOR_VIEW_SNAPSHOT(a5),a1
         moveq #0,d0
         move.w editor_view_valid(pc),d3
 .field:
-        moveq #0,d1
-        move.w (a0)+,d1
+        move.l (a0)+,d1
         move.w (a0)+,d2
         beq.s .done
         lea (a5,d1.l),a2
@@ -39,20 +40,34 @@ editor_view_changed:
 editor_view_valid: dc.w 0
 editor_poll_count: dc.l 0
 editor_view_fields:
-        dc.w editor_track,290
+        dc.l editor_track
+        dc.w 290
         ; Catalog changes explicitly invalidate the view; it now spans 2 KiB.
-        dc.w disk_state,(disk_state_end-disk_state)/2
-        dc.w building_mode,6
-        dc.w building_dirty,3
-        dc.w camera_route,2
-        dc.w overview_active,1
-        dc.w view_orbit,2
-        dc.w storage_status,1
-        dc.w storage_page,1
-        dc.w storage_slot,18
-        dc.w editing_prompt,1
-        dc.w model_valid,1
-        dc.w block_preview_valid,5
-        dc.w block_preview_visible,1
-        dc.w practice_class,2
-        dc.w 0,0
+        dc.l building_mode
+        dc.w 6
+        dc.l building_dirty
+        dc.w 3
+        dc.l overview_active
+        dc.w 1
+        dc.l storage_status
+        dc.w 1
+        dc.l storage_page
+        dc.w 1
+        dc.l storage_slot
+        dc.w 18
+        dc.l editing_prompt
+        dc.w 1
+        dc.l model_valid
+        dc.w 1
+        dc.l block_preview_valid
+        dc.w 5
+        dc.l block_preview_visible
+        dc.w 1
+        dc.l free_wire
+        dc.w 9
+        dc.l practice_class
+        dc.w 2
+        dc.l place_active
+        dc.w 4
+        dc.l 0
+        dc.w 0

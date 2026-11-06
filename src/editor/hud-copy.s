@@ -30,7 +30,7 @@
 HUD_ITEMS equ $34               ; image slots built by $69cfc (sprites excluded)
 HUD_CACHE equ $51000            ; Fast offset: 32-byte descriptors, then data
 HUD_DATA equ HUD_CACHE+HUD_ITEMS*32
-HUD_CACHE_END equ $5a000
+HUD_CACHE_END equ $59128         ; the editor stack follows
 HUD_PLANE equ 8000
 
 ; Descriptor: 0 source.l, 4 data.l, 8 width-1.w, 10 height-1.w,
