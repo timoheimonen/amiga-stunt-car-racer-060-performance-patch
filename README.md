@@ -1,8 +1,9 @@
 # Stunt Car Racer Performance patcher
 
-**Version 2.0.0.** This release is primarily intended for emulation.
+**Version 2.1.0.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
+**Timing Original** in [Settings](#settings) races with the original game loop and physics instead.
 
 The patcher writes a [WHDLoad install](WHDLOAD.md) of the game for a hard disk.
 From this version on, releases are WHDLoad installs only. The previous version,
@@ -45,7 +46,7 @@ WHDLoad installs of the game. See [WHDLoad install](WHDLOAD.md).
 
 ## Track Editor
 
-![The Track Editor](screenshots/SCR-Performance_v2.0.0.png)
+![The Track Editor](docs/images/track-editor/first-straight.png)
 
 Build your own circuits inside the game from complete sections of the original
 tracks. The [Track Editor manual](docs/track-editor.md) has a first track step
@@ -56,7 +57,9 @@ by step, every control and every message.
   button says why on the line below.
 - **A new track** starts on the map: put the start line down, then add sections
   by turn, slope and kind. Line 2 says how far the start is and which section
-  closes the track.
+  closes the track. A track has up to **78 road pieces**.
+- **Finish** builds the rest of an open track for you, and **Del** in the middle
+  of a track leaves a gap to build again.
 - **Hold the right mouse button and drag** to look around. **W A S D** move the
   camera and **Q Z** raise and lower it. **V** shows the whole track.
 - **Test** drives the track in memory; nothing is saved. **Undo** and **Redo**
@@ -64,12 +67,13 @@ by step, every control and every message.
 - **New** can also start from a ready-made track.
 
 The track list has **32 save slots** on two pages, and each slot is a file in
-the install directory. Slot 01 contains the ready-to-drive example track
-**BUILD**; saving over it replaces it after confirmation. Draft tracks can be
-saved and resumed; only validated **Ready** tracks appear in **Practise**. The
-original eight tracks remain available. Custom tracks retain their own best
-times, separately for normal and super league. Record eligibility requires
-Game Speed at 100%, Infinite Boost No and Disable Damage No.
+the install directory. Slots 01-03 contain the ready-to-drive example tracks
+**BUILD**, **BUILD 2** and **BUILD 3**; saving over one replaces it after
+confirmation. Draft tracks can be saved and resumed; only validated **Ready**
+tracks appear in **Practise**. The original eight tracks remain available.
+Custom tracks retain their own best times, separately for normal and super
+league. Record eligibility requires Game Speed at 100%, Infinite Boost No,
+Disable Damage No and Timing Performance.
 
 ## Computer Link (Beta)
 
@@ -99,7 +103,13 @@ championship starts in Division 4.
 - **Game Speed:** 100–150%, in 5% steps.
 - **AI Difficulty:** 100–150%, in 5% steps.
 - **Infinite Boost:** No/Yes.
-- **Disable Damage:** No/Yes,
+- **Disable Damage:** No/Yes.
+- **Timing:** Performance/Original. **Performance** is the 50 Hz game.
+  **Original** races with the original 120 ms game loop and physics, with the
+  faster drawing still on. Game Speed then shows 100%; the value set for
+  Performance is kept. Original races do not set records on the original tracks,
+  and custom tracks keep their times for the session only. Computer Link races
+  always use Performance.
 
 
 [Changelog](CHANGELOG.md) · [Checksums](PATCH.md#checksums) ·

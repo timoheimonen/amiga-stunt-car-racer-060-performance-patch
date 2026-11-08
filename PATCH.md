@@ -1,4 +1,4 @@
-# Patch details - 2.0.0
+# Patch details - 2.1.0
 
 This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
 with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
@@ -34,6 +34,9 @@ The achieved frame rate depends on the machine's Chip RAM access speed; see
   applied separately.
 - Rendering waits for the Copper display update before reusing a screen
   buffer. Display graphics, Copper lists and DMA buffers use Chip RAM.
+
+With **Timing Original** a race uses the original game loop instead; see
+[Timing](#timing).
 
 ## Late frames
 
@@ -92,13 +95,40 @@ Disable Damage at Yes prevents new player damage, crack growth and damage
 holes. Existing damage remains; No restores normal damage handling.
 
 Settings persist between races and reset on boot. Original-track records share
-the same table across settings. Custom-track records require Game Speed 100%,
-Infinite Boost No and Disable Damage No. See [controls](README.md#settings).
+the same table across settings; Timing Original sets none. Custom-track records
+require Game Speed 100%, Infinite Boost No, Disable Damage No and Timing
+Performance. See [controls](README.md#settings).
 Five guarded runtime entry overlays dispatch to the speed routines. The yaw
 instruction overlay preserves the existing damping continuation. Six menu
 hooks, two AI hooks, one boost hook and five damage hooks install the Settings
 features. Two player-name hooks add the default name and the name-screen text.
 `src/patches.json` records their expected and replacement bytes.
+
+## Timing
+
+Settings row 5 selects **Timing Performance** (default) or **Timing Original**
+for the session. Original keeps the 50 Hz runtime inactive for the whole race:
+
+- A runtime overlay at `frame_gate` in the first race frame calls
+  `original_gate` ([src/SCR_Timing.s](src/SCR_Timing.s)). In Original it
+  selects the original 120 ms frame: every gated hook runs its displaced
+  original instructions, the loop waits six vertical blanks, and the impact
+  cooldown and smoke phase advance once per loop as in the original game.
+- The yaw correction hook at `0x611ce` tests the runtime state first: active
+  races use the 20 ms correction, Original adds the whole original correction
+  once per loop. Apart from this test, Performance runs the new code only when
+  the runtime starts a race or a crane restart, and when a time is compared
+  with the records.
+- Two hooks at `0x5f18c` and `0x5f1f6`, where a lap and a race time are
+  compared with the track records, answer "not faster" in Original, so the
+  original tracks keep their records. Custom tracks keep session times.
+- Game Speed shows 100% and cannot be changed in Original; the stored Game
+  Speed is unchanged.
+- A Computer Link role keeps the race on Performance, with the stored Game
+  Speed.
+
+The new code is appended to the runtime, so no earlier runtime address moves.
+The setting is the former padding byte of the speed settings at `0x182447`.
 
 ## Computer Link
 
@@ -162,7 +192,7 @@ Boot retains the operating system's boot-task stack for OS calls, avoiding
 the small stack area inside the bootblock. The game's later stack switches are
 unchanged.
 
-A 320-byte boot extension at `0x200` installs the game runtime. The 6734-byte
+A 320-byte boot extension at `0x200` installs the game runtime. The 7142-byte
 runtime is stored at ADF offset `0xb720` and copied into
 a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial load at ADF offset `0x2c00` to a
 `0xb000`-byte Chip allocation. The loader clears
@@ -178,11 +208,12 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 89,608 bytes of code and data,
-loaded from ADF offset `0x76000` in a 106,496-byte transfer that also carries
-the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 114,688 bytes of persistent Chip RAM for loading, disk
-I/O and display support. The track preview marks the finish row with a small
+The editor is a separate relocatable module: 106,120 bytes of code and data,
+loaded from ADF offset `0x76000` in a 122,880-byte transfer that also carries
+the link module. Its bootstrap is 756 bytes at ADF offset `0xd800`. It reserves
+384 KiB of Fast RAM and 131,072 bytes of persistent Chip RAM for loading, disk
+I/O and display support. It runs relocated in Fast RAM and addresses game memory
+with absolute operands only. The track preview marks the finish row with a small
 arrow. Use: [Track Editor manual](docs/track-editor.md).
 Track projects use two guarded storage banks with 32 slots each, which the
 install keeps as one file per slot. Draft/Ready state, names and custom-track
@@ -191,8 +222,14 @@ Practise shows Custom Tracks and Track Editor only in single-player games:
 with more drivers (`0x5eb76`) or a Computer Link role (`0x57c3c`) the original
 division menu remains.
 
-The disk image contains the Ready track BUILD in save slot 01, written as a
-first save (one record and both directory copies) without lap records.
+A track has up to 78 road pieces. Tracks of up to 64 pieces are stored
+exactly as in 2.0.0. A record's track identity has 32 bytes and 4 per piece:
+the first 288 bytes keep their place, and the rest uses bytes 2.0.0 kept zero,
+so the records of a track of up to 64 pieces are unchanged.
+
+The disk image contains the Ready tracks BUILD, BUILD 2 and BUILD 3 in save
+slots 01-03, each written as a first save (one record, listed in both directory
+copies) without lap records.
 
 The 3D view shows rows 32-175 of its surface at the top of the screen. Below it
 a Copper tail shows the bar, a bitmap of its own in Chip RAM. Three moves at the
@@ -208,10 +245,17 @@ dropped.
 The camera is an eye and two angles, 512 steps a turn, and only the player moves
 it. While it moves, the view is drawn as road edges and the map outline. A
 piece with every vertex outside one side of the view is skipped. A 2048-byte
-field, built from the start piece, holds a distance to the start line for every
-heading and cell, and the choice lines read it. A test drive runs a Practise
-race on the track in memory, without its menus, and writes no file and no lap
-record.
+field, built from the start piece or the far side of a gap, holds a distance to
+that goal for every heading and cell, and the choice lines read it. A test drive
+runs a Practise race on the track in memory, without its menus, and writes no
+file and no lap record.
+
+Del in the middle of a track removes one section and leaves a gap, which the
+choices then lead to. Finish searches from the open end, then from ends with
+one, two and more sections taken off, with a weighted A* search over the same
+choices: map, height limits, the piece limit and the road already built. Its
+search state borrows the depth buffer, which the next full render clears. The
+sections taken off and added are one undo step.
 
 The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
 hooks and around each editor disk transfer, the module pushes and invalidates
@@ -228,9 +272,9 @@ WHDLoad slave does not call it: the game starts at its loading picture.
 
 ## Player-name screen
 
-The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`. Fire, Return or the
-keypad Enter supplies `racer` when the name is empty and preserves a typed
-name.
+The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`, and its edition line names
+the version: `PERFORMANCE EDITION 2.1.0`. Fire, Return or the keypad Enter
+supplies `racer` when the name is empty and preserves a typed name.
 
 ## Keyboard acknowledge
 
@@ -254,7 +298,7 @@ icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Sl
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4712 | `b2b86657869041a5a38cdf0abca364eb0b6b717abfeb6dcea6688488e35c7f6f` |
+| `StuntCarRacerPerf.slave` | 4716 | `1311ee24e6a38e1b5f438e2dd6e61f320cb95dda69e3f76803b99e9b0cc7d29c` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
 | `StuntCarRacerPerf.disk` | 901,120 | see [Checksums](#checksums) |
@@ -271,6 +315,8 @@ and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
 `AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
 `CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
 call ends WHDLoad with an operating system emulation error naming the call.
+WHDLoad's start window shows the slave's text `Performance Patch 2.1.0` and
+`by Timo Heimonen`.
 
 - Chip memory comes from the base memory: ordinary allocations from
   `0x80000` below the boot block at `0x8c000`, `MEMF_REVERSE` allocations from
@@ -343,7 +389,7 @@ runtime address = ADF offset + 0xb00
 runtime address = extracted game-block offset + 0xe700
 ```
 
-[src/patches.json](src/patches.json) lists the 108 game instruction patches,
+[src/patches.json](src/patches.json) lists the 110 game instruction patches,
 boot and loader patches, expected and replacement bytes, address mappings
 and payload hashes. The `editor.changes` list is applied after the guarded
 performance layer; its expected bytes refer to that intermediate disk. The
@@ -353,8 +399,8 @@ the WHDLoad slave and icons for standalone use.
 
 | Content | Size | SHA-256 |
 | --- | ---: | --- |
-| Boot | 320 | `10f67db818b945e70ebc2ed173584f016ca19e2cb5a253a5a83fed0c9457e453` |
-| Runtime | 6734 | `254b9d11ef787180c23864c43abf582648ca07678bc672a7b9f96fa48f08a0cd` |
+| Boot | 320 | `b7dd1acfd78c2629292208bb286b27bea963534dac03c22649c397d25e9298e7` |
+| Runtime | 7142 | `735a1d6e35d87ccd1898a5cb7ebb0e7523fb6330c0bdae0c92f9d796dce31b67` |
 | Intro | 5922 | `b7ad19f33e1debe3a5c231df6742479c01aecab0ab3b588c26b776a9e918f7ca` |
 
 ## Checksums
@@ -365,7 +411,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| `StuntCarRacerPerf.disk` (2.0.0, up to 50 FPS Practice, computer-opponent and linked races) | `376b9a8cc3cf6ac0176463dde80b3a4fb2064b6cf3dc1869876ba02653e70762` |
+| `StuntCarRacerPerf.disk` (2.1.0, up to 50 FPS Practice, computer-opponent and linked races) | `776bbee409f788040553e16563dc62380677465de5ec9b6a41eed286d4128166` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and the whole disk

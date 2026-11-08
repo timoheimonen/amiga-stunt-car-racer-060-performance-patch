@@ -8,7 +8,7 @@
 ; rebuilt in full only when these inputs change; an idle loop never swaps it.
 EDITOR_VIEW_SNAPSHOT equ $3f900
 ; Bytes before storage_status in the snapshot: the fields ahead of it below.
-VIEW_SNAPSHOT_STATUS equ (290+6+3+1)*2
+VIEW_SNAPSHOT_STATUS equ ((EDITOR_TRACK_BYTES+4)/2+6+3+1)*2
 editor_view_changed:
         lea editor_view_fields(pc),a0
         lea EDITOR_VIEW_SNAPSHOT(a5),a1
@@ -40,8 +40,9 @@ editor_view_changed:
 editor_view_valid: dc.w 0
 editor_poll_count: dc.l 0
 editor_view_fields:
+        ; The track, then editor_gap and editor_gap_height.
         dc.l editor_track
-        dc.w 290
+        dc.w (EDITOR_TRACK_BYTES+4)/2
         ; Catalog changes explicitly invalidate the view; it now spans 2 KiB.
         dc.l building_mode
         dc.w 6

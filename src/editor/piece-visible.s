@@ -128,5 +128,5 @@ piece_outcode:
         rts
 
 ; One flag per piece, and one for the ghost that follows a full track.
-piece_flags: dcb.b 65,0
+piece_flags: dcb.b EDITOR_MAX_PIECES+1,0
         even

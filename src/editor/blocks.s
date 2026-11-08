@@ -5,14 +5,14 @@
 
 ; Whole original runs. Authoritative track is never replaced by a preview.
 ; Two private Fast caches, outside the loaded module and screen backup.
-BLOCK_CACHE_BYTES equ 128+64*EDITOR_GEOMETRY_STRIDE
-BLOCK_ORIGINAL_CACHE equ $20000
-BLOCK_PREVIEW_CACHE equ $3b000
+; BLOCK_CACHE_BYTES: a row count word per piece, then the geometry of every
+; piece. It, BLOCK_ORIGINAL_CACHE and BLOCK_PREVIEW_CACHE come from the builder.
 
+; The track goes with its gap words.
 block_save:
         lea editor_track(pc),a0
         lea block_original_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         lea model_row_counts(pc),a0
         movea.l a5,a1
@@ -20,13 +20,13 @@ block_save:
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         lea practice_class(pc),a0
-        move.w #1048,d0
+        move.w #PRACTICE_SAVE_BYTES,d0
         bra storage_copy
 block_restore:
         move.w #1,model_valid-module_start(a5)
         lea block_original_track(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         movea.l a5,a0
         adda.l #BLOCK_ORIGINAL_CACHE,a0
@@ -34,7 +34,7 @@ block_restore:
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         lea practice_class(pc),a1
-        move.w #1048,d0
+        move.w #PRACTICE_SAVE_BYTES,d0
         bra storage_copy
 
 ; D0 variant -> A4 descriptor; D0 destroyed.
@@ -106,7 +106,8 @@ block_context:
         tst.w d0
         beq .done
         bsr block_save
-        move.w editor_track+28(pc),d0
+        ; A new section goes at the gap, else at the end.
+        bsr editor_end
         move.w d0,block_insert-module_start(a5)
         move.w d0,block_suffix-module_start(a5)
         cmpi.w #2,building_mode-module_start(a5)
@@ -162,9 +163,9 @@ block_context:
 block_tail_row:
         move.w block_insert(pc),d0
         bra.s piece_tail_row
-; Last row of the model -> A0.
+; Last row of the model before the gap or the end -> A0.
 model_tail_row:
-        move.w editor_track+28(pc),d0
+        bsr editor_end
 ; D0 piece -> A0 the last row before it.
 piece_tail_row:
         subq.w #1,d0
@@ -190,10 +191,10 @@ block_socket:
         sub.w 4(a0),d2
         bsr view_axis_index
         lea block_sockets(pc),a0
-        moveq #7,d0
+        moveq #BLOCK_DIAGONAL_SOCKETS,d0
         btst #0,d1
         bne.s .count
-        moveq #26,d0
+        moveq #BLOCK_AXIS_SOCKETS,d0
 .count:
         move.b (a0,d1.w),d1
         andi.w #255,d1
@@ -213,13 +214,17 @@ block_make:
         add.w block_insert(pc),d0
         add.w block_original_track+28(pc),d0
         sub.w block_suffix(pc),d0
-        cmpi.w #64,d0
+        cmpi.w #EDITOR_MAX_PIECES,d0
         bhi .bad_limit
         move.w d0,editor_track+28-module_start(a5)
         lsl.w #3,d0
         addi.w #68,d0
         move.w d0,editor_track+6-module_start(a5)
         clr.w editor_track+30-module_start(a5)
+        ; A gap after the insert moves with the new section.
+        bsr block_moved_gap
+        move.w d0,editor_gap-module_start(a5)
+        move.w block_original_track+EDITOR_TRACK_BYTES+2(pc),editor_gap_height-module_start(a5)
         ; Align the entry to the actual predecessor's left endpoint.
         bsr block_tail_row
         moveq #0,d2
@@ -278,6 +283,9 @@ block_make:
         bsr editor_model_refresh
         tst.w d0
         beq .bad_refresh
+        bsr block_fill
+        tst.w d0
+        beq .bad_refresh
         bsr block_height_valid
         tst.w d0
         beq .bad_low
@@ -294,7 +302,7 @@ block_make:
         move.w block_suffix(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
         movea.l a5,a2
-        adda.l #BLOCK_ORIGINAL_CACHE+128,a2
+        adda.l #BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES,a2
         adda.w d0,a2
         move.w block_insert(pc),d0
         add.w block_count(pc),d0
@@ -366,12 +374,39 @@ block_make:
         moveq #0,d0
         rts
 
+; The gap of the track as the new section moves it -> D0, zero without one.
+block_moved_gap:
+        move.w block_original_track+EDITOR_TRACK_BYTES(pc),d0
+        beq.s .done
+        add.w block_count(pc),d0
+        add.w block_insert(pc),d0
+        sub.w block_suffix(pc),d0
+.done:  rts
+
+; With the gap still open, a new section that meets its far side closes it: the
+; model is built again without the gap. D0=0 when that build fails.
+block_fill:
+        move.w editor_gap(pc),d0
+        beq.s .whole
+        bsr piece_tail_row
+        move.w editor_gap(pc),d0
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        lea model_geometry(pc),a1
+        adda.l d0,a1
+        bsr editor_join
+        tst.w d0
+        beq.s .whole
+        clr.l editor_gap-module_start(a5)
+        bra editor_model_refresh
+.whole: moveq #1,d0
+        rts
+
 block_preview:
         move.w #1,ui_map_dirty-module_start(a5)
         clr.w block_preview_valid-module_start(a5)
         clr.w block_preview_visible-module_start(a5)
         lea block_offsets(pc),a0
-        move.w #191,d0
+        move.w #EDITOR_MAX_PIECES*3-1,d0
 .clear_offsets:
         clr.l (a0)+
         dbra d0,.clear_offsets
@@ -389,7 +424,7 @@ block_preview:
 .valid:
         lea editor_track(pc),a0
         lea block_preview_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         lea model_row_counts(pc),a0
         movea.l a5,a1
@@ -419,6 +454,9 @@ block_commit:
         tst.w block_preview_valid-module_start(a5)
         beq .done
         ; Choosing the identical run preserves the previous undo snapshot.
+        move.l editor_gap(pc),d0
+        cmp.l block_preview_track+EDITOR_TRACK_BYTES(pc),d0
+        bne.s .changed
         lea editor_track(pc),a0
         lea block_preview_track(pc),a1
         move.w 6(a0),d0
@@ -437,7 +475,7 @@ block_commit:
         bsr editing_backup
         lea block_preview_track(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         move.w block_insert(pc),building_selected-module_start(a5)
         ; An open-track append leaves Space ready to add the next block.
@@ -467,7 +505,7 @@ block_render_enter:
         move.w building_selected(pc),block_render_selected-module_start(a5)
         lea block_preview_track(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         movea.l a5,a0
         adda.l #BLOCK_PREVIEW_CACHE,a0
@@ -513,6 +551,38 @@ block_group_start:
         subq.w #1,d0
         bne.s .loop
 .done: rts
+
+; D0 first piece of a section -> D0 the piece after it. D1, D2 and A0 destroyed.
+block_group_end:
+        move.l d4,-(sp)
+        moveq #1,d4
+        bsr.s block_browse_step
+        move.l (sp)+,d4
+        rts
+
+; The piece where the track goes on -> D0: the gap, else the end.
+editor_end:
+        move.w editor_gap(pc),d0
+        bne.s .done
+        move.w editor_track+28(pc),d0
+.done:  rts
+
+; D0 selection, D4 direction -> what Browse selects next. With a gap the Add
+; slot stands at it, and the pieces after it are not offered.
+block_browse_ui:
+        move.w editor_gap(pc),d1
+        beq.s block_browse_step
+        tst.w d4
+        bmi.s .back
+        bsr.s block_browse_step
+        cmp.w editor_gap(pc),d0
+        blo.s .done
+        move.w editor_track+28(pc),d0
+.done:  rts
+.back:  cmp.w editor_track+28(pc),d0
+        blo.s block_browse_step
+        move.w d1,d0
+        bra.s block_browse_step
 
 ; D0 selection, D4 direction -> next/previous complete block or Add Piece.
 block_browse_step:
@@ -615,8 +685,9 @@ block_height_valid:
 .done:
         movem.l (sp)+,d1-d3/a0-a2
         rts
-block_original_track: dcb.b 580,0
-block_preview_track: dcb.b 580,0
+; Each with editor_gap and editor_gap_height after the track.
+block_original_track: dcb.b EDITOR_TRACK_BYTES+4,0
+block_preview_track: dcb.b EDITOR_TRACK_BYTES+4,0
 
 
 block_highlight:
@@ -655,13 +726,15 @@ block_ghost:
         add.w block_insert(pc),d6
         add.w block_original_track+28(pc),d6
         sub.w block_suffix(pc),d6
-        cmpi.w #64,d6
+        cmpi.w #EDITOR_MAX_PIECES,d6
         bhi .bad
         lea block_original_track(pc),a0
         lea block_preview_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         move.w d6,block_preview_track+28-module_start(a5)
+        bsr block_moved_gap
+        move.w d0,block_preview_track+EDITOR_TRACK_BYTES-module_start(a5)
         movea.l a5,a0
         adda.l #BLOCK_ORIGINAL_CACHE,a0
         movea.l a5,a1
@@ -724,7 +797,7 @@ block_ghost:
         move.w block_ghost_index(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
         movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE+128,a1
+        adda.l #BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES,a1
         adda.w d0,a1
         move.l a1,block_ghost_rows-module_start(a5)
         lea building_probe(pc),a0
@@ -787,12 +860,12 @@ block_ghost:
         move.w d6,d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
         movea.l a5,a0
-        adda.l #BLOCK_ORIGINAL_CACHE+128,a0
+        adda.l #BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES,a0
         adda.w d0,a0
         move.w block_ghost_index(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
         movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE+128,a1
+        adda.l #BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES,a1
         adda.w d0,a1
         move.w #EDITOR_GEOMETRY_STRIDE,d0
         bsr storage_copy
@@ -866,7 +939,7 @@ block_ghost_join: dc.l 0
 block_ghost_rows: dc.l 0
 block_ghost_index: dc.w 0
 block_ghost_port: dcb.w 6,0
-block_offsets: dcb.l 64*3,0
+block_offsets: dcb.l EDITOR_MAX_PIECES*3,0
 
 ; A longword XYZ translation is used only during a rejected preview render.
 block_render_offset:

@@ -3,6 +3,9 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
+; The module runs relocated in Fast memory, so a game address must stay absolute.
+; vasm would turn one within 32 KB of the instruction into a PC-relative operand.
+        opt a-
 EDITOR_MAX_ROWS equ 14
 EDITOR_GEOMETRY_STRIDE equ EDITOR_MAX_ROWS*12
 ; relocatable editor lifecycle, height renderer and modal storage. Fast allocation lives until reset.
@@ -357,6 +360,9 @@ saved_pending: dc.b 0
         include "palette-data.s"
         include "src/editor/field.s"
         include "field-data.s"
+        ; The data first: finish.s checks its scratch against the constants.
+        include "finish-data.s"
+        include "src/editor/finish.s"
         include "src/editor/editing.s"
         include "editing-data.s"
 

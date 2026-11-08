@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.1.0 - 2026-11-08
+
+- **Timing** in Settings: **Performance** (default) is the 50 Hz game.
+  **Original** races with the original 120 ms game loop and physics, with the
+  faster drawing still on. In Original, Game Speed shows 100% and cannot be
+  changed; the value set for Performance returns with it. Original races do not
+  set records on the original tracks, and custom tracks keep their times for the
+  session only. Computer Link races always use Performance.
+- **Track Editor** ([manual](docs/track-editor.md)):
+  - **Finish**, or the F key, builds the rest of an open track. If the end as it
+    is leads nowhere, it first takes off sections as **Del** would. With a gap it
+    fills the gap. All of it is one **Undo** step.
+  - **Del** with a section in the middle selected removes only that section and
+    leaves a gap, which **Add** and **Finish** fill. **Cut** is gone. **Save** and
+    **Test** wait until the gap is filled.
+  - A track can have up to 78 road pieces instead of 64, as many as the longest
+    original tracks. Tracks and records of up to 64 pieces are saved exactly as
+    before; a longer track does not open in 2.0.0.
+  - Four more sections from the original tracks: **Bumps** from Big Ramp, **Dip**
+    from Stepping Stones, the straight **Large** jump from High Jump and the
+    whole diagonal **Ramp** of Little Ramp. The diagonal **Small** jump, which
+    began with a landing, is gone. There are 36 sections.
+  - Every section climbs or drops by whole quarter levels, so the height alone
+    never stops a track from closing. Tracks built with older versions keep
+    their shape.
+  - Slots 02 and 03 hold two more ready-to-drive example tracks, **BUILD 2** and
+    **BUILD 3**. A track file in the install takes the place of the example
+    track in its slot.
+- The player-name screen and WHDLoad's start window show the version.
+
 ## 2.0.0 - 2026-11-06
 
 - **WHDLoad only.** `patch.py` writes the WHDLoad install and nothing else:

@@ -182,7 +182,7 @@ map_draw:
         beq.s .marks
         movea.l a5,a0
         adda.l #BLOCK_PREVIEW_CACHE,a0
-        lea 128(a0),a1
+        lea 2*EDITOR_MAX_PIECES(a0),a1
         move.w block_insert(pc),d2
         move.w d2,d5
         add.w block_count(pc),d5
@@ -208,6 +208,15 @@ map_draw:
         bne.s .start
         bsr model_tail_row
         movea.l a0,a2
+        bsr map_centre
+        moveq #MAP_END,d6
+        bsr map_blob
+        ; A gap has two ends: its far side is marked as well.
+        move.w editor_gap(pc),d0
+        beq.s .start
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        lea model_geometry(pc),a2
+        adda.l d0,a2
         bsr map_centre
         moveq #MAP_END,d6
         bsr map_blob

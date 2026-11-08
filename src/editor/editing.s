@@ -6,10 +6,10 @@
 ; Transactional model editing. Undo ring, content-based dirty state.
 ; No I/O or renderer pointers live in the snapshots. Geometry revision is
 ; monotonic, including undo; SCTR format revision remains unchanged.
-; A slot holds the track and building_selected.w. The ring has
-; 16 slots and keeps 17 states: the live one and undo plus redo levels, at most 16.
-EDITING_RING equ $1d560
-EDITING_SLOT equ 582
+; A slot holds the track, editor_gap with its height, and building_selected.w.
+; The ring has 16 slots and keeps 17 states: the live one and undo plus redo
+; levels, at most 16. EDITING_RING and EDITING_SLOT (EDITOR_TRACK_BYTES+6) come
+; from the builder.
 ; D0 free-running index -> A0 slot.
 editing_slot:
         andi.w #15,d0
@@ -25,7 +25,7 @@ editing_backup:
         bsr editing_slot
         movea.l a0,a1
         lea editor_track(pc),a0
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bsr storage_copy
         move.w building_selected(pc),(a1)
         addq.w #1,editing_head-module_start(a5)
@@ -40,7 +40,7 @@ editing_mark_saved:
         movem.l d0/a0-a1,-(sp)
         lea editor_track(pc),a0
         lea editing_saved_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
         clr.w building_dirty-module_start(a5)
         move.w storage_slot(pc),storage_saved_slot-module_start(a5)
@@ -49,6 +49,9 @@ editing_mark_saved:
 editing_dirty:
         movem.l d0/a0-a1,-(sp)
         move.w #1,building_dirty-module_start(a5)
+        ; A track with a gap was never saved.
+        tst.w editor_gap-module_start(a5)
+        bne.s .done
         lea editor_track(pc),a0
         lea editing_saved_track(pc),a1
         move.w 6(a0),d0
@@ -116,11 +119,11 @@ editing_changed:
         bsr editor_model_view
         rts
 
-; Exchange the live track and selection with ring slot D0.
+; Exchange the live track, its gap and the selection with ring slot D0.
 editing_swap:
         bsr editing_slot
         lea editor_track(pc),a1
-        move.w #144,d1
+        move.w #(EDITOR_TRACK_BYTES+4)/4-1,d1
 .long:  move.l (a0),d0
         move.l (a1),(a0)+
         move.l d0,(a1)+
@@ -153,62 +156,119 @@ editing_redo:
         bra editing_swap
 .done:  rts
 
-; The piece a delete starts from -> D0. Mid-track that is the selected section,
-; which takes the tail with it; on the start line or the Add slot the last
-; section. An old track goes a piece at a time from its end.
+; The section Del takes -> D0 its first piece, D1 the piece after it, or D0=-1
+; when Del waits for the gap. On the start line or the Add slot the last
+; section goes; mid-track only the selected one, which leaves a gap. With a gap
+; open only the section before it goes, from the Add slot or that section. An
+; old track goes a piece at a time from its end. D2 and A0 destroyed.
 editing_cut_start:
         cmpi.l #3,editor_track+24-module_start(a5)
         blo.s .last
+        move.w editor_gap(pc),d0
+        bne.s .gap
         move.w building_selected(pc),d0
         beq.s .tail
         cmp.w editor_track+28(pc),d0
-        blo block_group_start
+        bhs.s .tail
+        bsr block_group_start
+.section:
+        move.w d0,-(sp)
+        bsr block_group_end
+        move.w d0,d1
+        move.w (sp)+,d0
+        rts
 .tail:  move.w editor_track+28(pc),d0
         subq.w #1,d0
-        bra block_group_start
-.last:  move.w editor_track+28(pc),d0
+        bsr block_group_start
+        bra.s .section
+.gap:   subq.w #1,d0
+        bsr block_group_start
+        move.w building_selected(pc),d1
+        cmp.w editor_track+28(pc),d1
+        bhs.s .before_gap
+        cmp.w d0,d1
+        blo.s .wait
+        cmp.w editor_gap(pc),d1
+        bhs.s .wait
+.before_gap:
+        move.w editor_gap(pc),d1
+        rts
+.wait:  moveq #-1,d0
+        rts
+.last:  move.w editor_track+28(pc),d1
+        move.w d1,d0
         subq.w #1,d0
         rts
 
 editing_delete:
-        move.l d4,-(sp)
+        movem.l d3-d4,-(sp)
         bsr.s .cut
-        move.l (sp)+,d4
+        movem.l (sp)+,d3-d4
         rts
 .cut:   cmpi.w #1,editor_track+28-module_start(a5)
         bls .done
         bsr editor_model_build
         tst.w d0
         beq .done
-        bsr.s editing_cut_start
-        move.w d0,d4
+        bsr editing_cut_start
+        tst.w d0
+        bmi .wait
         beq .stays
+        move.w d0,d4
+        move.w d1,d3
         ; The piece of the start line stays, wherever it is.
-        move.w d0,d1
-        lsl.w #3,d1
+        lsl.w #3,d0
         lea editor_track+64(pc),a0
-        adda.w d1,a0
-        move.w editor_track+28(pc),d1
-        sub.w d0,d1
-        subq.w #1,d1
-        move.l editor_track+36(pc),d2
+        adda.w d0,a0
+        move.w d3,d2
+        sub.w d4,d2
+        subq.w #1,d2
+        move.l editor_track+36(pc),d1
 .finish:
-        cmp.l (a0),d2
+        cmp.l (a0),d1
         beq .stays
         addq.l #8,a0
-        dbra d1,.finish
+        dbra d2,.finish
         bsr editing_backup
-        move.w d4,editor_track+28-module_start(a5)
-        move.w d4,building_selected-module_start(a5)
         clr.w editor_track+30-module_start(a5)
+        cmp.w editor_track+28(pc),d3
+        bhs.s .count
+        ; Mid-track the pieces after the section stay where they are: a gap
+        ; opens before them, and they keep their height.
+        tst.w editor_gap-module_start(a5)
+        bne.s .height_kept
+        move.w d3,d0
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        lea model_geometry(pc),a0
+        adda.l d0,a0
+        move.w 2(a0),editor_gap_height-module_start(a5)
+.height_kept:
+        move.w d4,editor_gap-module_start(a5)
+        move.w d3,d0
+        lsl.w #3,d0
+        lea editor_track+64(pc),a0
+        adda.w d0,a0
+        move.w d4,d0
+        lsl.w #3,d0
+        lea editor_track+64(pc),a1
+        adda.w d0,a1
+        move.w editor_track+28(pc),d0
+        sub.w d3,d0
+        lsl.w #3,d0
+        bsr storage_copy
+.count: move.w editor_track+28(pc),d0
+        sub.w d3,d0
+        add.w d4,d0
+        move.w d0,editor_track+28-module_start(a5)
+        move.w d0,building_selected-module_start(a5)
         ; Remove stale bytes, including the old CRC; serialize canonically.
-        lsl.w #3,d4
-        addi.w #68,d4
+        lsl.w #3,d0
+        addi.w #68,d0
         lea editor_track(pc),a0
         move.w 6(a0),d1
-        move.w d4,6(a0)
-        sub.w d4,d1
-        lea -4(a0,d4.w),a0
+        move.w d0,6(a0)
+        sub.w d0,d1
+        lea -4(a0,d0.w),a0
         lsr.w #2,d1
 .clear: clr.l (a0)+
         dbra d1,.clear
@@ -216,6 +276,8 @@ editing_delete:
         cmpi.w #1,editor_track+28-module_start(a5)
         beq place_enter
         rts
+.wait:  lea ui_text_gap(pc),a0
+        bra ui_refuse
 .stays: lea ui_text_stays(pc),a0
         bra ui_refuse
 .done:
@@ -226,7 +288,7 @@ editing_keys:
         cmpi.b #$b3,editor_input_keys+$16(a5)       ; raw U=$16
         beq.s .undo
         cmpi.b #$b3,editor_input_keys+$14(a5)       ; raw T=$14
-        beq.s .test
+        beq .test
         tst.w building_mode-module_start(a5)
         bne.s .none
         cmpi.b #$b3,editor_input_keys+$36(a5)       ; raw N=$36
@@ -235,6 +297,8 @@ editing_keys:
         beq.s .delete
         cmpi.b #$b3,editor_input_keys+$13(a5)       ; raw R=$13
         beq.s .redo
+        cmpi.b #$b3,editor_input_keys+$23(a5)       ; raw F=$23
+        beq.s .finish
 .none:
         moveq #0,d0
         rts
@@ -255,6 +319,10 @@ editing_keys:
 .delete:
         bsr editor_release
         bsr editing_delete
+        bra.s .used
+.finish:
+        bsr editor_release
+        bsr finish_key
         bra.s .used
 .test:
         bsr editor_release
@@ -292,7 +360,7 @@ editing_execute:
         move.w #-1,storage_active_slot-module_start(a5)
         lea editing_initial_track(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
         bsr editor_building_reset
         clr.l editing_undo_count-module_start(a5)
@@ -307,8 +375,9 @@ editing_execute:
         move.w storage_saved_slot(pc),storage_active_slot-module_start(a5)
         lea editing_saved_track(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
+        clr.l editor_gap-module_start(a5)
         clr.l editing_undo_count-module_start(a5)
         clr.w building_dirty-module_start(a5)
         addq.l #1,building_revision-module_start(a5)
@@ -386,7 +455,7 @@ starter_load:
         adda.w (a0,d0.w),a0
         move.w #-1,storage_active_slot-module_start(a5)
         lea editor_track(pc),a1
-        move.w #144,d0
+        move.w #EDITOR_TRACK_BYTES/4-1,d0
 .clear: clr.l (a1)+
         dbra d0,.clear
         lea editor_track(pc),a1

@@ -218,6 +218,7 @@ ai_difficulty_k: dc.w 20
 speed_menu_active: dc.b 0
 infinite_boost_enabled: dc.b 0
 disable_damage_enabled: dc.b 0
+original_mode: dc.b 0           ; SCR_Timing.s: 0 Performance, 1 Original
         even
 speed_state_end:
 ; round(33120/k), round(65536*(1-(1-3068/65536)^(k/20))).

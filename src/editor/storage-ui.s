@@ -165,7 +165,12 @@ storage_directories_write:
 
 ; Modal: 1 save list, 2 load list, 3 name, 4 overwrite.
 storage_open_save:
-        moveq #1,d6
+        tst.w editor_gap-module_start(a5)
+        beq.s .save
+        clr.w storage_continue-module_start(a5)
+        lea ui_text_gap(pc),a0
+        bra ui_refuse
+.save:  moveq #1,d6
         bra.s storage_open
 storage_open_load:
         clr.w storage_continue-module_start(a5)
@@ -403,7 +408,7 @@ storage_name_commit:
         ; bytes and dirty state if a renamed save cannot commit.
         lea editor_track(pc),a0
         lea storage_ui_backup(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
         lea storage_name(pc),a0
         lea editor_track+40(pc),a1
@@ -432,7 +437,7 @@ storage_name_commit:
 .rollback:
         lea storage_ui_backup(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
         bsr editor_model_view
         rts
@@ -592,6 +597,6 @@ storage_name: dcb.b 24,0
         dc.b 0,0
 storage_line: dcb.b 40,0
 storage_catalog: dcb.b 2048,0
-storage_ui_backup: dcb.b 580,0
+storage_ui_backup: dcb.b EDITOR_TRACK_BYTES,0
         include "storage-keymap.s"
 disk_game_error: dc.w 0

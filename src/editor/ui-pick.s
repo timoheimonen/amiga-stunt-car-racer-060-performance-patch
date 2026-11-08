@@ -12,7 +12,7 @@ UI_CELL_AXES equ $fc
 UI_CALL_SECTION equ 11
 UI_CALL_WORD equ 18
 UI_SLOTS equ 4
-BLOCK_MAX_PIECES equ 64
+BLOCK_MAX_PIECES equ EDITOR_MAX_PIECES
 
 ; D3 cell, D4 mask of the cell, D5 mask of the place -> D0 best candidate, -1 for
 ; none. The lowest key wins: rank<<2 | place, rank 0 fits with a route, 1 fits, 2
@@ -219,7 +219,7 @@ ui_choose_state:
         moveq #BLOCK_VARIANT_COUNT/4-1,d0
 .find:  cmp.b (a1)+,d3
         dbeq d0,.find
-        bne.s .next
+        bne .next
         move.l a1,d1
         lea pal_cell+1(pc),a1
         sub.l a1,d1

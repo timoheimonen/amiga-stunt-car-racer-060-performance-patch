@@ -20,7 +20,11 @@ test_preview:
 
 test_drive:
         clr.w test_request-module_start(a5)
-        bsr validate_for_practice
+        tst.w editor_gap-module_start(a5)
+        beq.s .whole
+        lea ui_text_gap(pc),a0
+        bra ui_refuse
+.whole: bsr validate_for_practice
         tst.w d0
         beq.s .not_ready
         bsr custom_compile

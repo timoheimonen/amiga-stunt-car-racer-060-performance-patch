@@ -349,6 +349,7 @@ ui_text_held: dc.b 'Let go of the key first.',0
 ui_text_busy: dc.b 'Still drawing. Click again.',0
 ui_text_wait: dc.b 'One moment.',0
 ui_text_stays: dc.b 'The start section stays.',0
+ui_text_gap: dc.b 'Fill the gap first.',0
         even
 ui_hold_row: dc.l 0
 ui_hits: dc.l 0

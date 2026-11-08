@@ -76,8 +76,9 @@ All saves are files in the install directory:
 | Season save index | `SaveIndex` |
 | Season saves 1..30 | `Save01` .. `Save30` |
 
-- Without a file, a track slot shows what the game disk holds: the BUILD track
-  in slot 1 and empty slots otherwise. Deleting a track file brings that back.
+- Without a file, a track slot shows what the game disk holds: the tracks
+  BUILD, BUILD 2 and BUILD 3 in slots 1-3 and empty slots otherwise. Deleting
+  a track file brings that back.
 - A track file belongs to its slot. A file renamed to another slot number is
   shown as UNREADABLE; move a track by loading it in the Track Editor and
   saving it into another slot. Copy files between installs under the same
