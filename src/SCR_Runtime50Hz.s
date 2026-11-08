@@ -68,6 +68,7 @@ frame_begin:
         movem.l d0/a0,-(sp)
         tst.b active
         bne.s frame_already_active
+frame_gate:                     ; runtime overlay: the Timing gate (SCR_Timing.s)
         tst.b $1ca22.l
         nop
         nop
@@ -305,4 +306,5 @@ display_done:
         include "src/SCR_ProjectDistance.s"
         include "src/SCR_Effects50Hz.s"
         include "src/SCR_LinkContact.s"
+        include "src/SCR_Timing.s"
 runtime_end:

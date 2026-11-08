@@ -364,6 +364,13 @@ ui_pred_default:
 ui_pred_word:
         move.w #UI_HIDDEN,d0
         rts
+; Finish: hidden on an older track, dimmed on a closed one.
+ui_pred_finish:
+        cmpi.l #3,editor_track+24-module_start(a5)
+        blo ui_pred_word
+        tst.w editor_track+30-module_start(a5)
+        bne ui_dim
+        bra ui_pred_plain
 ui_pred_placed:
         tst.w place_active-module_start(a5)
         bne ui_dim
@@ -392,12 +399,27 @@ ui_pred_redo:
         beq ui_dim
         bra ui_pred_plain
 ui_pred_delete:
+        tst.w editor_gap-module_start(a5)
+        bne ui_pred_word
         cmpi.w #1,editor_track+28-module_start(a5)
         bls ui_dim
         bsr ui_cut_here
         bne ui_pred_word
         bra ui_pred_plain
+; Del with a gap open: it takes the section before the gap, from the Add slot or
+; that section. Elsewhere on Browse it waits for the gap.
+ui_pred_gap:
+        tst.w editor_gap-module_start(a5)
+        beq ui_pred_word
+        cmpi.w #UI_PAGE_BROWSE,ui_page-module_start(a5)
+        bne ui_pred_plain
+        bsr editing_cut_start
+        tst.w d0
+        bmi ui_dim
+        bra ui_pred_plain
 ui_pred_cut:
+        tst.w editor_gap-module_start(a5)
+        bne ui_pred_word
         bsr ui_cut_here
         beq ui_pred_word
         move.w building_selected(pc),d0
@@ -464,7 +486,7 @@ ui_pred_next:
         moveq #1,d4
         cmpi.l #3,editor_track+24-module_start(a5)
         blo.s .single
-        bsr block_browse_step
+        bsr block_browse_ui
         bra.s .end
 .single:
         addq.w #1,d0
@@ -524,7 +546,8 @@ ui_row_rect:
         move.b UI_ENTRY_H(a3),d6
         rts
 
-; The default frame stands one pixel outside the button.
+; The default frame stands one pixel outside the button. A key underline sits
+; below the glyphs, which on a low button (Finish) is the row under it.
 ui_erase_row:
         bsr ui_row_rect
         btst #4,UI_ENTRY_FLAGS(a3)
@@ -533,7 +556,23 @@ ui_erase_row:
         subq.w #1,d2
         addq.w #2,d3
         addq.w #2,d6
-.plain: lea ui_commands(pc),a0
+        bra.s .erase
+.plain: lea ui_labels(pc),a0
+        adda.w UI_ENTRY_LABEL(a3),a0
+.mark:  move.b (a0)+,d0
+        beq.s .erase
+        cmpi.b #$ff,d0
+        beq.s .erase
+        cmpi.b #UI_KEY_MARK,d0
+        bne.s .mark
+        move.w d6,d0
+        subq.w #UI_GLYPH_ROWS,d0
+        asr.w #1,d0
+        addi.w #UI_GLYPH_ROWS+2,d0
+        cmp.w d6,d0
+        bls.s .erase
+        move.w d0,d6
+.erase: lea ui_commands(pc),a0
         move.w #UI_RECT,(a0)+
         move.w d1,(a0)+
         move.w d2,(a0)+

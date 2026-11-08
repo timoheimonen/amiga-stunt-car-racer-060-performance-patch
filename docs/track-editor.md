@@ -1,6 +1,6 @@
 # Track Editor manual
 
-For Stunt Car Racer Performance version 2.0.0.
+For Stunt Car Racer Performance version 2.1.0.
 
 The Track Editor lets you build your own circuits inside the game, from complete
 sections taken from the original tracks: banked corners with their entry and exit,
@@ -44,8 +44,8 @@ command is on the bar, so nothing has to be remembered.
 | --- | --- |
 | Top row | Commands: **New**, **Load**, **Save**, **Undo**, **Redo**, **Del**, **View**, **Test**, **Exit**. |
 | Second row | What to build: turn, slope and the main button. The main button has a yellow frame. |
-| Third row | **Prev** and **Next**, or the sections you can choose from. |
-| Line 1 | The name of the section, then the road pieces used, for example `14/64`, and the track state. |
+| Third row | **Prev**, **Next** and **Finish**, or the sections you can choose from. |
+| Line 1 | The name of the section, then the road pieces used, for example `14/78`, and the track state. |
 | Line 2 | What the game has to say. |
 | Map | The whole track from above, at the right edge. |
 
@@ -176,13 +176,13 @@ the road can still be clicked, to see where it would go.
 
 | Line 2 | What to do |
 | --- | --- |
-| `Too long: 64 pieces is the limit.` | The section would not fit in the 64 road pieces. Take a shorter one. |
+| `Too long: 78 pieces is the limit.` | The section would not fit in the 78 road pieces. Take a shorter one. |
 | `Runs off the map.` | Turn back toward the middle of the map. |
 | `Road would go too high.` | Go down first. |
 | `Road would go too low.` | Go up first. |
 | `Next section would not join.` | When replacing, the new section must meet the road that follows it. |
 | `Crosses road already built.` | Move the road away. Tracks cannot cross themselves. |
-| `Nothing fits here. Undo or Cut.` | No section fits this end of the road. Take something back. |
+| `Nothing fits here. Undo or Del.` | No section fits this end of the road. Take something back. |
 
 ## Closing the track
 
@@ -195,8 +195,12 @@ direction. While you choose, line 2 helps you get there:
 | `This section closes the track.` | Place it and the track is closed. |
 | `No way back from here.` | No road can reach the start from where this section ends. |
 | `Reaches the start at the wrong height.` | The shape is right but the height is not. |
-| `Height never meets: undo the Downhill large.` | The road end is at a height no other section can meet, so that section has to go. |
-| `Height never meets: undo the steep descent.` | The same for a steep descent. |
+| `Height never meets: undo the Downhill large.` | Only on a track built with an older version, such as the example track BUILD: its Downhill large left the road end at a height no other section can meet, so that section has to go. |
+| `Height never meets: undo the steep descent.` | The same for its Coaster descent. |
+
+Every section climbs or drops by a whole number of quarter levels, so the height
+never stops a track from closing by itself: room on the map and the piece limit
+still can.
 
 While building, line 2 can also show where the start is, seen from the end of the road:
 
@@ -208,6 +212,31 @@ would be to the left, and `180` back toward you.
 
 A closed track is checked further. If it is closed but still not **Ready**, line 2 says
 why, see [Messages](#messages).
+
+### Let the editor finish
+
+**Finish**, or the F key, builds the rest of an open track. It looks for sections that
+bring the road from its end back to the start, by the same rules as the choices: room on
+the map, the height limits, the piece limit and the road already built. If there is no
+way from the end as it is, it takes off the last section, as **Del** would, and looks
+again, then two, and so on. The start section always stays.
+
+While it looks, line 2 says `Looking for a way to close the track.` This takes a moment,
+on a long track a second or more. Then line 2 says what it did:
+
+| Line 2 | Meaning |
+| --- | --- |
+| `Closed with 2 more sections.` | Two sections were added, and the track is closed. |
+| `Closed: took off 4, added 5 sections.` | The last four sections were taken off first. |
+| `Found no way to close the track.` | Nothing was changed. |
+
+All of it is one step: **Undo** brings the track back as it was, the sections taken off
+included. The camera stays where it is, so press **View** to see the whole track.
+
+With a gap in the track **Finish** fills the gap instead, taking off sections before the
+gap if it has to: `Gap filled with 2 sections.` or `Found no way to fill the gap.`
+
+On a closed track **Finish** is dimmed. Tracks saved by older versions do not show it.
 
 ## Changing a track
 
@@ -221,9 +250,8 @@ the start line goes round to the last section. Holding **Prev** or **Next** repe
 | --- | --- |
 | **Add** | At the end of an open road: add the next section. |
 | **Edit** | Replace the selected section. The new one must join the road on both sides, and the rest of the track stays in place. |
-| **Del** | Remove the last section. |
-| **Cut** | Shown instead of **Del** when a section in the middle is selected. Removes that section and everything after it. |
-| **Undo** | Take back the last add, replacement, removal or cut. |
+| **Del** | Remove the last section. With a section in the middle selected, remove only that section and leave a gap, see [A gap in the track](#a-gap-in-the-track). |
+| **Undo** | Take back the last add, replacement or removal. |
 | **Redo** | Bring back what **Undo** took. |
 | **Exit** | Leave the editor. |
 
@@ -233,6 +261,34 @@ There are 16 levels of undo. A new edit clears the redo steps. Saving keeps both
 The start line itself cannot be replaced or removed. If you remove every other section,
 you are back on the map and can move the start. **Undo** is off on that page: click
 **Place** first, then **Undo** brings the road back.
+
+### A gap in the track
+
+**Del** with a section in the middle selected removes only that section. The rest of the
+track stays where it is, and a gap is left in the road. The selection moves to the gap,
+and **Add** builds there just as at the end of an open road. Line 2 now leads to the far
+side of the gap instead of the start, and the map marks both ends of the gap.
+
+![The jump of Ramp and Hills removed: a gap in the road](images/track-editor/gap.png)
+
+| Line 2 | Meaning |
+| --- | --- |
+| `At least 2 more sections to the gap.` | The shortest road on the map to the far side of the gap. |
+| `This section fills the gap.` | Place it and the road is whole again. A track that was closed is closed again. |
+| `No way to the gap from here.` | No road can reach the gap from where this section ends. |
+| `Reaches the gap at the wrong height.` | The shape is right but the height is not. |
+| `Gap 1 ahead` | Where the far side of the gap is, read as the guide to the start above. |
+
+A section fills the gap when its end meets the road after the gap in direction and
+height. Until then:
+
+- **Prev** and **Next** go from the start line to the gap. The road after the gap cannot
+  be selected, and **Edit** works on the sections before the gap.
+- **Del** on the gap, or on the section right before it, removes that section and makes
+  the gap wider. Elsewhere **Del** says `Fill the gap first.` There is one gap at a time.
+- **Save** and **Test** say `Fill the gap first.`
+- **Undo** and **Redo** bring the gap back with the track.
+- **Finish** fills the gap, see [Let the editor finish](#let-the-editor-finish).
 
 ### Moving the start
 
@@ -323,8 +379,9 @@ keeps it. **Space** types a space here.
 Each slot is a file in the install directory: `Track01.sct` to `Track32.sct`, with lap
 records in `Track01.rec` to `Track32.rec` and the list in `TrackIndex`.
 
-- Slot 01 holds the example track **BUILD** until you save over it. It is ready to drive.
-  Deleting `Track01.sct` brings it back.
+- Slots 01, 02 and 03 hold the example tracks **BUILD**, **BUILD 2** and **BUILD 3** until
+  you save over them. They are ready to drive. Deleting `Track01.sct`, `Track02.sct` or
+  `Track03.sct` brings that track back.
 - Keep the install on a writable volume.
 - With the icon's default settings WHDLoad writes a save to the hard disk at once, and
   the display goes blank for a moment while it does.
@@ -342,7 +399,8 @@ Custom tracks are for Practise. They are not used in the league, by the computer
 or in Computer Link, and the menu is there only in single-player games.
 
 Each track keeps its own best times, separately for Normal and Super. A record needs
-**Game Speed 100%**, **Infinite Boost No** and **Disable Damage No**. Other settings use
+**Game Speed 100%**, **Infinite Boost No**, **Disable Damage No** and **Timing Performance**.
+Other settings use
 times for the session only.
 
 - Records are written when you leave Practise with **Esc**, so leave it before you quit
@@ -368,7 +426,8 @@ saved track.
 | --- | --- | --- | --- |
 | Select a section | **Prev**, **Next** | Left, Right | Left, Right |
 | Add or edit | **Add**, **Edit** | Space | Fire |
-| Remove | **Del**, **Cut** | Backspace | |
+| Remove | **Del** | Backspace | |
+| Finish the track | **Finish** | F | |
 | Undo, redo | **Undo**, **Redo** | U, R | |
 | Overview | **View** | V | |
 | Test drive | **Test** | T | |
@@ -399,7 +458,7 @@ click again.
 
 ## All sections
 
-There are 33 sections. A section uses 1-9 of the 64 road pieces. Which ones you can choose
+There are 36 sections. A section uses 1-9 of the 78 road pieces. Which ones you can choose
 depends on how the road ends: along the map squares, or diagonally after a 45 or 135 degree
 turn.
 
@@ -407,10 +466,10 @@ turn.
 
 | Slope | Left | Ahead | Right |
 | --- | --- | --- | --- |
-| **Flat** | 90, 135, 180, Long 90 | Straight | 90, 45, 135 |
+| **Flat** | 90, 135, 180, Long 90 | Straight, Bumps, Dip | 90, 45, 135 |
 | **Up** | 90, 180 | Small, Medium, Large, Coaster | 45, 90, Steep 90 |
 | **Down** | 180 | Small, Medium, Large, Coaster | 90 |
-| **Jump** | | Ramp, Hump | Crest 180 |
+| **Jump** | | Ramp, Hump, Large | Crest 180 |
 
 ### Road ending diagonally
 
@@ -418,10 +477,16 @@ turn.
 | --- | --- | --- | --- |
 | **Flat** | 45, 135 | Straight | 135 |
 | **Up** | 45 | | |
-| **Jump** | | Small, Large | |
+| **Jump** | | Large, Ramp | |
 
 All corners are banked, as on the original tracks. There are no unbanked corners,
 drawbridges or crossings.
+
+**Bumps** is the bumpy start of Big Ramp: the left and the right edge rise in turn.
+**Dip** is a shallow dip from Stepping Stones. The straight **Large** jump is the big hill
+at the start of High Jump. The diagonal **Ramp** is the whole jump of Little Ramp: the
+ramp, the gap and the landing. The diagonal **Large** is its first half, the ramp without
+the gap and the landing.
 
 ## Messages
 
@@ -437,6 +502,8 @@ drawbridges or crossings.
 | `Test needs a Ready track.` | Close the track first. |
 | `Place or cancel the section first.` | **Test** does not work while a section is being tried. |
 | `Let go of the key first.` | A key is still held down. |
+| `Closed with 2 more sections.` and the like | What **Finish** did, see [Let the editor finish](#let-the-editor-finish). |
+| `Found no way to close the track.` / `Found no way to fill the gap.` | **Finish** changed nothing. |
 
 ### Why a dimmed button is dimmed
 
@@ -444,7 +511,9 @@ drawbridges or crossings.
 | --- | --- |
 | `Nothing to undo.` / `Nothing to redo.` | **Undo**, **Redo** |
 | `Only the start line is left.` | **Del** |
-| `The start section stays.` | **Cut** |
+| `The start section stays.` | **Del** on the start section |
+| `Fill the gap first.` | **Del** away from the gap, **Save** and **Test** while a gap is open |
+| `The track is closed.` | **Finish** on a closed track |
 | `This is the last section.` | **Next** |
 | `The track is closed. Edit a section.` | **Add** on a closed track |
 | `Test needs a closed, legal track.` | **Test** |
@@ -466,13 +535,13 @@ drawbridges or crossings.
 
 ## Limits and older tracks
 
-- A track has up to 64 road pieces on a map of 16 × 16 squares.
+- A track has up to 78 road pieces on a map of 16 × 16 squares.
 - There are 32 save slots.
 - A track must leave three squares behind and ahead of the start along its heading.
 
 Tracks saved by older versions keep the shape they had. The choices then show **Prev**
 and **Next** instead of the turn and slope buttons, as they also do when you replace a
-section, and **Cut** is not available. Use **New** to start a track with whole original
+section, and **Del** removes one road piece at a time from the end. Use **New** to start a track with whole original
 sections. Some of the oldest tracks stay as drafts and cannot be driven.
 
 Saved tracks from the 16-slot game disks cannot be converted.

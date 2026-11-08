@@ -7,6 +7,7 @@
 ; Preview owns separate bytes/geometry; only commit changes SCTR.
 editor_building_reset:
         bsr place_leave
+        clr.l editor_gap-module_start(a5)
         clr.w building_mode-module_start(a5)
         clr.w building_selected-module_start(a5)
         cmpi.l #3,editor_track+24-module_start(a5)
@@ -154,15 +155,15 @@ building_step:
         move.w building_selected(pc),d0
         cmpi.l #3,editor_track+24-module_start(a5)
         blo.s .single
-        bsr block_browse_step
+        bsr block_browse_ui
         bra.s .stepped
 .single:
         add.w d4,d0
 .stepped:
         tst.w d0               ; block_browse_step leaves stale flags
         bpl.s .in_range
-        ; Left from the finish wraps to the last block.
-        move.w editor_track+28(pc),d0
+        ; Left from the finish wraps to the last block, before a gap.
+        bsr editor_end
         subq.w #1,d0
         bsr block_group_start
 .in_range:
@@ -196,7 +197,7 @@ building_options:
         move.w #1,building_reason-module_start(a5)
         cmpi.w #2,building_mode-module_start(a5)
         beq.s .edit_limit
-        cmpi.w #64,editor_track+28-module_start(a5)
+        cmpi.w #EDITOR_MAX_PIECES,editor_track+28-module_start(a5)
         bhs .done
         tst.w editor_track+30-module_start(a5)
         bne .done

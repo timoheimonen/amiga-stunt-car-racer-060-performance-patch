@@ -222,7 +222,7 @@ custom_prepare:
         ; Keep checked description for verification and future identity binding.
         lea practice_runtime(pc),a0
         lea custom_runtime(pc),a1
-        move.w #1040,d0
+        move.w #EDITOR_RUNTIME_BYTES,d0
         bsr storage_copy
         move.w #1,custom_prepared-module_start(a5)
 .restore:
@@ -597,8 +597,9 @@ custom_session_times: dcb.b 32,0
 custom_track_name: dcb.b 24,0
         dc.b 0,0
 custom_geometry_revision: dc.l 0
-custom_record: dcb.b 332,0
-custom_runtime: dcb.b 1040,0
+; Rounded to longs, so custom_runtime stays long aligned.
+custom_record: dcb.b (EDITOR_RECORD_BYTES+3)/4*4,0
+custom_runtime: dcb.b EDITOR_RUNTIME_BYTES,0
 custom_bridge_profile:
         include "bridge-data.s"
 custom_hooks:

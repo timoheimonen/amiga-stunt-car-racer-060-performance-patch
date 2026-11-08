@@ -107,15 +107,16 @@ storage_copy:
         move.l (a0)+,(a1)+
         dbra d0,.loop
         rts
+; The track and its gap words: validation borrows them.
 storage_backup:
         lea editor_track(pc),a0
         lea storage_work(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bra storage_copy
 storage_restore:
         lea storage_work(pc),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES+4,d0
         bra storage_copy
 
 ; A0 data, D0 count. D0 returns CRC32, A0 advances; D1-D3 clobbered.
@@ -160,7 +161,7 @@ storage_validate:
         move.w 12(a0),d4
         cmpi.w #76,d4
         blo .bad
-        cmpi.w #580,d4
+        cmpi.w #EDITOR_TRACK_BYTES,d4
         bhi .bad
         cmp.w 38(a0),d4       ; SCTR length must equal envelope length
         bne .bad
@@ -183,8 +184,9 @@ storage_validate:
         bne .bad
         lea 32(a4),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
+        clr.l editor_gap-module_start(a5)
         bsr editor_model_build
         tst.w d0
         beq.s .bad
@@ -401,7 +403,7 @@ editor_load:
         bne .done
         lea 32(a4),a0
         lea editor_track(pc),a1
-        move.w #580,d0
+        move.w #EDITOR_TRACK_BYTES,d0
         bsr storage_copy
         move.l d4,storage_generation-module_start(a5)
         move.w storage_slot(pc),storage_active_slot-module_start(a5)
@@ -442,9 +444,14 @@ editor_storage_text:
 ; storage_status -> A0 text.
 storage_message:
         move.w storage_status(pc),d0
+        cmpi.w #FINISH_STATUS,d0
+        beq.s .finish
         add.w d0,d0
         lea storage_messages(pc),a0
         adda.w (a0,d0.w),a0
+        rts
+.finish:
+        lea finish_text(pc),a0
         rts
 
 storage_text_line:
@@ -493,7 +500,7 @@ storage_io_error: dc.l 0
 storage_generation: dc.l 0
 storage_gen_a: dc.l 0
 storage_gen_b: dc.l 0
-storage_work: dcb.b 580,0
+storage_work: dcb.b EDITOR_TRACK_BYTES+4,0
 storage_a: dcb.b 1024,0
 storage_b: dcb.b 1024,0
 storage_pending: dcb.b 1536,0

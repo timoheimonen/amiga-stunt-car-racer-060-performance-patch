@@ -4,7 +4,8 @@
 ; Licensed under the MIT License; see LICENSE.
 
 ; Building HUD: block name with rise and choice number, piece count, exact
-; rejection reason and a closing guide from the open end to the start line.
+; rejection reason and a closing guide from the open end to the start line, or
+; to the far side of a gap.
 ; hud_measure runs while a preview is installed, so a valid append preview
 ; is measured from its own open end. Text is drawn after the model restore.
 hud_measure:
@@ -13,6 +14,17 @@ hud_measure:
         move.w block_render_active(pc),hud_choosing-module_start(a5)
         move.w block_preview_valid(pc),hud_preview_valid-module_start(a5)
         move.w editor_track+30(pc),hud_closes-module_start(a5)
+        ; A preview that fills the gap closes what is open.
+        tst.w block_render_active-module_start(a5)
+        beq.s .fill_done
+        tst.w block_preview_valid-module_start(a5)
+        beq.s .fill_done
+        tst.w block_original_track+EDITOR_TRACK_BYTES-module_start(a5)
+        beq.s .fill_done
+        tst.w editor_gap-module_start(a5)
+        bne.s .fill_done
+        move.w #1,hud_closes-module_start(a5)
+.fill_done:
         move.w editor_track+28(pc),hud_count-module_start(a5)
         tst.w block_render_active-module_start(a5)
         beq.s .counted
@@ -34,7 +46,11 @@ hud_measure:
         tst.w editor_track+28-module_start(a5)
         beq .done
         bsr model_tail_row             ; open end: last exit row
-        lea model_geometry(pc),a1      ; start line: first entrance row
+        ; The goal: the first entrance row of the start line or after the gap.
+        move.w editor_gap(pc),d0
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        lea model_geometry(pc),a1
+        adda.l d0,a1
         ; Direction indices of both right axes (45-degree steps, left +).
         move.w 6(a1),d1
         sub.w (a1),d1
@@ -238,7 +254,7 @@ hud_status_line:
         bra .draw
 .chosen:
         tst.w hud_choosing-module_start(a5)
-        beq.s .browse
+        beq .browse
         tst.w hud_preview_valid-module_start(a5)
         bne.s .valid
         move.w block_fail(pc),d0
@@ -251,6 +267,8 @@ hud_status_line:
         tst.w hud_closes-module_start(a5)
         beq.s .route
         lea hud_closes_text(pc),a0
+        lea hud_fills_text(pc),a1
+        bsr hud_goal_text
         bra .draw
 .route: cmpi.w #1,block_mode-module_start(a5)
         bne.s .aid
@@ -260,12 +278,16 @@ hud_status_line:
         cmpi.w #UI_LEVEL_NONE,d2
         bne.s .way
         lea hud_no_way_text(pc),a0
+        lea hud_no_way_gap_text(pc),a1
+        bsr hud_goal_text
         bra.s .draw
 .way:   bsr hud_odd
         bne.s .odd
         tst.w d2
         bne.s .count
         lea hud_height_text(pc),a0
+        lea hud_gap_height_text(pc),a1
+        bsr hud_goal_text
         bra.s .draw
 .count: bsr hud_route_text
         bra.s .draw
@@ -299,11 +321,23 @@ hud_status_line:
         moveq #UI_SAY_REASON,d0
         bra ui_status_put
 
-; Z clear when the open end has an odd rise: the height can never meet.
+; Z clear when the open end has an odd rise: the height can never meet. A gap
+; asks for the rise of the section that was there, so it is not odd.
 hud_odd:
+        tst.w editor_gap-module_start(a5)
+        bne.s .gap
         tst.w hud_aid_valid-module_start(a5)
         beq.s .done
         btst #0,hud_rise+1-module_start(a5)
+.done:  rts
+.gap:   cmp.w d0,d0
+        rts
+
+; A0 text of the start line, A1 of the gap -> A0 the one for this track.
+hud_goal_text:
+        tst.w editor_gap-module_start(a5)
+        beq.s .done
+        movea.l a1,a0
 .done:  rts
 
 ; D2 the level of the choice in the distance field.
@@ -328,6 +362,10 @@ hud_route_text:
         beq.s .one
         move.b #'s',(a1)+
 .one:   lea hud_to_start_text(pc),a0
+        movea.l a1,a2
+        lea hud_to_gap_text(pc),a1
+        bsr hud_goal_text
+        movea.l a2,a1
         bsr hud_put_text
         clr.b (a1)
         lea hud_line(pc),a0
@@ -337,6 +375,10 @@ hud_route_text:
 hud_build_aid:
         lea hud_line(pc),a1
         lea hud_start_text(pc),a0
+        movea.l a1,a2
+        lea hud_gap_text(pc),a1
+        bsr hud_goal_text
+        movea.l a2,a1
         bsr hud_put_text
         move.w hud_side(pc),d0
         beq.s .ahead
@@ -417,17 +459,23 @@ hud_put_rise:
         move.b #'8',(a1)+
 .done:  rts
 
-; An odd 32-unit rise never meets the even grid of the other blocks. A0 text.
+; An odd 32-unit rise never meets the 64 unit grid of the blocks. Only a track
+; built before both drops were put on the grid has one: Downhill large began
+; with kind 48 before kind 45, Coaster descent with kind 14 before kind 97.
+; Today's Coaster descent begins with kind 48 before kind 97. A0 text.
 hud_odd_text:
         lea hud_odd_large(pc),a0
         lea editor_track+68(pc),a1
         move.w editor_track+28(pc),d1
-        subq.w #1,d1
+        subq.w #2,d1
+        bmi.s .steep
 .find:  cmpi.b #48,(a1)
+        bne.s .next
+        cmpi.b #45,8(a1)
         beq.s .found
-        addq.l #8,a1
+.next:  addq.l #8,a1
         dbra d1,.find
-        lea hud_odd_steep(pc),a0
+.steep: lea hud_odd_steep(pc),a0
 .found: rts
 
 ; Right end of L1: "20/64" and the track's word. A star marks unsaved changes,
@@ -480,7 +528,7 @@ hud_fail_texts:
         dc.w .height-hud_fail_texts,.low-hud_fail_texts,.next-hud_fail_texts
         dc.w .overlap-hud_fail_texts,.low-hud_fail_texts
 .red: dc.b 'This block cannot be added here.',0
-.limit: dc.b 'Too long: 64 pieces is the limit.',0
+.limit: dc.b 'Too long: 78 pieces is the limit.',0
 .map: dc.b 'Runs off the map.',0
 .height: dc.b 'Road would go too high.',0
 .low: dc.b 'Road would go too low.',0
@@ -489,7 +537,12 @@ hud_fail_texts:
 hud_closes_text: dc.b 'This section closes the track.',0
 hud_no_way_text: dc.b 'No way back from here.',0
 hud_height_text: dc.b 'Reaches the start at the wrong height.',0
-hud_none_text: dc.b 'Nothing fits here. Undo or Cut.',0
+hud_fills_text: dc.b 'This section fills the gap.',0
+hud_no_way_gap_text: dc.b 'No way to the gap from here.',0
+hud_gap_height_text: dc.b 'Reaches the gap at the wrong height.',0
+hud_to_gap_text: dc.b ' to the gap.',0
+hud_gap_text: dc.b 'Gap',0
+hud_none_text: dc.b 'Nothing fits here. Undo or Del.',0
 hud_least_text: dc.b 'At least ',0
 hud_more_text: dc.b ' more section',0
 hud_to_start_text: dc.b ' to the start.',0
@@ -510,7 +563,7 @@ hud_up_text: dc.b ' +',0
 hud_down_text: dc.b ' -',0
 hud_face_text: dc.b ' face ',0
 hud_reverse_text: dc.b '180',0
-hud_capacity_text: dc.b '/64',0
+hud_capacity_text: dc.b '/','0'+EDITOR_MAX_PIECES/10,'0'+EDITOR_MAX_PIECES-EDITOR_MAX_PIECES/10*10,0
         even
 hud_choosing: dc.w 0
 hud_preview_valid: dc.w 0

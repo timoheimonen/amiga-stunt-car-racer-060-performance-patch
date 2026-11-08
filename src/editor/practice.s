@@ -171,7 +171,7 @@ practice_roundtrip:
         bne .bad
         cmpi.w #8,d0
         blo .bad
-        cmpi.w #64,d0
+        cmpi.w #EDITOR_MAX_PIECES,d0
         bhi .bad
         move.w 4(a3),d1
         cmp.w d0,d1
@@ -324,7 +324,7 @@ practice_catalog_entry:
 practice_class: dc.w 0
 practice_reason: dc.w 1
 practice_runtime_valid: dc.w 0
-practice_runtime: dcb.b 1040,0
+practice_runtime: dcb.b EDITOR_RUNTIME_BYTES,0
 practice_geometry: dcb.b EDITOR_GEOMETRY_STRIDE,0
 
 practice_text:

@@ -3,16 +3,22 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; SCER v1: exact 288-byte identity, two 32-byte league records.
-; Cache at Fast+$1fa00 is outside the 64000-byte display backup.
+; SCER v1: exact identity, two 32-byte league records.
+; The identity is RECORDS_KEY_BYTES: 32 bytes and 4 per piece. Its first 288
+; bytes (64 pieces) sit at 32..320 as in 2.0.0, the rest at 384, in bytes 2.0.0
+; kept zero, so the record of a track up to 64 pieces is unchanged.
+; Cache at Fast+RECORDS_CACHE is outside the 64000-byte display backup.
 ; Shared storage scratch is used only synchronously outside gameplay.
+RECORDS_KEY_LOW equ 288
+RECORDS_KEY_HIGH equ RECORDS_KEY_BYTES-RECORDS_KEY_LOW
+RECORDS_KEY_END equ 384+RECORDS_KEY_HIGH
 records_cache:
         movea.l a5,a4
-        adda.l #$1fa00,a4
+        adda.l #RECORDS_CACHE,a4
         rts
 records_key_build:
         lea records_key(pc),a1
-        moveq #71,d0
+        moveq #RECORDS_KEY_BYTES/4-1,d0
 .zero:  clr.l (a1)+
         dbra d0,.zero
         lea editor_track+8(pc),a0
@@ -38,6 +44,8 @@ records_eligible:
         bne.s .done
         tst.b $182446
         bne.s .done
+        tst.b $182447          ; Original timing makes no records
+        bne.s .done
         moveq #1,d0
 .done:  rts
 
@@ -61,8 +69,8 @@ records_validate:
         tst.l (a1)+
         bne .bad
         dbra d0,.reserved
-        lea 384(a0),a1
-        move.w #158,d0
+        lea RECORDS_KEY_END(a0),a1
+        move.w #(1020-RECORDS_KEY_END)/4-1,d0
 .padding:
         tst.l (a1)+
         bne .bad
@@ -191,11 +199,17 @@ records_begin:
         bsr storage_copy
         lea 32(a4),a0
         lea records_key(pc),a1
-        moveq #71,d0
+        moveq #RECORDS_KEY_LOW/4-1,d0
 .compare:
         cmpm.l (a0)+,(a1)+
         bne.s .new
         dbra d0,.compare
+        lea 384(a4),a0
+        moveq #RECORDS_KEY_HIGH/4-1,d0
+.compare_high:
+        cmpm.l (a0)+,(a1)+
+        bne.s .new
+        dbra d0,.compare_high
         bra.s .load
 .new:
         movea.l a4,a0
@@ -208,7 +222,11 @@ records_begin:
         move.w #1,14(a4)
         lea records_key(pc),a0
         lea 32(a4),a1
-        move.w #288,d0
+        move.w #RECORDS_KEY_LOW,d0
+        bsr storage_copy
+        lea records_key+RECORDS_KEY_LOW(pc),a0
+        lea 384(a4),a1
+        moveq #RECORDS_KEY_HIGH,d0
         bsr storage_copy
         lea custom_session_times(pc),a0
         lea 320(a4),a1
@@ -350,7 +368,7 @@ records_commit:
 .bad:   move.w #1,records_error-module_start(a5)
         moveq #1,d0
         rts
-records_key: dcb.b 288,0
+records_key: dcb.b RECORDS_KEY_BYTES,0
 records_slot: dc.w 0
 records_league: dc.w 0
 records_allowed: dc.w 0

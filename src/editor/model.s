@@ -179,7 +179,7 @@ editor_model_build:
         moveq #0,d6
         move.w 28(a0),d6
         beq .bad
-        cmpi.w #64,d6
+        cmpi.w #EDITOR_MAX_PIECES,d6
         bhi .bad
         move.w d6,d0
         lsl.w #3,d0
@@ -190,6 +190,14 @@ editor_model_build:
         bhi .bad
         tst.w 34(a0)
         bne .bad
+        ; A gap lies inside an open track, after the start piece.
+        move.w editor_gap(pc),d0
+        beq.s .gap_ok
+        cmp.w d6,d0
+        bhs .bad
+        tst.w 30(a0)
+        bne .bad
+.gap_ok:
         moveq #0,d7
         move.w 32(a0),d7
         bmi .bad
@@ -274,6 +282,14 @@ editor_model_build:
         cmpi.b #3,4(a0)
         beq .bad
 .revision_ok:
+        ; After a gap the pieces keep the height they had: no join is checked there.
+        tst.w d4
+        beq.s .based
+        cmp.w editor_gap(pc),d4
+        bne.s .based
+        moveq #0,d7
+        move.w editor_gap_height(pc),d7
+.based:
         movea.l a1,a3
         bsr editor_piece_geometry
         tst.w d0
@@ -282,6 +298,8 @@ editor_model_build:
         ; Every piece owns a fixed cache stride (max EDITOR_MAX_ROWS rows).
         lea EDITOR_GEOMETRY_STRIDE(a3),a1
         tst.w d4
+        beq.s .first
+        cmp.w editor_gap(pc),d4
         beq.s .first
         movem.l d0-d7/a0-a4,-(sp)
         movea.l a3,a1
@@ -316,6 +334,11 @@ editor_model_build:
         adda.w d0,a0
         lea model_geometry(pc),a1
         bsr editor_join
+        ; A track with a gap is open.
+        tst.w editor_gap-module_start(a5)
+        beq.s .joined
+        moveq #0,d0
+.joined:
         tst.w model_refresh-module_start(a5)
         beq.s .check_closed
         move.w d0,editor_track+30-module_start(a5)
@@ -371,7 +394,7 @@ model_refresh: dc.w 0
 ; Last geometry failure for the HUD: 1 map edge, 2 height limit.
 model_fail: dc.w 0
 model_valid: dc.w 0
-model_row_counts: dcb.w 64,0
-model_geometry: dcb.b 64*EDITOR_GEOMETRY_STRIDE,0
+model_row_counts: dcb.w EDITOR_MAX_PIECES,0
+model_geometry: dcb.b EDITOR_MAX_PIECES*EDITOR_GEOMETRY_STRIDE,0
 
 model_legacy_flat: dcb.w 20,0

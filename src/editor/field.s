@@ -1,18 +1,23 @@
-; Track the distance from the open track end to the start line.
+; Track the distance from the open track end to the start line or across a gap.
 ; Copyright (c) 2026 Timo Heimonen
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Track Editor: how many sections the open end is from the start line. The field
-; has a level for every heading and cell, $ff where no route is. It hangs on
-; piece 0 only, so a new section or a Cut leaves it as it is.
+; Track Editor: how many sections the open end is from the start line, or from
+; the far side of a gap. The field has a level for every heading and cell, $ff
+; where no route is. It hangs on that goal piece only, so a new section or a Del
+; at the end leaves it as it is.
 FIELD_OFFSET equ $1C960
 FIELD_BYTES equ 2048
 FIELD_NO_ROUTE equ 15
 
 ; With the model of the track built.
 field_refresh:
-        move.l editor_track+68(pc),d0
+        ; The goal piece's kind, rotation and cell fix its first row.
+        move.w editor_gap(pc),d0
+        lsl.w #3,d0
+        lea editor_track+68(pc),a0
+        move.l (a0,d0.w),d0
         cmp.l field_key(pc),d0
         beq field_done
         move.l d0,field_key-module_start(a5)
@@ -25,6 +30,9 @@ field_refresh:
 .fill:  move.l d0,(a1)+
         dbra d1,.fill
         lea model_geometry(pc),a1
+        move.w editor_gap(pc),d0
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d0
+        adda.l d0,a1
         ; A start line on the far edge of the map has no cell.
         move.w (a1),d0
         or.w 4(a1),d0
@@ -38,10 +46,10 @@ field_refresh:
         bne.s .scan_next
         move.w d3,d2
         lsr.w #8,d2
-        moveq #14-1,d5
+        moveq #FIELD_AXIS_EDGES-1,d5
         btst #0,d2
         beq.s .axis
-        moveq #6-1,d5
+        moveq #FIELD_DIAGONAL_EDGES-1,d5
 .axis:  add.w d2,d2
         lea field_first(pc),a1
         move.w (a1,d2.w),d2
@@ -110,7 +118,7 @@ field_index:
         or.w d0,d1
         rts
 
-; With a candidate in the model: D0 sections from its open end to the start line,
+; With a candidate in the model: D0 sections from its open end to the goal,
 ; FIELD_NO_ROUTE when no route is.
 field_end_level:
         bsr model_tail_row
@@ -129,7 +137,8 @@ field_end_level:
 .ok:    rts
 
 ; After block_make, D0 kept: what the bar says of the candidate, NNNN C RRR. N and
-; C mean something only when a section is added to an open track.
+; C mean something only when a section is added to an open track. C is set when
+; the section closes the track or fills the gap.
 field_info:
         movem.l d0-d3/a0-a1,-(sp)
         move.w block_fail(pc),d3
@@ -141,7 +150,12 @@ field_info:
         tst.w block_original_track+30-module_start(a5)
         bne.s .store
         tst.w editor_track+30-module_start(a5)
+        bne.s .closes
+        tst.w block_original_track+EDITOR_TRACK_BYTES-module_start(a5)
         beq.s .open
+        tst.w editor_gap-module_start(a5)
+        bne.s .open
+.closes:
         bset #3,d3
         bra.s .store
 .open:  bsr field_end_level
@@ -153,5 +167,5 @@ field_info:
 
 field_key: dc.l 0
 field_value: dc.w 0
-block_info: dcb.b 34,0
+block_info: dcb.b BLOCK_VARIANT_COUNT/4+1,0
         even
