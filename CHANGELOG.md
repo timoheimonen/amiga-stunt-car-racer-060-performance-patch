@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.2.0 - 2026-11-08
+
+- **Race the computer on custom tracks.** After a track in **Practise →
+  Custom Tracks**, a menu offers **Practise**, **Race** and **Cancel**.
+  **Race** is a single race against a computer driver chosen at random, at the
+  pace of the Little Ramp's opponent; **AI Difficulty** makes it faster.
+  ([manual](docs/track-editor.md#driving-and-racing-your-tracks))
+  - The car starts every race undamaged. The race leaves the league, its
+    damage, points and season times as they were.
+  - A won race can set the track's best race time next to its best lap, with
+    the same settings as lap records.
+  - The menu starts on the choice made last.
+
 ## 2.1.0 - 2026-11-08
 
 - **Timing** in Settings: **Performance** (default) is the 50 Hz game.

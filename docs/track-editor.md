@@ -1,6 +1,6 @@
 # Track Editor manual
 
-For Stunt Car Racer Performance version 2.1.0.
+For Stunt Car Racer Performance version 2.2.0.
 
 The Track Editor lets you build your own circuits inside the game, from complete
 sections taken from the original tracks: banked corners with their entry and exit,
@@ -16,7 +16,7 @@ and the game keeps its best lap times.
 - [Changing a track](#changing-a-track)
 - [Test drive](#test-drive)
 - [Saving and loading](#saving-and-loading)
-- [Driving in Practise](#driving-in-practise)
+- [Driving and racing your tracks](#driving-and-racing-your-tracks)
 - [Controls](#controls)
 - [All sections](#all-sections)
 - [Messages](#messages)
@@ -389,22 +389,37 @@ records in `Track01.rec` to `Track32.rec` and the list in `TrackIndex`.
 - A file renamed to another slot number shows as `UNREADABLE`. To move a track to
   another slot, load it and save it there.
 
-## Driving in Practise
+## Driving and racing your tracks
 
 Choose **Single Player League**, then **Practise**, then **Custom Tracks**. The list shows
 your saved **Ready** tracks. Tracks that are open or do not pass the checks stay as
 drafts in the editor.
 
-Custom tracks are for Practise. They are not used in the league, by the computer drivers
-or in Computer Link, and the menu is there only in single-player games.
+Choose a track, and the game asks how to drive it:
 
-Each track keeps its own best times, separately for Normal and Super. A record needs
-**Game Speed 100%**, **Infinite Boost No**, **Disable Damage No** and **Timing Performance**.
-Other settings use
+- **Practise** drives the track alone.
+- **Race** is a single race against a computer driver chosen at random.
+- **Cancel** goes back to the track list.
+
+![Practise or Race](images/track-editor/race-menu.png)
+
+The computer driver races at the pace of the Little Ramp's opponent. **AI Difficulty** in
+Settings makes it faster. Your car starts every race undamaged. The race is not part of
+the league: your league damage, points and season times stay as they were. The next time,
+the menu starts on the choice you made last.
+
+![The computer driver ahead](images/track-editor/race-opponent.png)
+
+Custom tracks are not used in the league or in Computer Link, and the menu is there only in
+single-player games.
+
+Each track keeps its own best lap and race times, separately for Normal and Super. A race
+time is a record only when you win the race. A record needs **Game Speed 100%**,
+**Infinite Boost No**, **Disable Damage No** and **Timing Performance**. Other settings use
 times for the session only.
 
-- Records are written when you leave Practise with **Esc**, so leave it before you quit
-  the game.
+- Records are written when you go back to the menus, after you leave Practise with **Esc**
+  or after the race ends, so do that before you quit the game.
 - A record belongs to the saved track and its exact shape. Renaming the track in the same
   slot keeps the record. Changing the shape starts fresh times.
 - A copy in another slot has its own records.

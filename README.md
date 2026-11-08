@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 2.1.0.** This release is primarily intended for emulation.
+**Version 2.2.0.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 **Timing Original** in [Settings](#settings) races with the original game loop and physics instead.
@@ -65,14 +65,17 @@ by step, every control and every message.
 - **Test** drives the track in memory; nothing is saved. **Undo** and **Redo**
   reach back 16 steps.
 - **New** can also start from a ready-made track.
+- **Race the computer** on your own tracks: choose a track in **Practise**,
+  then **Race**.
 
 The track list has **32 save slots** on two pages, and each slot is a file in
 the install directory. Slots 01-03 contain the ready-to-drive example tracks
 **BUILD**, **BUILD 2** and **BUILD 3**; saving over one replaces it after
 confirmation. Draft tracks can be saved and resumed; only validated **Ready**
-tracks appear in **Practise**. The original eight tracks remain available.
-Custom tracks retain their own best times, separately for normal and super
-league. Record eligibility requires Game Speed at 100%, Infinite Boost No,
+tracks appear in **Practise**, where each one is driven alone or raced once
+against a computer driver chosen at random. The original eight tracks remain
+available. Custom tracks retain their own best lap and race times, separately
+for normal and super league. Record eligibility requires Game Speed at 100%, Infinite Boost No,
 Disable Damage No and Timing Performance.
 
 ## Computer Link (Beta)

@@ -49,6 +49,7 @@ test_drive:
         move.w #1,test_mode-module_start(a5)
         bsr custom_save_times
         move.w #1,custom_active-module_start(a5)
+        clr.w custom_race-module_start(a5)
         clr.b $1ca33
         clr.b $1ca22
         clr.b $5eb75

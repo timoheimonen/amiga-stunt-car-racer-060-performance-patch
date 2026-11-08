@@ -1,4 +1,4 @@
-# Patch details - 2.1.0
+# Patch details - 2.2.0
 
 This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
 with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
@@ -85,7 +85,8 @@ and legacy timer pulses keep their timing. AI Difficulty independently raises
 ordinary opponent target speeds, retaining flagged special-piece targets and
 moving-bridge targets. Positive signed speed overflow saturates at 32767 when
 AI Difficulty exceeds 100%. The engine, braking and track still determine
-achieved pace; Practice has no opponent.
+achieved pace. Practice has no opponent; a custom track's Race uses the
+opponent setup of the Little Ramp.
 
 Infinite Boost at Yes bypasses the player's reserve check and consumption,
 while preserving turbo power and input conditions. It neither refills the
@@ -208,10 +209,10 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 106,120 bytes of code and data,
-loaded from ADF offset `0x76000` in a 122,880-byte transfer that also carries
-the link module. Its bootstrap is 756 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 131,072 bytes of persistent Chip RAM for loading, disk
+The editor is a separate relocatable module: 106,586 bytes of code and data,
+loaded from ADF offset `0x76000` in a 123,392-byte transfer that also carries
+the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
+384 KiB of Fast RAM and 131,584 bytes of persistent Chip RAM for loading, disk
 I/O and display support. It runs relocated in Fast RAM and addresses game memory
 with absolute operands only. The track preview marks the finish row with a small
 arrow. Use: [Track Editor manual](docs/track-editor.md).
@@ -221,6 +222,19 @@ records persist in those files.
 Practise shows Custom Tracks and Track Editor only in single-player games:
 with more drivers (`0x5eb76`) or a Computer Link role (`0x57c3c`) the original
 division menu remains.
+
+After a custom track a menu offers Practise, Race and Cancel. Race runs the
+game's own race against a computer driver 0-10, chosen with the game's random
+byte. The original opponent setup runs with track 0 (`0x1ca33` is 0 on custom
+tracks), so the opponent gets the Little Ramp's speed limits, and the AI
+Difficulty hooks apply as on the original tracks. A module hook at `0x5cfee`,
+Practise's race call, saves the race mode `0x1ca22`, the opponent driver
+`0x1ca29`, the player index `0x5eb79` and the damage holes `0x1c9cf`, starts a
+race with all ten damage holes left, as at a new game, and restores the four
+bytes after the race. The lap hook adds each lap to the race time as the
+original race does, without the season's own best times. A won race is
+compared with the track's race record, which the record file already holds
+next to the lap record.
 
 A track has up to 78 road pieces. Tracks of up to 64 pieces are stored
 exactly as in 2.0.0. A record's track identity has 32 bytes and 4 per piece:
@@ -273,7 +287,7 @@ WHDLoad slave does not call it: the game starts at its loading picture.
 ## Player-name screen
 
 The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`, and its edition line names
-the version: `PERFORMANCE EDITION 2.1.0`. Fire, Return or the keypad Enter
+the version: `PERFORMANCE EDITION 2.2.0`. Fire, Return or the keypad Enter
 supplies `racer` when the name is empty and preserves a typed name.
 
 ## Keyboard acknowledge
@@ -298,7 +312,7 @@ icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Sl
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4716 | `1311ee24e6a38e1b5f438e2dd6e61f320cb95dda69e3f76803b99e9b0cc7d29c` |
+| `StuntCarRacerPerf.slave` | 4716 | `42bda07b465f6e4c63758b0c6bab0ad2c3623db191749ab8521074d66b4944fc` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
 | `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
 | `StuntCarRacerPerf.disk` | 901,120 | see [Checksums](#checksums) |
@@ -315,7 +329,7 @@ and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
 `AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
 `CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
 call ends WHDLoad with an operating system emulation error naming the call.
-WHDLoad's start window shows the slave's text `Performance Patch 2.1.0` and
+WHDLoad's start window shows the slave's text `Performance Patch 2.2.0` and
 `by Timo Heimonen`.
 
 - Chip memory comes from the base memory: ordinary allocations from
@@ -411,7 +425,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| `StuntCarRacerPerf.disk` (2.1.0, up to 50 FPS Practice, computer-opponent and linked races) | `776bbee409f788040553e16563dc62380677465de5ec9b6a41eed286d4128166` |
+| `StuntCarRacerPerf.disk` (2.2.0, up to 50 FPS Practice, computer-opponent and linked races) | `52c7040f2155923f5aaaf8831c20207babb374767c4d4ccba79adbf019ce724c` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and the whole disk

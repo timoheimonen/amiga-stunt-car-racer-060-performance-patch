@@ -131,6 +131,32 @@ custom_select:
         movem.l (sp)+,d1-d7/a0-a6
         tst.w d0
         beq .error
+        ; Practise, or a single race against a random computer driver.
+        move.w #5,custom_menu-module_start(a5)
+        move.b #$40,$5eb75
+        moveq #2,d2
+        moveq #0,d0
+        move.w custom_last_mode(pc),d0
+        moveq #28,d1
+        jsr $5b840
+        lea module_start(pc),a5
+        clr.w custom_menu-module_start(a5)
+        clr.b $5eb75
+        andi.w #255,d0
+        cmpi.w #2,d0
+        bhs .page
+        move.w d0,custom_race-module_start(a5)
+        move.w d0,custom_last_mode-module_start(a5)
+        beq.s .mode_set
+        ; The game's random byte ($62574 changes D0 and D3) scaled to 0..10.
+        movem.l d1-d7/a0-a6,-(sp)
+        jsr $62574
+        movem.l (sp)+,d1-d7/a0-a6
+        andi.w #255,d0
+        mulu #11,d0
+        lsr.w #8,d0
+        move.b d0,custom_opponent-module_start(a5)
+.mode_set:
         move.b $1ca33,custom_saved_road-module_start(a5)
         move.b $1ca21,custom_saved_aux-module_start(a5)
         movem.l d0-d7/a0-a6,-(sp)
@@ -308,6 +334,8 @@ custom_menu_row:
         move.b $1bb18,d0
         cmpi.w #1,custom_menu(pc)
         beq.s .division
+        cmpi.w #5,custom_menu(pc)
+        beq .mode
         cmpi.w #4,custom_menu(pc)
         beq.s .record_error
         cmpi.w #3,custom_menu(pc)
@@ -328,6 +356,10 @@ custom_menu_row:
         bra.s .text
 .division:
         lea custom_division_names(pc),a0
+        lsl.w #4,d0
+        adda.w d0,a0
+        bra.s .text
+.mode:  lea custom_mode_names(pc),a0
         lsl.w #4,d0
         adda.w d0,a0
         bra.s .text
@@ -386,6 +418,7 @@ custom_menu_enter:
         move.b custom_saved_road(pc),$1ca33
         move.b custom_saved_aux(pc),$1ca21
         clr.w custom_active-module_start(a5)
+        clr.w custom_race-module_start(a5)
 .done:
         movem.l (sp)+,d0-d7/a0-a6
         move.b #0,$5b83d
@@ -435,6 +468,10 @@ custom_name:
 custom_parameters:
         tst.w custom_active(pc)
         beq.s .original
+        ; A Custom Race takes the original setup with track 0 ($1ca33 is 0):
+        ; Little Ramp's opponent speeds and the record's damage limits.
+        tst.w custom_race(pc)
+        bne.s .original
         clr.w d1                       ; original $63ab0 caller contract
         move.b $1ca2a,d2
         tst.b $1c9d0
@@ -522,9 +559,28 @@ custom_lap:
         moveq #0,d1
         moveq #14,d2
         jsr $5dc38
-        bcs.s .done
+        bcs.s .race
         moveq #0,d1
         move.w #$c9,d2
+        jsr $5f21e
+        moveq #0,d0
+        bsr custom_records
+.race:  tst.w custom_race(pc)
+        beq.s .done
+        ; Race time as the original $5f1b0..$5f21a, without the season's
+        ; own best times (times 11 to 13, $1ca23, $1ca24).
+        moveq #0,d1
+        moveq #0,d2
+        move.b $5eb79,d2
+        addi.b #12,d2
+        jsr $5ee04
+        cmpi.b #4,$1bb20
+        bne.s .done
+        move.b d2,d1
+        moveq #15,d2
+        jsr $5dc38
+        bcs.s .done
+        move.w #$d6,d2
         jsr $5f21e
         moveq #0,d0
         bsr custom_records
@@ -532,6 +588,37 @@ custom_lap:
         move.w (sp)+,ccr
         rts
 .original: jmp $5f16c
+
+; $5cfee: Practise's race call. A Custom Race runs it as a race against the
+; driver chosen in custom_select, with a clean car (no damage holes, as at a
+; new game), and then puts back the league's values.
+custom_race_run:
+        move.l a5,-(sp)
+        lea module_start(pc),a5
+        tst.w custom_active-module_start(a5)
+        beq.s .practise
+        tst.w custom_race-module_start(a5)
+        bne.s .race
+.practise:
+        movea.l (sp)+,a5
+        jmp $5d326
+.race:  move.b $1ca22,custom_race_saved-module_start(a5)
+        move.b $1ca29,custom_race_saved+1-module_start(a5)
+        move.b $5eb79,custom_race_saved+2-module_start(a5)
+        move.b $1c9cf,custom_race_saved+3-module_start(a5)
+        move.b #$80,$1ca22
+        move.b custom_opponent(pc),$1ca29
+        move.b #11,$5eb79
+        move.b #10,$1c9cf
+        movea.l (sp)+,a5
+        jsr $5d326
+        movem.l d0-d7/a0-a6,-(sp)
+        move.b custom_race_saved(pc),$1ca22
+        move.b custom_race_saved+1(pc),$1ca29
+        move.b custom_race_saved+2(pc),$5eb79
+        move.b custom_race_saved+3(pc),$1c9cf
+        movem.l (sp)+,d0-d7/a0-a6
+        rts
 
 custom_transfer_times:
         lea $5ec48.l,a1
@@ -579,6 +666,10 @@ custom_division_names:
         dc.b 'Custom Tracks',0,0,0
         dc.b 'Track Editor',0,0,0,0
         dc.b 'Cancel',0,0,0,0,0,0,0,0,0,0
+custom_mode_names:
+        dc.b 'Practise',0,0,0,0,0,0,0,0
+        dc.b 'Race',0,0,0,0,0,0,0,0,0,0,0,0
+        dc.b 'Cancel',0,0,0,0,0,0,0,0,0,0
 custom_cancel_text: dc.b 'Cancel',0
 custom_next_text: dc.b 'Next page',0
 custom_empty_text: dc.b 'No ready track',0
@@ -591,6 +682,11 @@ custom_prepared: dc.w 0
 custom_active: dc.w 0
 custom_saved_road: dc.b 0
 custom_saved_aux: dc.b 0
+custom_race: dc.w 0
+custom_last_mode: dc.w 0
+; $1ca22, $1ca29, $5eb79 and $1c9cf around a Custom Race.
+custom_race_saved: dcb.b 4,0
+custom_opponent: dc.b 0,0
 custom_slots: dcb.w 32,0
 custom_original_times: dcb.b 32,0
 custom_session_times: dcb.b 32,0
