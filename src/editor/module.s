@@ -51,10 +51,23 @@ main_loaded:
         cmpm.b (a0)+,(a1)+
         bne .failed
         dbra d0,.verify_label
+        ; The game's two stack loads: movea.l #$ead2,a7 at $e73c and $5cf40.
+        cmpi.w #$2e7c,$e73c
+        bne .failed
+        cmpi.l #$ead2,$e73e
+        bne .failed
+        cmpi.w #$2e7c,$5cf40
+        bne .failed
+        cmpi.l #$ead2,$5cf42
+        bne .failed
         bsr custom_verify_hooks
         tst.w d0
         beq .failed
         bsr custom_install_hooks
+        ; The game stack moves from Chip to the module's Fast allocation.
+        lea GAME_STACK_TOP(a5),a0
+        move.l a0,$e73e
+        move.l a0,$5cf42
         lea title_menu_select(pc),a0
         move.l a0,$5e8ca
         lea title_menu_dispatch(pc),a0

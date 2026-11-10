@@ -1,4 +1,4 @@
-# Patch details - 2.3.0
+# Patch details - 2.3.1
 
 This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
 with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
@@ -53,6 +53,12 @@ draws the images before its display swap. Crane lifts are caught up the same way
 fixed 20 ms step; race setup drawing is complete and does not add steps to
 catch up. Time spent paused is not caught up. The vertical blank count is kept by
 the editor module's interrupt call.
+
+The race loop does not wait for the vertical blank after it requests the
+display swap. The next frame's game logic and geometry do not draw, so they run
+meanwhile, and the wait is made before the first drawing of that frame, the
+background fill. Frames are therefore shown as soon as they are ready, one or
+more vertical blanks apart. Every other display swap waits as before.
 
 ## PAL and NTSC
 
@@ -191,8 +197,9 @@ the disk image of the [WHDLoad install](#whdload-install), and the slave runs
 its boot block.
 
 Boot retains the operating system's boot-task stack for OS calls, avoiding
-the small stack area inside the bootblock. The game's later stack switches are
-unchanged.
+the small stack area inside the bootblock. The game's own stack is 1,024 bytes
+in the Track Editor module's Fast RAM allocation instead of Chip RAM; the module
+checks the game's two stack loads before it redirects them.
 
 A 320-byte boot extension at `0x200` installs the game runtime. The 7142-byte
 runtime is stored at ADF offset `0xb720` and copied into
@@ -210,10 +217,10 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 109,410 bytes of code and data,
-loaded from ADF offset `0x76000` in a 125,952-byte transfer that also carries
+The editor is a separate relocatable module: 109,590 bytes of code and data,
+loaded from ADF offset `0x76000` in a 126,464-byte transfer that also carries
 the link module. Its bootstrap is 766 bytes at ADF offset `0xd800`. It reserves
-416 KiB of Fast RAM and 134,144 bytes of persistent Chip RAM for loading, file
+416 KiB of Fast RAM and 134,656 bytes of persistent Chip RAM for loading, file
 I/O and display support. It runs relocated in Fast RAM and addresses game memory
 with absolute operands only. The track preview marks the finish row with a small
 arrow. Use: [Track Editor manual](docs/track-editor.md).
@@ -313,7 +320,7 @@ WHDLoad slave does not call it: the game starts at its loading picture.
 ## Player-name screen
 
 The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`, and its edition line names
-the version: `PERFORMANCE EDITION 2.3.0`. Fire, Return or the keypad Enter
+the version: `PERFORMANCE EDITION 2.3.1`. Fire, Return or the keypad Enter
 supplies `racer` when the name is empty and preserves a typed name.
 
 ## Keyboard acknowledge
@@ -339,7 +346,7 @@ icon. Use: [WHDLoad install](WHDLOAD.md). Slave source:
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 3780 | `f1cef34d0a2806d36c28cc0b258635489b00b71ca2af74e9cf005c14ca5af50d` |
+| `StuntCarRacerPerf.slave` | 3796 | `56acab88871acfb50aaf5a48e1459cf184a809164c796c06ee09d9cb9e8baeb2` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 299 | `ebeebfc42d86895c9ce954cf39e3329e99b191e2d4e501158bd6b81f19c31e5e` |
 | `<directory>.info` (drawer) | 264 | `c6695dc18210c72a672c2e20f1fba7b8f5036e6c2513e7f84772d7cd84072e88` |
 | `tracks` | | empty drawer |
@@ -358,8 +365,11 @@ and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
 `AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
 `CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
 call ends WHDLoad with an operating system emulation error naming the call.
-WHDLoad's start window shows the slave's text `Performance Patch 2.3.0` and
-`by Timo Heimonen`.
+WHDLoad's start window shows the slave's text `Performance Patch 2.3.1` and
+`by Timo Heimonen`. At start the slave calls `resload_SetCPU`: the base memory,
+which holds the game's code and data, becomes cacheable in write-through mode,
+and the instruction and data caches are enabled. Only the CPU writes to the
+base memory, and write-through keeps the display memory current.
 
 - Chip memory comes from the base memory: ordinary allocations from
   `0x80000` below the boot block at `0x8c000`, `MEMF_REVERSE` allocations from
@@ -460,7 +470,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| `StuntCarRacerPerf.disk` (2.3.0, up to 50 FPS Practice, computer-opponent and linked races) | `4cb6328d8f473c676033d331666acc26547959ef7d6e1ed99343a0e87f19c02b` |
+| `StuntCarRacerPerf.disk` (2.3.1, up to 50 FPS Practice, computer-opponent and linked races) | `a7c6f7d409336ac8772ce22af9fa184fec063f46af670c3f6c4aff6d010bd101` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and the whole disk
