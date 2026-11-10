@@ -4,12 +4,11 @@
 ; Licensed under the MIT License; see LICENSE.
 
 ; Ordered keyboard ISR and VBL joystick transitions. No model work in ISRs.
-; Indices 0..95 are raw keys; 96 holds U/D/L/R/fire, active high.
-EDITOR_INPUT_QUEUE equ $23000
+; The table layout is in input-equ.i.
 EDITOR_INPUT_MASK equ $7fe
-editor_input_keys equ $23800
-editor_input_captured equ $23880
-editor_input_suppressed equ $23900
+editor_input_keys equ EDITOR_INPUT_STATE
+editor_input_captured equ editor_input_keys+EDITOR_INPUT_BANK
+editor_input_suppressed equ editor_input_keys+2*EDITOR_INPUT_BANK
 editor_input_start:
         move.w sr,-(sp)
         ori.w #$0700,sr
@@ -19,7 +18,7 @@ editor_input_start:
         clr.w editor_input_holdoff-module_start(a5)
         clr.l editor_input_overflows-module_start(a5)
         lea editor_input_keys(a5),a0
-        moveq #95,d0
+        moveq #EDITOR_INPUT_STATE_BYTES/4-1,d0
 .clear: clr.l (a0)+
         dbra d0,.clear
         move.w #1,editor_input_enabled-module_start(a5)
@@ -35,7 +34,7 @@ editor_keyboard:
         lea module_start(pc),a5
         tst.w editor_input_enabled-module_start(a5)
         beq.s .done
-        cmpi.w #96,d0
+        cmpi.w #RAW_KEYS,d0
         bhs.s .done
         lea $ead6.l,a0
         moveq #0,d1
@@ -54,10 +53,10 @@ editor_input_vbl:
         bsr editor_read_joystick
         btst #7,$bfe001
         bne.s .fire
-        bset #4,d0
+        bset #EDITOR_INPUT_FIRE,d0
 .fire:
         move.w d0,d1
-        moveq #96,d0
+        moveq #EDITOR_INPUT_JOY,d0
         move.w sr,-(sp)
         ori.w #$0700,sr
         bsr editor_input_capture
@@ -75,7 +74,7 @@ editor_input_resync:
         beq.s .done
         ; JOY0DAT ran on: the next count is not a movement.
         move.w #1,ui_baseline-module_start(a5)
-        moveq #95,d0
+        moveq #RAW_KEYS-1,d0
 .key:   lea $ead6.l,a0
         moveq #0,d1
         move.b (a0,d0.w),d1
@@ -147,17 +146,17 @@ editor_input_next:
 .blocked:
         move.w editor_input_head(pc),editor_input_tail-module_start(a5)
         lea editor_input_keys(a5),a0
-        moveq #31,d0
+        moveq #EDITOR_INPUT_BANK/4-1,d0
 .clear: clr.l (a0)+
         dbra d0,.clear
         lea editor_input_captured(a5),a0
-        moveq #96,d0
+        moveq #EDITOR_INPUT_ENTRIES-1,d0
 .neutral:
         tst.b (a0)+
         bne.s .done
         dbra d0,.neutral
         lea editor_input_suppressed(a5),a0
-        moveq #31,d0
+        moveq #EDITOR_INPUT_BANK/4-1,d0
 .reset: clr.l (a0)+
         dbra d0,.reset
         clr.w editor_input_blocked-module_start(a5)
@@ -172,10 +171,10 @@ editor_input_next:
         subq.w #1,editor_input_holdoff-module_start(a5)
         move.w editor_input_head(pc),editor_input_tail-module_start(a5)
         lea editor_input_keys(a5),a0
-        moveq #96,d0
+        moveq #EDITOR_INPUT_ENTRIES-1,d0
 .key:
         clr.b (a0)
-        move.b $80(a0),$100(a0)
+        move.b EDITOR_INPUT_BANK(a0),2*EDITOR_INPUT_BANK(a0)
         addq.l #1,a0
         dbra d0,.key
         bra.s .done
@@ -199,9 +198,9 @@ editor_input_more:
         move.b 1(a0,d1.w),d2
         beq.s .more
         move.b (a0,d1.w),d1
-        cmpi.b #96,d1
+        cmpi.b #EDITOR_INPUT_JOY,d1
         bne.s .key
-        btst #4,d2
+        btst #EDITOR_INPUT_FIRE,d2
         bne.s .stop
         bra.s .more
 .key:   lea editor_commit_keys(pc),a0
@@ -216,24 +215,24 @@ editor_input_more:
 ; Space, Backspace, Return, Esc, U, R, N, L, T, F1, and the held camera keys
 ; W, S, A, D, Q, Z: a tap must still be down when the pass reads it.
 editor_commit_keys:
-        dc.b $40,$41,$44,$45,$16,$13,$36,$28,$14,$50
-        dc.b $11,$21,$20,$22,$10,$31,0
+        dc.b RAW_SPACE,RAW_BS,RAW_RETURN,RAW_ESC,RAW_U,RAW_R,RAW_N,RAW_L,RAW_T,RAW_F1
+        dc.b RAW_W,RAW_S,RAW_A,RAW_D,RAW_Q,RAW_Z,0
         even
 
 editor_sample_directions:
         moveq #0,d0
-        move.b editor_input_keys+96(a5),d0
+        move.b editor_input_keys+EDITOR_INPUT_JOY(a5),d0
         andi.w #15,d0
-        cmpi.b #$b3,editor_input_keys+$4c(a5)
+        cmpi.b #KEY_DOWN,editor_input_keys+$4c(a5)
         bne.s .down
         bset #0,d0
-.down:  cmpi.b #$b3,editor_input_keys+$4d(a5)
+.down:  cmpi.b #KEY_DOWN,editor_input_keys+$4d(a5)
         bne.s .left
         bset #1,d0
-.left:  cmpi.b #$b3,editor_input_keys+$4f(a5)
+.left:  cmpi.b #KEY_DOWN,editor_input_keys+$4f(a5)
         bne.s .right
         bset #2,d0
-.right: cmpi.b #$b3,editor_input_keys+$4e(a5)
+.right: cmpi.b #KEY_DOWN,editor_input_keys+$4e(a5)
         bne.s .done
         bset #3,d0
 .done:  rts
@@ -245,7 +244,7 @@ editor_release:
         movem.l d0-d1/a0-a1,-(sp)
         lea editor_input_keys(a5),a0
         lea editor_input_suppressed(a5),a1
-        moveq #96,d0
+        moveq #EDITOR_INPUT_ENTRIES-1,d0
 .keys:
         move.b (a0),d1
         or.b d1,(a1)+
@@ -256,6 +255,34 @@ editor_release:
         clr.w building_arrow-module_start(a5)
         clr.w overview_key-module_start(a5)
         movem.l (sp)+,d0-d1/a0-a1
+        rts
+
+; D4 the arrow held now (0 none), A0 the pair {arrow, repeat time} it is
+; compared with. D0 (flags set) = 1 when it steps now: a new arrow at once, a
+; held one after EDITOR_REPEAT_DELAY ticks, then every EDITOR_REPEAT_RATE.
+; The other registers are kept.
+editor_arrow_repeat:
+        cmp.w (a0),d4
+        bne.s .new
+        tst.w d4
+        beq.s .no
+        move.w editor_ticks(pc),d0
+        sub.w 2(a0),d0
+        bmi.s .no
+        cmpi.w #EDITOR_REPEAT_RATE,d0
+        blo.s .no
+        move.w editor_ticks(pc),2(a0)
+        moveq #1,d0
+        rts
+.new:   move.w d4,(a0)
+        move.w editor_ticks(pc),d0
+        addi.w #EDITOR_REPEAT_DELAY-EDITOR_REPEAT_RATE,d0
+        move.w d0,2(a0)
+        tst.w d4
+        beq.s .no
+        moveq #1,d0
+        rts
+.no:    moveq #0,d0
         rts
 
 editor_input_enabled: dc.w 0

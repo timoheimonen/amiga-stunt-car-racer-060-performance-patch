@@ -91,7 +91,7 @@ piece_outcode:
         move.l d5,d1
         muls.l #FREE_FOCAL,d1
         move.l d4,d2
-        mulu.l #162,d2           ; D>=0 only, negatives fall to the behind code
+        mulu.l #VIEW_CX+2,d2     ; D>=0 only, negatives fall to the behind code
         tst.l d4
         bpl.s .x
         moveq #0,d2
@@ -111,7 +111,7 @@ piece_outcode:
         tst.l d2
         bpl.s .y2
         moveq #0,d2
-.y2:    mulu.l #70,d2
+.y2:    mulu.l #VIEW_CY-VIEW_TOP+2,d2
         add.l d1,d2
         bpl.s .y3
         bset #3,d0
@@ -119,7 +119,7 @@ piece_outcode:
         tst.l d2
         bpl.s .y4
         moveq #0,d2
-.y4:    mulu.l #78,d2
+.y4:    mulu.l #VIEW_BOTTOM-VIEW_CY+2,d2
         cmp.l d2,d1
         ble.s .done
         bset #4,d0

@@ -25,7 +25,7 @@ map_plot:
         movem.l d0-d2/a0,-(sp)
         move.w d4,d0
         addq.w #MAP_TOP,d0
-        mulu.w #40,d0
+        mulu.w #SCREEN_ROW_BYTES,d0
         move.w d3,d1
         addi.w #MAP_X,d1
         move.w d1,d2
@@ -162,13 +162,13 @@ map_draw:
         lea model_row_counts(pc),a0
         lea model_geometry(pc),a1
         moveq #0,d2
-        move.w editor_track+28(pc),d5
+        move.w editor_track+SCTR_COUNT(pc),d5
         bsr map_rows
         tst.w building_mode-module_start(a5)
         bne.s .ghost
         ; The selected section, or nothing on the Add slot.
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs .marks
         bsr block_group_start
         move.w d0,d2
@@ -176,12 +176,11 @@ map_draw:
         bsr block_browse_step
         move.w d0,d5
         bra.s .marked
-.ghost: cmpi.l #3,editor_track+24-module_start(a5)
+.ghost: cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .marks
         tst.w block_preview_visible-module_start(a5)
         beq.s .marks
-        movea.l a5,a0
-        adda.l #BLOCK_PREVIEW_CACHE,a0
+        lea BLOCK_PREVIEW_CACHE(a5),a0
         lea 2*EDITOR_MAX_PIECES(a0),a1
         move.w block_insert(pc),d2
         move.w d2,d5
@@ -204,7 +203,7 @@ map_draw:
         lea model_row_counts(pc),a0
         lea model_geometry(pc),a1
         bsr map_rows
-.marks: tst.w editor_track+30-module_start(a5)
+.marks: tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .start
         bsr model_tail_row
         movea.l a0,a2

@@ -12,19 +12,23 @@ validate_for_practice:
         rts
 
 ; Called after model geometry validation, including load/save/edit/undo.
-; Class 0 Draft, 1 Closed, 2 Ready. Reasons match host oracle.
+; Class 0 Draft, 1 Closed, 2 Ready. A track file
+; keeps CLASS_READY for a Ready track and CLASS_DRAFT for the others.
+PRACTICE_DRAFT equ 0
+PRACTICE_CLOSED equ 1
+PRACTICE_READY equ 2
 practice_classify:
         movem.l d0-d7/a0-a4,-(sp)
         clr.w practice_class-module_start(a5)
         clr.w practice_runtime_valid-module_start(a5)
         move.w #1,practice_reason-module_start(a5)
-        cmpi.l #2,editor_track+24-module_start(a5)
+        cmpi.l #2,editor_track+SCTR_REVISION-module_start(a5)
         blo .legacy
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         beq .done
-        move.w #1,practice_class-module_start(a5)
+        move.w #PRACTICE_CLOSED,practice_class-module_start(a5)
         move.w #2,practice_reason-module_start(a5)
-        move.w editor_track+28(pc),d6
+        move.w editor_track+SCTR_COUNT(pc),d6
         cmpi.w #8,d6
         blo .done
         lea model_row_counts(pc),a0
@@ -37,49 +41,19 @@ practice_classify:
         dbra d0,.segments
         cmpi.w #64,d7
         blo .done
-        ; Original near/far side walls have a fixed bottom Y=512.
-        ; A road below that plane produces inverted walls/stray edge lines.
+        ; The side walls of the game have a fixed bottom, as for building.
         move.w #7,practice_reason-module_start(a5)
-        lea model_geometry(pc),a0
-        lea model_row_counts(pc),a1
-        move.w d6,d0
-        subq.w #1,d0
-.clearance_piece:
-        movea.l a0,a2
-        move.w (a1)+,d1
-        add.w d1,d1
-        subq.w #1,d1
-.clearance_vertex:
-        cmpi.w #512,2(a2)
-        bls .done
-        addq.l #6,a2
-        dbra d1,.clearance_vertex
-        adda.w #EDITOR_GEOMETRY_STRIDE,a0
-        dbra d0,.clearance_piece
-        ; Reuse whole-footprint collision contract, preserving preview state.
+        bsr block_height_valid
+        beq .done
+        ; The collision test of building, the preview state kept.
         move.w building_mode(pc),-(sp)
         move.w building_selected(pc),-(sp)
         move.l building_probe(pc),-(sp)
-        move.l building_probe+4(pc),-(sp)
-        move.w #2,building_mode-module_start(a5)
-        clr.w building_selected-module_start(a5)
-.collision:
+        move.l building_probe+PIECE_KIND(pc),-(sp)
         movem.l d6-d7,-(sp)
-        move.w building_selected(pc),d0
-        lsl.w #3,d0
-        lea editor_track+64(pc),a0
-        adda.w d0,a0
-        move.l (a0),building_probe-module_start(a5)
-        move.l 4(a0),building_probe+4-module_start(a5)
-        bsr building_collision
+        bsr model_self_clear
         movem.l (sp)+,d6-d7
-        tst.w d0
-        beq.s .collision_done
-        addq.w #1,building_selected-module_start(a5)
-        cmp.w building_selected(pc),d6
-        bhi.s .collision
-.collision_done:
-        move.l (sp)+,building_probe+4-module_start(a5)
+        move.l (sp)+,building_probe+PIECE_KIND-module_start(a5)
         move.l (sp)+,building_probe-module_start(a5)
         move.w (sp)+,building_selected-module_start(a5)
         move.w (sp)+,building_mode-module_start(a5)
@@ -90,14 +64,14 @@ practice_classify:
         lea practice_runtime(pc),a1
         move.w #3,(a1)+
         move.w d6,(a1)+
-        lea editor_track+64(pc),a0
+        lea editor_track+SCTR_PIECES(pc),a0
         moveq #0,d4
 .find_finish:
         move.l (a0),d0
-        cmp.l editor_track+36(pc),d0
+        cmp.l editor_track+SCTR_FINISH(pc),d0
         beq.s .finish
         addq.w #1,d4
-        addq.l #8,a0
+        addq.l #PIECE_BYTES,a0
         bra.s .find_finish
 .finish:
         move.w d4,(a1)+
@@ -113,14 +87,14 @@ practice_classify:
         move.w d7,(a1)+
         move.w #4,(a1)+
         move.w #8,(a1)+
-        lea editor_track+64(pc),a0
+        lea editor_track+SCTR_PIECES(pc),a0
         lea model_geometry(pc),a2
         lea model_row_counts(pc),a3
         moveq #0,d4             ; colour phase
         subq.w #1,d6
 .entry:
         move.l (a0),(a1)+
-        move.b 7(a0),(a1)+
+        move.b PIECE_CELL(a0),(a1)+
         bsr practice_piece_metadata
         move.b d1,(a1)+
         move.b d2,(a1)+
@@ -142,7 +116,7 @@ practice_classify:
         move.w d0,(a1)+
         add.w d3,d4
         andi.w #1,d4
-        addq.l #8,a0
+        addq.l #PIECE_BYTES,a0
         adda.w #EDITOR_GEOMETRY_STRIDE,a2
         dbra d6,.entry
         ; Roundtrip: decode every private entry through catalog geometry and
@@ -151,7 +125,7 @@ practice_classify:
         move.w #5,practice_reason-module_start(a5)
         tst.w d0
         beq.s .done
-        move.w #2,practice_class-module_start(a5)
+        move.w #PRACTICE_READY,practice_class-module_start(a5)
         move.w #1,practice_runtime_valid-module_start(a5)
         clr.w practice_reason-module_start(a5)
         bra.s .done
@@ -166,7 +140,7 @@ practice_roundtrip:
         lea practice_runtime(pc),a3
         cmpi.w #3,(a3)
         bne .bad
-        move.w editor_track+28(pc),d0
+        move.w editor_track+SCTR_COUNT(pc),d0
         cmp.w 2(a3),d0
         bne .bad
         cmpi.w #8,d0
@@ -179,10 +153,10 @@ practice_roundtrip:
         cmp.w 6(a3),d1
         bne .bad
         move.w d1,d2
-        lsl.w #3,d2
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d2
+        lea editor_track+SCTR_PIECES(pc),a0
         move.l (a0,d2.w),d2
-        cmp.l editor_track+36(pc),d2
+        cmp.l editor_track+SCTR_FINISH(pc),d2
         bne .bad
         move.w d0,d2
         lsr.w #1,d2
@@ -198,13 +172,13 @@ practice_roundtrip:
         moveq #0,d5             ; summed segments and colour phase
         lea practice_runtime+16(pc),a3
         lea model_geometry(pc),a4
-        move.w editor_track+28(pc),d6
+        move.w editor_track+SCTR_COUNT(pc),d6
         subq.w #1,d6
 .piece:
         move.l (a0),d0
         cmp.l (a3),d0
         bne .bad
-        move.b 7(a0),d0
+        move.b PIECE_CELL(a0),d0
         cmp.b 4(a3),d0
         bne .bad
         bsr practice_piece_metadata
@@ -251,7 +225,7 @@ practice_roundtrip:
         cmpm.w (a1)+,(a2)+
         bne.s .bad
         dbra d0,.compare
-        addq.l #8,a0
+        addq.l #PIECE_BYTES,a0
         adda.w #16,a3
         adda.w #EDITOR_GEOMETRY_STRIDE,a4
         dbra d6,.piece
@@ -278,10 +252,10 @@ practice_piece_metadata:
         bne.s .angle
         ori.b #32,d1
 .angle:
-        move.b 5(a0),d0
+        move.b PIECE_ROT(a0),d0
         lsl.b #6,d0
         or.b d0,d1
-        move.b 6(a0),d0
+        move.b PIECE_REV(a0),d0
         lsl.b #4,d0
         or.b d0,d1
         movem.l (sp)+,d0/a4
@@ -300,7 +274,7 @@ practice_first_heights:
 practice_crane_safe:
         movem.l d1/a4,-(sp)
         moveq #0,d1
-        move.b 4(a0),d1
+        move.b PIECE_KIND(a0),d1
         subq.w #1,d1
         lea practice_safe_kinds(pc),a4
         moveq #0,d0
@@ -309,11 +283,11 @@ practice_crane_safe:
         rts
 practice_catalog_entry:
         moveq #0,d0
-        move.b 4(a0),d0
+        move.b PIECE_KIND(a0),d0
         subq.w #1,d0
         cmpi.w #7,d0
         bhs.s .entry
-        tst.b 6(a0)
+        tst.b PIECE_REV(a0)
         beq.s .entry
         addi.w #EDITOR_KIND_COUNT,d0
 .entry:

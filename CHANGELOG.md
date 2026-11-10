@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.3.0 - 2026-11-10
+
+- **Custom tracks are files in the `tracks` drawer.** The installer creates the
+  empty drawer `tracks` and its icon in the install. Slot 7 is
+  `tracks/Track007.sct`, and its records are `tracks/Track007.rec`.
+  ([manual](docs/track-editor.md#where-the-tracks-are))
+  - Renaming a track file moves the track to that slot; renaming its `.rec`
+    file the same way takes the records along.
+  - Each save writes one file. The icon's tool types now include
+    `WRITEDELAY=10`, so the display is blank for a moment only.
+  - Without the `tracks` drawer nothing is saved, and the editor says
+    `No tracks drawer. Nothing saved.`
+  - A file saved by a newer version shows as `NEWER VERSION` and is not saved
+    over.
+- **512 save slots** on 32 pages of 16 rows. **Left** and **Right** turn the
+  page, holding the mouse button on **Prev** or **Next** turns page after page,
+  and typing a slot number goes to that slot. A new track offers the name
+  `TRACK` and its slot number, such as `TRACK004`.
+- **Practise -> Custom Tracks** lists the Ready tracks with their slot numbers,
+  16 on a page, and works like the Save and Load lists.
+- **Import of older tracks.** Tracks and records of versions 1.6.0 to 2.2.0
+  (`Track01.sct` to `Track32.sct`, `.rec`) copied into the install directory
+  are imported into `tracks` when the game starts, after a question. Every
+  written file is read back, and at the end the old files can be kept or
+  deleted. While old files remain, **Practise** has the row
+  **Import Old Tracks**.
+  ([manual](docs/track-editor.md#tracks-from-an-older-version))
+- The [Track File Format](docs/track-format.md) describes the track and records
+  files byte by byte.
+
 ## 2.2.0 - 2026-11-08
 
 - **Race the computer on custom tracks.** After a track in **Practise →
@@ -81,7 +111,7 @@
   earlier WHDLoad install work as they are. Tracks saved on a patched ADF or a
   DF1 track disk stay on that disk.
 
-## 1.6.3 — 2026-10-04
+## 1.6.3 - 2026-10-04
 
 - WHDLoad install: season Load no longer loads a save by itself. The Return
   or fire that chose Load or Save was taken as the choice in the list; the
@@ -97,7 +127,7 @@
   The original menu remains for multiplayer and Computer Link games. Applies
   to both the ADF and the WHDLoad install.
 
-## 1.6.2 — 2026-10-04
+## 1.6.2 - 2026-10-04
 
 - WHDLoad install: season Load and Save no longer ask for a formatted save
   disk or warn that a new save disk has not been used for saving; season
@@ -112,7 +142,7 @@
   the game's CIA setup clears the keyboard acknowledge state; the setup itself
   is unchanged. Applies to both the ADF and the WHDLoad install.
 
-## 1.6.1 — 2026-10-03
+## 1.6.1 - 2026-10-03
 
 - WHDLoad install: the slave, its icon and the disk image are now
   `StuntCarRacerPerf.slave`, `StuntCarRacerPerf.info` and
@@ -124,7 +154,7 @@
   icon `StuntCarRacerPerf.info` beside the original ADF.
 - The patched ADF is unchanged.
 
-## 1.6.0 — 2026-10-03
+## 1.6.0 - 2026-10-03
 
 - WHDLoad install: `patch.py --whdload DIRECTORY` writes the slave, the
   patched disk as `Disk.1`, a Workbench icon and a drawer icon for starting
@@ -132,11 +162,11 @@
   season saves are files in the install directory. See [WHDLoad install](WHDLOAD.md).
 - The patched ADF is unchanged from 1.5.0.
 
-## 1.5.0 — 2026-09-29
+## 1.5.0 - 2026-09-29
 
 - The boot intro is skipped on a 68060 whose FPU is enabled at boot
 
-## 1.4.9 — 2026-09-28
+## 1.4.9 - 2026-09-28
 
 - Track Editor is no longer marked beta.
 - Editor: straight hills, ramps and crests are previewed from the side.
@@ -147,22 +177,22 @@
 - Editor: fix a freeze of the append preview camera in some views.
 - The game disk includes the ready-to-drive track BUILD in save slot 01.
 
-## 1.4.8 — 2026-09-26
+## 1.4.8 - 2026-09-26
 
 - PAL and NTSC
 
-## 1.4.7 — 2026-09-26
+## 1.4.7 - 2026-09-26
 
 - Faster frame rate when frames are late: the extra physics steps no longer
   redraw the HUD and cockpit images, which the next drawn frame draws anyway.
   The images are drawn once per displayed frame, as in the original game.
 
-## 1.4.5 — 2026-09-25
+## 1.4.5 - 2026-09-25
 
 - Smoke and particles keep real time when frames are late.
 - Boot intro rendering updated.
 
-## 1.4.4 — 2026-09-25
+## 1.4.4 - 2026-09-25
 
 - Crane lifts keep real time when frames are late: like racing, the crane
   runs extra fixed physics steps without drawing.
@@ -172,19 +202,19 @@
   completed track piece and no longer writes into the editor module's code
   while the game runs.
 
-## 1.4.3 — 2026-09-25
+## 1.4.3 - 2026-09-25
 
 - Fix boot failures on PiStorm / Emu68 by retaining the operating system's
   boot-task stack during startup.
 
-## 1.4.2 — 2026-09-24
+## 1.4.2 - 2026-09-24
 
 - Track Editor module: cache flushing now matches the detected CPU. Earlier
   versions used an instruction that stopped some processors with a Line-F
   error (8000 000B) after the intro.
 - Requirements: 2 MiB Chip RAM and at least 1 MiB Fast RAM.
 
-## 1.4.1 — 2026-09-24
+## 1.4.1 - 2026-09-24
 
 - Computer Link: if the other machine stops responding while a race is being
   set up, the game returns to the title screen after about 5 seconds instead
@@ -193,7 +223,7 @@
   after 10 min 55 s of racing. Finish times from 655.35 s upwards count as
   equal, and a tie goes to the Host.
 
-## 1.4.0 — 2026-09-24
+## 1.4.0 - 2026-09-24
 
 - Add a two-player Computer Link: 50 Hz local physics, 20 Hz position
   exchange with a smoothed opponent, cars pass through each other, shared
@@ -203,11 +233,11 @@
 - Frametime corrections
 - Finish row is marked with a small arrow in the track preview.
 
-## 1.3.1 — 2026-09-22
+## 1.3.1 - 2026-09-22
 
 - Restore the original CIA startup initialization.
 
-## 1.3.0 — 2026-09-21
+## 1.3.0 - 2026-09-21
 
 - Add in-game Track Editor: 33 section choices, a 16 × 16 building
   grid.
@@ -217,57 +247,57 @@
   key presses from leaving input locked.
 - Smoke / particles framerate fixed.
 
-## 1.2.2 — 2026-09-18
+## 1.2.2 - 2026-09-18
 
 - Retain 32-bit precision in screen-point transforms and round to the nearest pixel.
 - Interpolate projection angle and distance lookup tables for smoother geometry.
 - Round projection distances and saturate values above 32767.
 
-## 1.2.1 — 2026-09-18
+## 1.2.1 - 2026-09-18
 
 - Add Disable Damage (No/Yes, default No) to Settings.
 - Allow Fire to continue past player-name entry, using `racer` for an empty name.
 
-## 1.2.0 — 2026-09-16
+## 1.2.0 - 2026-09-16
 
 - Added a Settings menu with independent Game Speed, AI Difficulty controls and Infinite Boost (No/Yes)
 
-## 1.1.0 — 2026-09-16
+## 1.1.0 - 2026-09-16
 
 - Add main-menu speed adjustment from 100% to 150% in 5% increments.
 
-## 1.0.2 — 2026-09-15
+## 1.0.2 - 2026-09-15
 
 - Correct direct yaw correction timing for the 20 ms physics step.
 - Restore the severe-impact cooldown to its original 120 ms tick rate.
 
-## 1.0.1 — 2026-09-15
+## 1.0.1 - 2026-09-15
 
 - Fix crane lift
 
-## 1.0.0 — 2026-09-09
+## 1.0.0 - 2026-09-09
 
 - Add a boot intro
 
-## 0.4.0 — 2026-09-08
+## 0.4.0 - 2026-09-08
 
 - Optimize rendering for the 68060.
 
-## 0.3.0 — 2026-09-07
+## 0.3.0 - 2026-09-07
 
 - Optimize geometry processing for the 68060.
 
-## 0.2.0 — 2026-09-07
+## 0.2.0 - 2026-09-07
 
 - Change the target platform to emulation only.
 - Add 50 Hz physics and 50 FPS rendering to computer-opponent races.
 - Fix a Guru Meditation caused by time penalties after leaving the track.
 
-## 0.1.1 — 2026-09-07
+## 0.1.1 - 2026-09-07
 
 - Fix display flickering in opponent races.
 
-## 0.1.0 — 2026-09-07
+## 0.1.0 - 2026-09-07
 
 - Add 50 Hz physics and 50 FPS rendering to Practice mode.
 - Add a standalone Python patcher.

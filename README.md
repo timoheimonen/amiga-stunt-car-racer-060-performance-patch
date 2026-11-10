@@ -1,6 +1,6 @@
 # Stunt Car Racer Performance patcher
 
-**Version 2.2.0.** This release is primarily intended for emulation.
+**Version 2.3.0.** This release is primarily intended for emulation.
 It provides **50 Hz physics and rendering at up to 50 FPS, while lap timers retain their original 8.33 Hz update rate**, and detects PAL or NTSC displays at boot.
 The achieved frame rate depends on the machine's Chip RAM access speed; game speed stays correct when frames are late.
 **Timing Original** in [Settings](#settings) races with the original game loop and physics instead.
@@ -40,9 +40,9 @@ package version.
 Copy the directory and its drawer icon to the Amiga and start the game from
 its icon, `StuntCarRacerPerf`. The intro is skipped, the loading picture stays
 for 3 seconds (or with WHDLoad's ButtonWait option until a button is pressed),
-and custom tracks, records and season saves are files in the install
-directory. The install's own file names let it share a directory with other
-WHDLoad installs of the game. See [WHDLoad install](WHDLOAD.md).
+season saves are files in the install directory, and custom tracks and their
+records are files in its `tracks` drawer. The install's own file names let it
+share a directory with other WHDLoad installs of the game. See [WHDLoad install](WHDLOAD.md).
 
 ## Track Editor
 
@@ -68,15 +68,22 @@ by step, every control and every message.
 - **Race the computer** on your own tracks: choose a track in **Practise**,
   then **Race**.
 
-The track list has **32 save slots** on two pages, and each slot is a file in
-the install directory. Slots 01-03 contain the ready-to-drive example tracks
-**BUILD**, **BUILD 2** and **BUILD 3**; saving over one replaces it after
-confirmation. Draft tracks can be saved and resumed; only validated **Ready**
-tracks appear in **Practise**, where each one is driven alone or raced once
-against a computer driver chosen at random. The original eight tracks remain
+The track list has **512 save slots** on 32 pages, and each slot is a file in
+the install's `tracks` drawer: slot 7 is `Track007.sct`, and renaming a file
+moves the track to that slot. Slots 1-3 contain the ready-to-drive example
+tracks **BUILD**, **BUILD 2** and **BUILD 3**; saving over one replaces it
+after confirmation. Draft tracks can be saved and resumed; only validated
+**Ready** tracks appear in **Practise**, where each one is driven alone or
+raced once against a computer driver chosen at random. The original eight tracks remain
 available. Custom tracks retain their own best lap and race times, separately
 for normal and super league. Record eligibility requires Game Speed at 100%, Infinite Boost No,
 Disable Damage No and Timing Performance.
+
+Tracks and records of versions 1.6.0 to 2.2.0 come along: copy the old
+`Track01.sct` to `Track32.sct` and `.rec` files into the new install directory,
+and the game offers to import them into `tracks` when it starts
+([how](docs/track-editor.md#tracks-from-an-older-version)). The
+[Track File Format](docs/track-format.md) describes the files byte by byte.
 
 ## Computer Link (Beta)
 
@@ -103,8 +110,8 @@ championship starts in Division 4.
 
 **Settings** in the main menu.
 
-- **Game Speed:** 100–150%, in 5% steps.
-- **AI Difficulty:** 100–150%, in 5% steps.
+- **Game Speed:** 100-150%, in 5% steps.
+- **AI Difficulty:** 100-150%, in 5% steps.
 - **Infinite Boost:** No/Yes.
 - **Disable Damage:** No/Yes.
 - **Timing:** Performance/Original. **Performance** is the 50 Hz game.
@@ -117,7 +124,8 @@ championship starts in Division 4.
 
 [Changelog](CHANGELOG.md) · [Checksums](PATCH.md#checksums) ·
 [Patch details](PATCH.md) · [WHDLoad install](WHDLOAD.md) ·
-[Track Editor manual](docs/track-editor.md) · [Assembly sources](src)
+[Track Editor manual](docs/track-editor.md) ·
+[Track File Format](docs/track-format.md) · [Assembly sources](src)
 
 Timo Heimonen (timo.heimonen@proton.me) · [MIT License](LICENSE)
 

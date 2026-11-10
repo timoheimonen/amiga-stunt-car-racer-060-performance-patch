@@ -1,6 +1,6 @@
 # Track Editor manual
 
-For Stunt Car Racer Performance version 2.2.0.
+For Stunt Car Racer Performance version 2.3.0.
 
 The Track Editor lets you build your own circuits inside the game, from complete
 sections taken from the original tracks: banked corners with their entry and exit,
@@ -16,6 +16,7 @@ and the game keeps its best lap times.
 - [Changing a track](#changing-a-track)
 - [Test drive](#test-drive)
 - [Saving and loading](#saving-and-loading)
+- [Tracks from an older version](#tracks-from-an-older-version)
 - [Driving and racing your tracks](#driving-and-racing-your-tracks)
 - [Controls](#controls)
 - [All sections](#all-sections)
@@ -337,13 +338,17 @@ until you release it.
 
 ## Saving and loading
 
-**Save** or **F1** saves, and **Load** or **L** loads. There are 32 slots on two pages.
+**Save** or **F1** saves, and **Load** or **L** loads. There are 512 slots on 32 pages of
+16 rows, and the title of the list shows the page.
 
 ![The list of tracks](images/track-editor/save-list.png)
 
 Click a row, or move with the arrows and confirm with **Space**, **Return** or **Fire**.
-**Prev** and **Next** change the page. With the keys, moving past the last row reaches
-them, and the button lights up. **Esc**, **Cancel** or a right click closes the list.
+**Left** and **Right** turn the page, and so do **Prev** and **Next**: after the last page
+comes the first again. Holding the mouse button on **Prev** or **Next** turns page after
+page. Typing a slot number goes to that slot: **2**, **0** and **0** go to slot 200. With
+the keys, moving past the last row reaches **Prev** and **Next**, and the button lights up.
+**Esc**, **Cancel** or a right click closes the list.
 
 | In the list | Meaning |
 | --- | --- |
@@ -351,7 +356,8 @@ them, and the button lights up. **Esc**, **Cancel** or a right click closes the 
 | `DRAFT` | An unfinished track. It can be saved and continued later. |
 | `READY` | A finished track. It appears in Practise. |
 | `INVALID` | The track did not pass its checks. |
-| `UNREADABLE` | The slot cannot be read. |
+| `UNREADABLE` | The file cannot be read. Nothing is saved over it. |
+| `NEWER VERSION` | A newer version of the game saved this track. Nothing is saved over it. |
 
 The first save of a new track selects the first free row. Saving over a used slot asks
 first: **Replace** goes on, **Cancel** goes back.
@@ -360,9 +366,9 @@ Then you name the track.
 
 ![Typing a name](images/track-editor/save-name.png)
 
-A name has 1-24 letters, digits or spaces. A new track offers `TRACK nn` from its row:
-the first letter you type replaces it, **Backspace** edits it and **Return** or **Fire**
-keeps it. **Space** types a space here.
+A name has 1-24 letters, digits or spaces. A new track offers `TRACK` and its slot number,
+such as `TRACK004`: the first letter you type replaces it, **Backspace** edits it and
+**Return** or **Fire** keeps it. **Space** types a space here.
 
 **New**, **Load** and **Exit** protect unsaved changes. They ask first:
 
@@ -376,24 +382,92 @@ keeps it. **Space** types a space here.
 
 ### Where the tracks are
 
-Each slot is a file in the install directory: `Track01.sct` to `Track32.sct`, with lap
-records in `Track01.rec` to `Track32.rec` and the list in `TrackIndex`.
+The tracks are files in the `tracks` drawer of the install, one file for each slot: slot 1
+is `Track001.sct` and slot 512 is `Track512.sct`. The lap records of a track are in the file
+of the same name ending in `.rec`, such as `Track001.rec`. The installer makes the empty
+`tracks` drawer and its icon. The track files have no icons, so the drawer's window lists
+all its files by name.
 
-- Slots 01, 02 and 03 hold the example tracks **BUILD**, **BUILD 2** and **BUILD 3** until
-  you save over them. They are ready to drive. Deleting `Track01.sct`, `Track02.sct` or
-  `Track03.sct` brings that track back.
-- Keep the install on a writable volume.
-- With the icon's default settings WHDLoad writes a save to the hard disk at once, and
-  the display goes blank for a moment while it does.
-- To back up tracks, copy the files. Copy them between installs under the same names.
-- A file renamed to another slot number shows as `UNREADABLE`. To move a track to
-  another slot, load it and save it there.
+- Slots 1, 2 and 3 hold the example tracks **BUILD**, **BUILD 2** and **BUILD 3** until
+  you save over them. They are ready to drive. Deleting `Track001.sct`, `Track002.sct` or
+  `Track003.sct` brings that track back.
+- The file name is the slot. Renaming `Track007.sct` to `Track020.sct` moves the track to
+  slot 20. Rename its `.rec` file the same way, and the records go with it.
+- To back up your tracks, copy the `tracks` drawer. To take tracks to another install,
+  copy the files into its `tracks` drawer under the same names.
+- The [Track File Format](track-format.md) describes the files byte by byte.
+- Keep the install on a writable volume. Without the `tracks` drawer nothing is saved,
+  and line 2 says `No tracks drawer. Nothing saved.`
+- Each save writes one file at once, and the display goes blank for a moment while
+  WHDLoad writes it. After a write WHDLoad waits for the time set by the tool type
+  `WRITEDELAY=10` of the icon, 0.2 seconds. Some file systems write their data to the disk
+  a little later; there, a reset straight after a save can lose that save. If that
+  happens, raise `WRITEDELAY` in the icon's tool types, for example to WHDLoad's own
+  default 150, that is 3 seconds.
+
+## Tracks from an older version
+
+Versions 1.6.0 to 2.2.0 kept the tracks in the install directory itself, as `Track01.sct`
+to `Track32.sct` with the records in `Track01.rec` to `Track32.rec`. The editor does not
+read these files. The game imports them into the `tracks` drawer instead:
+
+1. Copy the old `.sct` and `.rec` files into the directory of the new install, next to
+   its icon. Do not put them into `tracks`.
+2. Start the game. Before the title menu it asks `Import old tracks?` and tells how many
+   tracks and records it found.
+
+   ![The import question](images/track-editor/import-question.png)
+
+3. **Yes** imports them. The game counts the files it writes, for example `Importing 2/8`
+   with the name of the track, and at the end tells what it did:
+
+   ![After the import](images/track-editor/import-summary.png)
+
+4. **Keep old files** leaves the old files where they are. **Delete old files** deletes
+   the old files whose tracks or records are now in `tracks`, and `TrackIndex`. An old
+   file that is protected from deletion stays. When the import wrote nothing, for example
+   because every track was already there, the game says `Nothing new to import`. When
+   none of the old files is in `tracks`, for example because all of them were skipped,
+   the summary offers only **Continue**.
+
+How the import decides:
+
+- A track keeps its number when that slot is free: old track 07 becomes slot 7. A slot
+  is not free when `tracks` has a track file or a records file in it. Then the track goes
+  to the first free slot, and the summary says so.
+- Old tracks 01 to 03 take the place of the example tracks in slots 1 to 3, unless the
+  example track there already has records in `tracks`. Then the example track keeps its
+  slot and records, and the old track goes to the first free slot.
+- The records go with their track. Old records of the example track **BUILD** go to
+  **BUILD**. When the track already has records in `tracks`, each old time that is
+  better goes into them with its driver's name, and the other times stay.
+- A track that is already in `tracks`, also one imported before and renamed since, is
+  not copied again. The summary says it was already there. A track whose shape you
+  changed after the import counts as another track, and the old one is copied again.
+- A file that cannot be read, and records whose track is not there, are skipped and left
+  as they are. Files the import did not take are never deleted, and neither are the season
+  saves.
+- The game reads back every file it writes. If one does not match, the import stops with
+  `Import stopped` and `A file read back wrong`, and no old file is deleted.
+- Without the `tracks` drawer the game does not ask.
+
+**No** is also an answer: the game does not ask again when it starts. While old track files
+are in the install directory, **Practise** has the row **Import Old Tracks**, which asks the
+same question. Use it also for old files you copy in later. After **Keep old files** the
+row stays until you delete the old files yourself.
 
 ## Driving and racing your tracks
 
 Choose **Single Player League**, then **Practise**, then **Custom Tracks**. The list shows
-your saved **Ready** tracks. Tracks that are open or do not pass the checks stay as
-drafts in the editor.
+your saved **Ready** tracks with their slot numbers, 16 on a page.
+
+![Custom Tracks](images/track-editor/custom-tracks.png)
+
+It works like the Save and Load lists: **Fire**, **Return** or **Space** chooses a track,
+**Left** and **Right** turn the page, and typing a number goes to the first track from that
+slot on. **Esc** goes back to Practise. Without a Ready track the menu says
+`No ready track`. Tracks that are open or do not pass the checks stay as drafts in the
+editor.
 
 Choose a track, and the game asks how to drive it:
 
@@ -427,9 +501,9 @@ times for the session only.
 After Practise, choose **Track Editor** in the track menu to go on with your project.
 Driving does not replace what is in the editor.
 
-`Records error: Retry` means records could not be loaded or saved. Check the install
-and retry, or choose `Use session times only`. That gives up the pending record, not your
-saved track.
+`Records error: Retry` means records could not be loaded or saved, for example because the
+install has no `tracks` drawer. Check the install and retry, or choose
+`Use session times only`. That gives up the pending record, not your saved track.
 
 ## Controls
 
@@ -510,10 +584,9 @@ the gap and the landing.
 | Line 2 | Meaning |
 | --- | --- |
 | `Track saved.` / `Track loaded.` | Done. |
-| `Save failed.` / `Load failed.` / `Wrong or missing disk.` | It did not complete. A failed save keeps the track in memory, so do not leave the editor if it holds unsaved work. |
+| `Save failed.` / `Load failed.` | It did not complete. A failed save keeps the track in memory, so do not leave the editor if it holds unsaved work. |
+| `No tracks drawer. Nothing saved.` | The install has no `tracks` drawer, see [Where the tracks are](#where-the-tracks-are). |
 | `Empty slot.` | There is nothing to load in that row. |
-| `Saved, but the index needs recovery.` | The track was saved but the list was not. Keep the install as it is. |
-| `Index recovered from records.` | The list was rebuilt, for example after copying files. The next save writes it. |
 | `Test needs a Ready track.` | Close the track first. |
 | `Place or cancel the section first.` | **Test** does not work while a section is being tried. |
 | `Let go of the key first.` | A key is still held down. |
@@ -551,7 +624,7 @@ the gap and the landing.
 ## Limits and older tracks
 
 - A track has up to 78 road pieces on a map of 16 × 16 squares.
-- There are 32 save slots.
+- There are 512 save slots.
 - A track must leave three squares behind and ahead of the start along its heading.
 
 Tracks saved by older versions keep the shape they had. The choices then show **Prev**
@@ -559,4 +632,6 @@ and **Next** instead of the turn and slope buttons, as they also do when you rep
 section, and **Del** removes one road piece at a time from the end. Use **New** to start a track with whole original
 sections. Some of the oldest tracks stay as drafts and cannot be driven.
 
-Saved tracks from the 16-slot game disks cannot be converted.
+Tracks of versions 1.6.0 to 2.2.0 come in through the import, see
+[Tracks from an older version](#tracks-from-an-older-version). Saved tracks from the
+16-slot game disks cannot be converted.

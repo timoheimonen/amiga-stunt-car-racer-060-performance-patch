@@ -12,6 +12,7 @@
 WHDLF_NoError           equ 1<<1        ; resload errors quit with a requester
 WHDLF_EmulTrap          equ 1<<2        ; forward TRAP #n to the program's vectors
 WHDLF_ClearMem          equ 1<<12       ; clear BaseMem and ExpMem instead of filling
+WHDLF_Examine           equ 1<<13       ; cache every file and directory for resload_Examine
 
 TDREASON_OK             equ -1
 TDREASON_WRONGVER       equ 9
@@ -20,11 +21,14 @@ TDREASON_OSEMUFAIL      equ 10
 resload_Abort           equ $04
 resload_LoadFile        equ $08
 resload_SaveFile        equ $0c
+resload_ListFiles       equ $14
 resload_FlushCache      equ $20
 resload_GetFileSize     equ $24
 resload_Control         equ $34
 resload_LoadFileOffset  equ $4c
 resload_Delay           equ $54
+resload_DeleteFile      equ $58
+resload_Examine         equ $78
 
 WHDLTAG_ATTNFLAGS_GET   equ $88000000   ; TAG_USER+$8000000: exec AttnFlags
 WHDLTAG_BUTTONWAIT_GET  equ $88000006   ; option ButtonWait/S: -1 or 0

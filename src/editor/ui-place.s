@@ -9,12 +9,11 @@
 PLACE_MAP_X equ 96
 PLACE_MAP_Y equ 8
 PLACE_MAP_PIXELS equ 128
-PLACE_LAST_CELL equ 15
+PLACE_LAST_CELL equ MAP_CELLS-1
 PLACE_ON equ 1
 PLACE_OFF equ 13
 PLACE_LINES equ 7
-PLACE_CELL equ 2048
-RAW_T equ $14
+PLACE_CELL equ MAP_CELL
 
 ; Keeps the track, reads where its start stands.
 place_enter:
@@ -23,14 +22,14 @@ place_enter:
         clr.w place_fire-module_start(a5)
         clr.w place_arrow-module_start(a5)
         moveq #0,d0
-        move.b editor_track+71(pc),d0
+        move.b editor_track+SCTR_PIECES+PIECE_CELL(pc),d0
         move.w d0,d1
         andi.w #PLACE_LAST_CELL,d0
         move.w d0,place_x-module_start(a5)
-        lsr.w #4,d1
+        lsr.w #MAP_CELL_BITS,d1
         move.w d1,place_z-module_start(a5)
         moveq #3,d0
-        and.b editor_track+69(pc),d0
+        and.b editor_track+SCTR_PIECES+PIECE_ROT(pc),d0
         move.w d0,place_rot-module_start(a5)
         rts
 
@@ -57,7 +56,7 @@ place_valid:
 
 ; What L2 says of the place -> A0.
 place_text:
-        lea place_text_refused(pc),a0
+        lea ui_reason_start(pc),a0
         bsr.s place_valid
         beq.s .done
         lea place_text_hint(pc),a0
@@ -67,18 +66,16 @@ place_text:
 place_commit:
         bsr.s place_valid
         bne.s .fits
-        lea place_text_refused(pc),a0
+        lea ui_reason_start(pc),a0
         bra ui_refuse
-.fits:  move.b place_rot+1(pc),editor_track+69-module_start(a5)
+.fits:  move.b place_rot+1(pc),editor_track+SCTR_PIECES+PIECE_ROT-module_start(a5)
         move.w place_z(pc),d0
         lsl.w #4,d0
         or.w place_x(pc),d0
-        move.b d0,editor_track+71-module_start(a5)
+        move.b d0,editor_track+SCTR_PIECES+PIECE_CELL-module_start(a5)
         bsr place_leave
         move.w #1,free_open_due-module_start(a5)
-        move.l ui_ms(pc),d0
-        addi.l #UI_PLACE_MS,d0
-        move.l d0,ui_place_end-module_start(a5)
+        bsr ui_place_guard
         bra editing_changed
 
 place_turn:
@@ -109,16 +106,16 @@ place_click:
 ; The keys of the page. A stick moves the start, Fire held turns it with the
 ; sideways move, and a short Fire places it when it is let go.
 place_keys:
-        cmpi.b #$b3,editor_input_keys+$36(a5)       ; N
+        cmpi.b #KEY_DOWN,editor_input_keys+$36(a5)       ; N
         beq.s .new
-        cmpi.b #$b3,editor_input_keys+$45(a5)       ; Esc
+        cmpi.b #KEY_DOWN,editor_input_keys+$45(a5)       ; Esc
         beq.s .exit
-        cmpi.b #$b3,editor_input_keys+RAW_T(a5)
+        cmpi.b #KEY_DOWN,editor_input_keys+RAW_T(a5)
         beq.s .turn
-        cmpi.b #$b3,editor_input_keys+UI_RAW_SPACE(a5)
+        cmpi.b #KEY_DOWN,editor_input_keys+RAW_SPACE(a5)
         beq.s .space
         move.w editor_directions(pc),d4
-        btst #UI_FIRE_BIT,editor_input_keys+96(a5)
+        btst #EDITOR_INPUT_FIRE,editor_input_keys+EDITOR_INPUT_JOY(a5)
         bne.s .fire
         tst.w place_fire-module_start(a5)
         beq .steer
@@ -151,22 +148,8 @@ place_keys:
         subq.w #2,place_rot-module_start(a5)
 .right: move.w #1,place_turned-module_start(a5)
         bra place_turn
-.steer: cmp.w place_arrow(pc),d4
-        bne.s .fresh
-        tst.w d4
-        beq .done
-        move.w editor_ticks(pc),d0
-        sub.w place_repeat(pc),d0
-        bmi.s .done
-        cmpi.w #8,d0
-        blo.s .done
-        move.w editor_ticks(pc),place_repeat-module_start(a5)
-        bra.s .move
-.fresh: move.w d4,place_arrow-module_start(a5)
-        move.w editor_ticks(pc),d0
-        addi.w #12,d0
-        move.w d0,place_repeat-module_start(a5)
-        tst.w d4
+.steer: lea place_arrow(pc),a0
+        bsr editor_arrow_repeat
         beq.s .done
 .move:  move.w place_x(pc),d0
         move.w place_z(pc),d1
@@ -218,13 +201,13 @@ place_band:
         bne.s .x
         moveq #0,d0
         move.l d4,d1
-        move.l #32768,d2
+        move.l #MAP_SIZE,d2
         move.l d4,d3
         bra.s place_line
 .x:     move.l d4,d0
         moveq #0,d1
         move.l d4,d2
-        move.l #32768,d3
+        move.l #MAP_SIZE,d3
         bra.s place_line
 
 ; D0, D1 in the square of the start -> on the map. Keeps D2, D3.
@@ -272,9 +255,7 @@ place_lines:
         dc.w 1024,6144,100,4800
         dc.w 1024,6144,1948,4800
 
-place_text_name: dc.b 'Start line',0
 place_text_hint: dc.b 'Click a square. Right click turns the start.',0
-place_text_refused: dc.b 'Too close to the edge: no road back.',0
         even
 ; The view compares these four words: keep them together.
 place_active: dc.w 0
@@ -283,5 +264,5 @@ place_z: dc.w 0
 place_rot: dc.w 0
 place_fire: dc.w 0
 place_turned: dc.w 0
-place_arrow: dc.w 0
+place_arrow: dc.w 0             ; with place_repeat, editor_arrow_repeat's pair
 place_repeat: dc.w 0

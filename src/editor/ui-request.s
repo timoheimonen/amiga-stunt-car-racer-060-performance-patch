@@ -8,13 +8,8 @@
 ; the keyboard queued, and the handlers stay the handlers of the keyboard.
 UI_REQUEST_KEY equ 1
 UI_REQUEST_CALL equ 2
-UI_RAW_ESC equ $45
-UI_RAW_SPACE equ $40
-UI_RAW_RETURN equ $44
-UI_FIRE_BIT equ 4
-UI_LIST_FIRST_Y equ 4
-UI_HOLD_DELAY equ 20
-UI_HOLD_RATE equ 8
+UI_HOLD_DELAY equ EDITOR_REPEAT_DELAY
+UI_HOLD_RATE equ EDITOR_REPEAT_RATE
 
 ; After editor_input_next: one press or hold becomes one request.
 ui_begin:
@@ -24,11 +19,8 @@ ui_begin:
         beq.s .request
         tst.w ui_request-module_start(a5)
         bne.s .request
-        move.w editor_input_blocked(pc),d0
-        or.w editor_input_holdoff(pc),d0
-        bne.s .busy
-        bsr ui_page_now
-        cmp.w ui_press_page(pc),d0
+        move.w ui_press_page(pc),d1
+        bsr ui_press_live
         beq.s .hit
 .busy:  clr.w ui_press_pending-module_start(a5)
         bsr ui_drop
@@ -51,13 +43,13 @@ ui_key_press:
         lea editor_input_captured(a5),a0
         tst.b (a0,d1.w)
         bne.s .held
-        cmpi.w #UI_RAW_SPACE,d1
+        cmpi.w #RAW_SPACE,d1
         bne.s .free
-        btst #UI_FIRE_BIT,editor_input_keys+96(a5)
+        btst #EDITOR_INPUT_FIRE,editor_input_keys+EDITOR_INPUT_JOY(a5)
         bne.s .held
 .free:  lea editor_input_keys(a5),a0
         move.b (a0,d1.w),ui_key_old-module_start(a5)
-        move.b #$b3,(a0,d1.w)
+        move.b #KEY_DOWN,(a0,d1.w)
         move.w d1,ui_key-module_start(a5)
         rts
 .held:  lea ui_text_held(pc),a0
@@ -84,6 +76,17 @@ ui_after_render:
         beq.s .done
         clr.w ui_press_pending-module_start(a5)
         bsr ui_drop
+.done:  rts
+
+; D1 the page a press began on: Z set (beq) when the press still counts, with
+; the input neither blocked nor held off and that page still on the screen;
+; then D0 = that page. D0 changes, the other registers are kept.
+ui_press_live:
+        move.w editor_input_blocked(pc),d0
+        or.w editor_input_holdoff(pc),d0
+        bne.s .done
+        bsr ui_page_now
+        cmp.w d1,d0
 .done:  rts
 
 ui_drop:
@@ -153,7 +156,7 @@ ui_hit_begin:
         moveq #0,d0
         move.b UI_ENTRY_ACTION(a3),d0
         move.w #UI_REQUEST_KEY<<8,d1
-        btst #6,d5
+        btst #UI_BIT_CALL,d5
         beq.s .kind
         move.w #UI_REQUEST_CALL<<8,d1
 .kind:  or.w d1,d0
@@ -225,42 +228,28 @@ ui_call:
         add.w d1,d1
         move.w ui_calls(pc,d1.w),d1
         jmp ui_calls(pc,d1.w)
-ui_calls:
-        dc.w ui_call_place-ui_calls
-        dc.w ui_call_undo-ui_calls
-        dc.w ui_call_delete-ui_calls
-        dc.w ui_call_free-ui_calls
-        dc.w ui_call_starter_0-ui_calls
-        dc.w ui_call_starter_1-ui_calls
-        dc.w ui_call_starter_2-ui_calls
-        dc.w ui_call_new-ui_calls
-        dc.w ui_call_step_back-ui_calls
-        dc.w ui_call_step_on-ui_calls
-        dcb.w 11,ui_call_section-ui_calls
-        dc.w ui_call_redo-ui_calls
-        dc.w ui_call_slot_previous-ui_calls
-        dc.w ui_call_slot_next-ui_calls
+        ; ui_calls, the handlers of the rows.
+        include "ui-calls.s"
 ui_call_free:
         rts
 
-; Same order as the Fire confirm in editor_building_keys. A rejected ghost keeps
-; Choose. The next section opens at once, so Primary stays under the pointer.
+; The Fire confirm (building_confirm). A rejected ghost keeps Choose. The next
+; section opens at once, so Primary stays under the pointer.
 ui_call_place:
-        tst.w building_candidate_count-module_start(a5)
+        bsr building_confirm
         beq.s .done
-        bsr building_commit
-        cmpi.l #3,editor_track+24-module_start(a5)
-        blo.s .placed
-        tst.w building_mode-module_start(a5)
-        bne.s .done
-.placed:
-        move.l ui_ms(pc),d0
-        addi.l #UI_PLACE_MS,d0
-        move.l d0,ui_place_end-module_start(a5)
-        bsr.s ui_choose_end
+        bsr.s ui_place_guard
         bra.s ui_continue
 .done:  rts
 
+; Rows with the place guard wait UI_PLACE_MS from now. D0 changes.
+ui_place_guard:
+        move.l ui_ms(pc),d0
+        addi.l #UI_PLACE_MS,d0
+        move.l d0,ui_place_end-module_start(a5)
+        rts
+
+; Choose ends: no candidates, no mode.
 ui_choose_end:
         clr.w building_mode-module_start(a5)
         clr.w building_candidate_count-module_start(a5)
@@ -268,10 +257,10 @@ ui_choose_end:
 
 ; After a change on the Choose page: choose on while the tail is selected.
 ui_continue:
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .done
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bne.s .done
         move.w #1,building_mode-module_start(a5)
         bsr building_options
@@ -289,7 +278,7 @@ ui_call_redo:
 
 ui_call_delete:
         bsr.s ui_choose_end
-        move.w editor_track+28(pc),building_selected-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),building_selected-module_start(a5)
         bsr editing_delete
         bra.s ui_continue
 
@@ -309,13 +298,13 @@ ui_call_starter_2:
         bra editing_request
 
 ui_call_slot_previous:
-        moveq #UI_LIST_SLOT_PREVIOUS,d0
+        move.w #UI_LIST_SLOT_PREVIOUS,d0
         bra.s ui_slot_confirm
 ui_call_slot_next:
-        moveq #UI_LIST_SLOT_NEXT,d0
+        move.w #UI_LIST_SLOT_NEXT,d0
 ui_slot_confirm:
         move.w d0,storage_slot-module_start(a5)
-        moveq #UI_RAW_RETURN,d1
+        moveq #RAW_RETURN,d1
         bra ui_key_press
 
 ui_call_step_back:
@@ -348,8 +337,6 @@ ui_text_view: dc.b 'Hold the right button to look. WASD moves.',0
 ui_text_held: dc.b 'Let go of the key first.',0
 ui_text_busy: dc.b 'Still drawing. Click again.',0
 ui_text_wait: dc.b 'One moment.',0
-ui_text_stays: dc.b 'The start section stays.',0
-ui_text_gap: dc.b 'Fill the gap first.',0
         even
 ui_hold_row: dc.l 0
 ui_hits: dc.l 0

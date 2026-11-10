@@ -6,8 +6,8 @@
 ; Track Editor bar: L1 and L2. The text routines of a render say what they
 ; have, the most important text of a pass goes to L2, and ui_status_flush draws
 ; only a line that changed.
-UI_L1_Y equ 184-145
-UI_L2_Y equ 192-145
+UI_L1_Y equ 184-UI_BAR_TOP
+UI_L2_Y equ 192-UI_BAR_TOP
 UI_TEXT_X equ 3
 UI_L1_WIDTH equ 192
 UI_L2_WIDTH equ 264
@@ -15,7 +15,6 @@ UI_COUNT_X equ 195
 UI_COUNT_WIDTH equ 30
 UI_WORD_X equ 231
 UI_WORD_WIDTH equ 36
-UI_LINE_CHARS equ 44
 UI_SAY_HINT equ 1
 UI_SAY_UNSAVED equ 2
 UI_SAY_REASON equ 3

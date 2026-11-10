@@ -145,7 +145,7 @@ preview_arrow_pixel:
         bgt.s .out
         movem.l d2-d4/a1,-(sp)
         move.w d7,d2
-        mulu.w #40,d2
+        mulu.w #SCREEN_ROW_BYTES,d2
         move.w d1,d3
         lsr.w #3,d3
         add.w d3,d2
@@ -161,7 +161,7 @@ preview_arrow_pixel:
 .clear:
         bclr d1,(a1)
 .next_plane:
-        lea 8000(a1),a1
+        lea SCREEN_PLANE_BYTES(a1),a1
         dbra d4,.plane
         movem.l (sp)+,d2-d4/a1
 .out:

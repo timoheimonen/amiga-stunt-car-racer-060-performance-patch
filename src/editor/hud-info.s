@@ -13,7 +13,7 @@ hud_measure:
         clr.w hud_aid_valid-module_start(a5)
         move.w block_render_active(pc),hud_choosing-module_start(a5)
         move.w block_preview_valid(pc),hud_preview_valid-module_start(a5)
-        move.w editor_track+30(pc),hud_closes-module_start(a5)
+        move.w editor_track+SCTR_CLOSED(pc),hud_closes-module_start(a5)
         ; A preview that fills the gap closes what is open.
         tst.w block_render_active-module_start(a5)
         beq.s .fill_done
@@ -25,25 +25,25 @@ hud_measure:
         bne.s .fill_done
         move.w #1,hud_closes-module_start(a5)
 .fill_done:
-        move.w editor_track+28(pc),hud_count-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),hud_count-module_start(a5)
         tst.w block_render_active-module_start(a5)
         beq.s .counted
         tst.w block_preview_valid-module_start(a5)
         bne.s .counted
-        move.w block_original_track+28(pc),hud_count-module_start(a5)
+        move.w block_original_track+SCTR_COUNT(pc),hud_count-module_start(a5)
 .counted:
         tst.w model_valid-module_start(a5)
         beq .done
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo .done
         tst.w hud_choosing-module_start(a5)
         beq.s .measure
         tst.w hud_preview_valid-module_start(a5)
         beq .done
 .measure:
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne .done
-        tst.w editor_track+28-module_start(a5)
+        tst.w editor_track+SCTR_COUNT-module_start(a5)
         beq .done
         bsr model_tail_row             ; open end: last exit row
         ; The goal: the first entrance row of the start line or after the gap.
@@ -147,7 +147,7 @@ hud_block_line:
         bsr block_descriptor
         movea.l a4,a0
         adda.w 2(a4),a0
-        bsr hud_put_text
+        bsr text_append
         move.w (sp)+,d0
         lsr.w #2,d0
         lsl.w #2,d0
@@ -177,7 +177,7 @@ hud_section_line:
         bsr hud_section_name
 .named:
         lea hud_line(pc),a1
-        bsr hud_put_text
+        bsr text_append
         move.b #' ',(a1)+
         ; Sections before it, then all of them.
         moveq #0,d0
@@ -186,7 +186,7 @@ hud_section_line:
         bne.s .before
         move.w d5,d7
 .before:
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .counted
         addq.w #1,d5
         moveq #1,d4
@@ -195,11 +195,11 @@ hud_section_line:
 .counted:
         move.w d7,d0
         addq.w #1,d0
-        bsr hud_put_decimal
+        bsr text_decimal
         lea hud_of_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         move.w d5,d0
-        bsr hud_put_decimal
+        bsr text_decimal
         clr.b (a1)
         lea hud_line(pc),a0
         rts
@@ -215,8 +215,8 @@ hud_section_name:
         bne.s .next
         lea 8(a4),a2
         move.w d6,d0
-        lsl.w #3,d0
-        lea editor_track+68(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES+PIECE_KIND(pc),a0
         adda.w d0,a0
         move.w d7,d1
         subq.w #1,d1
@@ -236,15 +236,13 @@ hud_section_name:
         lea hud_section_text(pc),a0
         rts
 
-UI_LEVEL_NONE equ 15
-
 ; L2 for whole-block tracks; otherwise the practice status.
 hud_status_line:
         tst.w place_active-module_start(a5)
         bne .place
         tst.w overview_active-module_start(a5)
         bne .overview
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo .practice
         tst.w building_mode-module_start(a5)
         beq.s .chosen
@@ -272,10 +270,10 @@ hud_status_line:
         bra .draw
 .route: cmpi.w #1,block_mode-module_start(a5)
         bne.s .aid
-        tst.w block_original_track+30-module_start(a5)
+        tst.w block_original_track+SCTR_CLOSED-module_start(a5)
         bne.s .aid
         bsr hud_route_level
-        cmpi.w #UI_LEVEL_NONE,d2
+        cmpi.w #FIELD_NO_ROUTE,d2
         bne.s .way
         lea hud_no_way_text(pc),a0
         lea hud_no_way_gap_text(pc),a1
@@ -292,7 +290,7 @@ hud_status_line:
 .count: bsr hud_route_text
         bra.s .draw
 .browse:
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .practice
         cmpi.w #1,practice_reason-module_start(a5)
         bne.s .practice
@@ -346,18 +344,18 @@ hud_route_level:
         lea block_info(pc),a0
         moveq #0,d2
         move.b (a0,d0.w),d2
-        lsr.b #4,d2
+        lsr.b #FIELD_INFO_LEVEL_SHIFT,d2
         rts
 
 ; "At least 3 more sections to the start." D2 sections.
 hud_route_text:
         lea hud_line(pc),a1
         lea hud_least_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         move.w d2,d0
-        bsr hud_put_decimal
+        bsr text_decimal
         lea hud_more_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         cmpi.w #1,d2
         beq.s .one
         move.b #'s',(a1)+
@@ -366,7 +364,7 @@ hud_route_text:
         lea hud_to_gap_text(pc),a1
         bsr hud_goal_text
         movea.l a2,a1
-        bsr hud_put_text
+        bsr text_append
         clr.b (a1)
         lea hud_line(pc),a0
         rts
@@ -379,7 +377,7 @@ hud_build_aid:
         lea hud_gap_text(pc),a1
         bsr hud_goal_text
         movea.l a2,a1
-        bsr hud_put_text
+        bsr text_append
         move.w hud_side(pc),d0
         beq.s .ahead
         lea hud_right_text(pc),a2
@@ -388,9 +386,9 @@ hud_build_aid:
         lea hud_left_text(pc),a2
 .side:
         move.b #' ',(a1)+
-        bsr hud_put_decimal
+        bsr text_decimal
         movea.l a2,a0
-        bsr hud_put_text
+        bsr text_append
 .ahead:
         move.w hud_ahead(pc),d0
         beq.s .rise
@@ -400,9 +398,9 @@ hud_build_aid:
         lea hud_back_text(pc),a2
 .along:
         move.b #' ',(a1)+
-        bsr hud_put_decimal
+        bsr text_decimal
         movea.l a2,a0
-        bsr hud_put_text
+        bsr text_append
 .rise:
         move.w hud_rise(pc),d0
         ext.l d0
@@ -410,11 +408,11 @@ hud_build_aid:
         move.w hud_turn(pc),d0
         beq.s .end
         lea hud_face_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         cmpi.w #4,d0
         bne.s .sided
         lea hud_reverse_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         bra.s .end
 .sided:
         move.b #'L',(a1)+
@@ -425,7 +423,7 @@ hud_build_aid:
         addq.w #8,d0
 .angle:
         mulu.w #45,d0
-        bsr hud_put_decimal
+        bsr text_decimal
 .end:
         clr.b (a1)
         lea hud_line(pc),a0
@@ -441,11 +439,11 @@ hud_put_rise:
         lea hud_down_text(pc),a0
 .text:
         move.w d0,-(sp)
-        bsr hud_put_text
+        bsr text_append
         move.w (sp),d0
         lsr.w #3,d0
         beq.s .eighths
-        bsr hud_put_decimal
+        bsr text_decimal
         move.b #' ',(a1)+
 .eighths:
         move.w (sp)+,d0
@@ -454,7 +452,7 @@ hud_put_rise:
         subq.l #1,a1
         bra.s .done
 .fraction:
-        bsr hud_put_decimal
+        bsr text_decimal
         move.b #'/',(a1)+
         move.b #'8',(a1)+
 .done:  rts
@@ -465,75 +463,71 @@ hud_put_rise:
 ; Today's Coaster descent begins with kind 48 before kind 97. A0 text.
 hud_odd_text:
         lea hud_odd_large(pc),a0
-        lea editor_track+68(pc),a1
-        move.w editor_track+28(pc),d1
+        lea editor_track+SCTR_PIECES+PIECE_KIND(pc),a1
+        move.w editor_track+SCTR_COUNT(pc),d1
         subq.w #2,d1
         bmi.s .steep
 .find:  cmpi.b #48,(a1)
         bne.s .next
-        cmpi.b #45,8(a1)
+        cmpi.b #45,PIECE_BYTES(a1)
         beq.s .found
-.next:  addq.l #8,a1
+.next:  addq.l #PIECE_BYTES,a1
         dbra d1,.find
 .steep: lea hud_odd_steep(pc),a0
 .found: rts
 
-; Right end of L1: "20/64" and the track's word. A star marks unsaved changes,
+; Right end of L1: the count and the limit, "20/78", and the track's word. A star marks unsaved changes,
 ; which L2 can not always say.
 hud_count_line:
         lea ui_next_count(pc),a1
         move.w hud_count(pc),d0
-        bsr hud_put_decimal
+        bsr text_decimal
         lea hud_capacity_text(pc),a0
-        bsr hud_put_text
+        bsr text_append
         clr.b (a1)
         lea ui_next_word(pc),a1
         lea hud_open_text(pc),a0
-        cmpi.w #2,practice_class-module_start(a5)
+        cmpi.w #PRACTICE_READY,practice_class-module_start(a5)
         bne.s .word
         lea hud_ready_text(pc),a0
-.word:  bsr hud_put_text
+.word:  bsr text_append
         tst.w building_dirty-module_start(a5)
         beq.s .end
         move.b #'*',(a1)+
 .end:   clr.b (a1)
         rts
 
-; Copy a zero-terminated string A0 to A1 without its terminator.
-hud_put_text:
-        move.b (a0)+,d1
-        beq.s .done
-        move.b d1,(a1)+
-        bra.s hud_put_text
-.done:  rts
-
-; Unsigned decimal of D0.w to A1. D0/D1 destroyed.
-hud_put_decimal:
-        andi.l #$ffff,d0
-        cmpi.w #10,d0
-        blo.s .digit
-        divu.w #10,d0
-        move.l d0,-(sp)
-        andi.l #$ffff,d0
-        bsr hud_put_decimal
-        move.l (sp)+,d0
-        swap d0
-.digit:
-        addi.b #'0',d0
-        move.b d0,(a1)+
+; A0 text appended at A1 with its zero; A1 at that zero, so the next text
+; goes over it. Only A0 and A1 change.
+text_append:
+        move.b (a0)+,(a1)+
+        bne.s text_append
+        subq.l #1,a1
         rts
 
-hud_fail_texts:
-        dc.w .red-hud_fail_texts,.limit-hud_fail_texts,.map-hud_fail_texts
-        dc.w .height-hud_fail_texts,.low-hud_fail_texts,.next-hud_fail_texts
-        dc.w .overlap-hud_fail_texts,.low-hud_fail_texts
-.red: dc.b 'This block cannot be added here.',0
-.limit: dc.b 'Too long: 78 pieces is the limit.',0
-.map: dc.b 'Runs off the map.',0
-.height: dc.b 'Road would go too high.',0
-.low: dc.b 'Road would go too low.',0
-.next: dc.b 'Next section would not join.',0
-.overlap: dc.b 'Crosses road already built.',0
+; D0.w unsigned in decimal at A1, without leading zeros; A1 after it. Only A1
+; changes.
+text_decimal:
+        movem.l d0-d2,-(sp)
+        andi.l #$ffff,d0
+        moveq #0,d2
+.split: divu.w #10,d0
+        swap d0
+        move.w d0,-(sp)
+        addq.w #1,d2
+        clr.w d0
+        swap d0
+        bne.s .split
+        subq.w #1,d2
+.digit: move.w (sp)+,d1
+        addi.b #'0',d1
+        move.b d1,(a1)+
+        dbra d2,.digit
+        movem.l (sp)+,d0-d2
+        rts
+
+        ; hud_fail_texts: what block_fail says, one text per reason.
+        include "hud-fail-texts.s"
 hud_closes_text: dc.b 'This section closes the track.',0
 hud_no_way_text: dc.b 'No way back from here.',0
 hud_height_text: dc.b 'Reaches the start at the wrong height.',0

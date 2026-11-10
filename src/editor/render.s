@@ -10,12 +10,12 @@ editor_render_adapter:
         ; A dialog covers the view, and storage_modal_text clears the surface.
         tst.w storage_modal-module_start(a5)
         bne .done
-        move.w #1999,d0
+        move.w #SCREEN_PLANE_BYTES/4-1,d0
 .clear:
         move.l #-1,(a0)
-        clr.l 8000(a0)
-        clr.l 16000(a0)
-        move.l #-1,24000(a0)
+        clr.l SCREEN_PLANE_BYTES(a0)
+        clr.l 2*SCREEN_PLANE_BYTES(a0)
+        move.l #-1,3*SCREEN_PLANE_BYTES(a0)
         addq.l #4,a0
         dbra d0,.clear
         tst.w model_valid-module_start(a5)
@@ -23,9 +23,8 @@ editor_render_adapter:
         ; Per-pixel reciprocal-depth buffer lives in unused private Fast.
         tst.w free_wire-module_start(a5)
         bne.s .depth_ready
-        movea.l a5,a0
-        adda.l #$24000,a0
-        move.w #23039,d0       ; 320*144 words, clear as longwords
+        lea DEPTH_BUFFER(a5),a0
+        move.w #DEPTH_BUFFER_BYTES/4-1,d0 ; clear as longwords
 .depth_clear:
         clr.l (a0)+
         dbra d0,.depth_clear
@@ -54,7 +53,7 @@ editor_render_adapter:
         bsr ui_yield
 .piece_go:
         move.w render_piece(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .preview
         cmpi.w #2,building_mode-module_start(a5)
         bne.s .confirmed
@@ -164,12 +163,12 @@ editor_render_adapter:
         cmpi.w #4,segment_index-module_start(a5)
         bne.s .next_segment
         move.w render_piece(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .next_segment
-        lsl.w #3,d0
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a0
         move.l (a0,d0.w),d0
-        cmp.l editor_track+36(pc),d0
+        cmp.l editor_track+SCTR_FINISH(pc),d0
         bne.s .next_segment
         clr.w render_checker-module_start(a5)
 .checker:
@@ -375,8 +374,8 @@ polygon_raster:
         lea polygon_screen(pc),a0
         move.w polygon_count(pc),d7
         subq.w #1,d7
-        move.l #176,d4
-        moveq #32,d5
+        move.l #VIEW_BOTTOM,d4
+        moveq #VIEW_TOP,d5
 .bounds:
         move.l 4(a0),d0
         cmp.l d4,d0
@@ -389,13 +388,13 @@ polygon_raster:
 .bound_next:
         adda.w #12,a0
         dbra d7,.bounds
-        cmpi.l #32,d4
+        cmpi.l #VIEW_TOP,d4
         bge.s .bottom
-        moveq #32,d4
+        moveq #VIEW_TOP,d4
 .bottom:
-        cmpi.l #176,d5
+        cmpi.l #VIEW_BOTTOM,d5
         ble.s .start
-        move.l #176,d5
+        move.l #VIEW_BOTTOM,d5
 .start:
         move.w d5,polygon_bottom-module_start(a5)
         move.w d4,polygon_y-module_start(a5)
@@ -404,10 +403,10 @@ polygon_raster:
         tst.w render_layer-module_start(a5)
         beq.s .range_done
         move.w d4,d0
-        subi.w #32,d0
+        subi.w #VIEW_TOP,d0
         move.w d0,parent_top-module_start(a5)
         move.w d5,d0
-        subi.w #32,d0
+        subi.w #VIEW_TOP,d0
         move.w d0,parent_end-module_start(a5)
 .range_done:
 .row:
@@ -467,7 +466,7 @@ polygon_raster:
         ; All paint bands use the parent road face's depth plane. Projected
         ; integer band vertices must not introduce new rounding planes.
         move.w d4,d0
-        subi.w #32,d0
+        subi.w #VIEW_TOP,d0
         lsl.w #4,d0
         lea polygon_parent_rows(pc),a0
         adda.w d0,a0
@@ -493,9 +492,9 @@ polygon_raster:
         bpl.s .clip_right
         clr.l d5
 .clip_right:
-        cmpi.l #320,d6
+        cmpi.l #SCREEN_WIDTH,d6
         ble.s .span
-        move.l #320,d6
+        move.l #SCREEN_WIDTH,d6
 .span:
         cmp.l d5,d6
         ble.s .advance
@@ -514,14 +513,14 @@ editor_span:
         bpl.s .left
         clr.w d0
 .left:
-        cmpi.w #320,d1
+        cmpi.w #SCREEN_WIDTH,d1
         ble.s .right
-        move.w #320,d1
+        move.w #SCREEN_WIDTH,d1
 .right:
         cmp.w d0,d1
         ble .done
         movea.l draw_surface(pc),a0
-        mulu.w #40,d2
+        mulu.w #SCREEN_ROW_BYTES,d2
         adda.l d2,a0
         move.w d0,d4
         lsr.w #3,d4
@@ -591,7 +590,7 @@ editor_span:
 .set_last:
         or.b d7,(a1)
 .next_plane:
-        adda.w #8000,a0
+        adda.w #SCREEN_PLANE_BYTES,a0
         dbra d2,.plane
 .done:
         movem.l (sp)+,d0-d7/a0-a2
@@ -644,11 +643,11 @@ polygon_edge_depth:
 
         include "src/editor/depth-span.s"
 parent_top: dc.w 0
-parent_end: dc.w 144
+parent_end: dc.w VIEW_BOTTOM-VIEW_TOP
 
 polygon_overlay: dc.w 0
 ; Private Fast scratch, outside the module and preview cache.
-polygon_parent_rows equ $3f000
+polygon_parent_rows equ POLYGON_PARENT_ROWS
 
         include "src/editor/overview.s"
 
@@ -721,11 +720,11 @@ view_polygon:
         move.l (a0),d0
         muls.l #FREE_FOCAL,d0
         divs.l d2,d0
-        addi.l #160,d0
+        addi.l #VIEW_CX,d0
         move.l d0,(a1)+
         muls.l #FREE_FOCAL,d1
         divs.l d2,d1
-        addi.l #100,d1
+        addi.l #VIEW_CY,d1
         move.l d1,(a1)+
         move.l #$1000000,d0
         divu.l d2,d0

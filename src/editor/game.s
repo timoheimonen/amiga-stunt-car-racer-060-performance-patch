@@ -52,6 +52,30 @@ custom_cia_setup:
         sf $f0a8.l
         rts
 
+; custom_menu: 0, or the custom menu the game's menu shows, whose rows the
+; title hook prints. The import's menus come last.
+CUSTOM_MENU_DIVISION equ 1      ; Practise: the divisions and the custom tracks
+CUSTOM_MENU_PAGE equ 2          ; a page of custom tracks
+CUSTOM_MENU_ERROR equ 3         ; Track unavailable
+CUSTOM_MENU_RECORDS equ 4       ; Records error: Retry, or session times only
+CUSTOM_MENU_MODE equ 5          ; Practise or a single race
+IMPORT_MENU_ASK equ 6
+IMPORT_MENU_DONE equ 7          ; summary with Keep / Delete
+IMPORT_MENU_SUMMARY equ 8       ; summary with Continue
+IMPORT_MENU_STOPPED equ 9
+
+; The game's menu ($5b840) as the custom menu the caller put in custom_menu,
+; with the text bank in $5eb75, D2 the last row and D0 the default row. Then
+; custom_menu and the bank are 0 again and A5 = module_start; the low byte of
+; D0 is the chosen row, the other registers are as the menu leaves them.
+custom_menu_run:
+        moveq #28,d1
+        jsr $5b840
+        lea module_start(pc),a5
+        clr.w custom_menu-module_start(a5)
+        clr.b $5eb75
+        rts
+
 ; Custom tracks are for single-player Practice: the original menu stays for
 ; more players ($5eb76) and for a link role ($57c3c). $1ca31 is only the
 ; direction of the last season or link transfer and stays set after a save.
@@ -62,17 +86,21 @@ custom_select:
         bne .legacy
 .divisions:
         lea module_start(pc),a5
-        move.w #1,custom_menu-module_start(a5)
+        move.w #CUSTOM_MENU_DIVISION,custom_menu-module_start(a5)
         move.b #$80,$5eb75
         moveq #3,d2
+        bsr import_practise_rows
         moveq #0,d0
-        moveq #28,d1
-        jsr $5b840
-        lea module_start(pc),a5
-        clr.w custom_menu-module_start(a5)
-        clr.b $5eb75           ; original text bank before every exit branch
+        bsr custom_menu_run     ; the original text bank before every exit branch
+        clr.b SPEED_MENU_ACTIVE
         andi.w #255,d0
-        cmpi.w #1,d0
+        tst.w import_practise-module_start(a5)
+        beq.s .four
+        cmpi.w #3,d0
+        blo.s .four
+        beq.s .import
+        moveq #3,d0            ; Cancel is the fifth row
+.four:  cmpi.w #1,d0
         beq.s .scan
         cmpi.w #2,d0
         beq .editor
@@ -81,6 +109,12 @@ custom_select:
         bra .legacy_result
 .editor:
         bsr editor_enter
+        bra .divisions
+.import:
+        movem.l d1-d7/a0-a6,-(sp)
+        moveq #0,d7
+        bsr import_offer
+        movem.l (sp)+,d1-d7/a0-a6
         bra .divisions
 .scan:
         ; Storage uses full-width registers; original menu/drawing code often
@@ -91,30 +125,41 @@ custom_select:
         tst.w d0
         bne .error
         clr.w custom_count-module_start(a5)
-        lea storage_catalog(pc),a0
+        lea STORAGE_CATALOG(a5),a0
         lea custom_slots(pc),a1
         moveq #0,d1
 .filter:
-        cmpi.w #2,32(a0)
+        cmpi.w #CLASS_READY,CATALOG_CLASS(a0)
         bne.s .next
         move.w d1,(a1)+
         addq.w #1,custom_count-module_start(a5)
 .next:
-        adda.w #64,a0
+        adda.w #CATALOG_ROW,a0
         addq.w #1,d1
-        cmpi.w #32,d1
+        cmpi.w #STORAGE_SLOTS,d1
         blo.s .filter
         clr.w custom_page-module_start(a5)
+        clr.w custom_index-module_start(a5)
 .page:
-        move.w #2,custom_menu-module_start(a5)
+        ; The Ready tracks in the editor's list on its own screen; without one
+        ; the game's menu says so.
+        tst.w custom_count-module_start(a5)
+        beq.s .menu_page
+        move.w #1,custom_pick-module_start(a5)
+        bsr editor_enter
+        lea module_start(pc),a5
+        clr.w custom_pick-module_start(a5)
+        move.w custom_picked(pc),d0
+        beq .divisions
+        subq.w #1,d0
+        move.w d0,storage_slot-module_start(a5)
+        bra.s .prepare
+.menu_page:
+        move.w #CUSTOM_MENU_PAGE,custom_menu-module_start(a5)
         move.b #$40,$5eb75
         moveq #3,d2
         moveq #0,d0
-        moveq #28,d1
-        jsr $5b840
-        lea module_start(pc),a5
-        clr.w custom_menu-module_start(a5)
-        clr.b $5eb75
+        bsr custom_menu_run
         andi.w #255,d0
         cmpi.w #3,d0
         beq .divisions
@@ -126,22 +171,19 @@ custom_select:
         add.w d0,d0
         lea custom_slots(pc),a0
         move.w (a0,d0.w),storage_slot-module_start(a5)
+.prepare:
         movem.l d1-d7/a0-a6,-(sp)
         bsr custom_prepare
         movem.l (sp)+,d1-d7/a0-a6
         tst.w d0
         beq .error
         ; Practise, or a single race against a random computer driver.
-        move.w #5,custom_menu-module_start(a5)
+        move.w #CUSTOM_MENU_MODE,custom_menu-module_start(a5)
         move.b #$40,$5eb75
         moveq #2,d2
         moveq #0,d0
         move.w custom_last_mode(pc),d0
-        moveq #28,d1
-        jsr $5b840
-        lea module_start(pc),a5
-        clr.w custom_menu-module_start(a5)
-        clr.b $5eb75
+        bsr custom_menu_run
         andi.w #255,d0
         cmpi.w #2,d0
         bhs .page
@@ -165,13 +207,11 @@ custom_select:
         tst.w records_error-module_start(a5)
         beq.s .records_ready
 .record_retry:
-        move.w #4,custom_menu-module_start(a5)
+        ; The text bank is 0 here, as after every custom menu.
+        move.w #CUSTOM_MENU_RECORDS,custom_menu-module_start(a5)
         moveq #0,d0
         moveq #1,d2
-        moveq #28,d1
-        jsr $5b840
-        lea module_start(pc),a5
-        clr.w custom_menu-module_start(a5)
+        bsr custom_menu_run
         tst.b d0
         bne.s .records_ready
         movem.l d0-d7/a0-a6,-(sp)
@@ -194,11 +234,10 @@ custom_select:
         clr.w custom_page-module_start(a5)
         bra .page
 .error:
-        move.w #3,custom_menu-module_start(a5)
+        move.w #CUSTOM_MENU_ERROR,custom_menu-module_start(a5)
         moveq #1,d2
         moveq #0,d0
-        moveq #28,d1
-        jsr $5b840
+        bsr custom_menu_run
         bra .divisions
 .legacy:
         jsr $5fb62
@@ -213,35 +252,22 @@ custom_select:
         clr.b $5eb7d
         jmp $5baea
 
-; Reread the selected generation/CRC, validate again, compile privately.
-; The unsaved editor model, undo, selection and saved identity remain owned
-; by the editor. Storage validators only borrow its model buffer.
+; Read the selected track again, check it again (a STAT chunk only lists it),
+; compile privately. The unsaved editor model, undo, selection and saved
+; identity remain owned by the editor. The checks only borrow its model buffer.
 custom_prepare:
         clr.w custom_prepared-module_start(a5)
         bsr storage_backup
-        bsr storage_identity
-        bne .done
-        bsr storage_scan
-        bne .done
-        bsr storage_select
-        tst.l d4
-        beq .done
-        bsr storage_entry
-        cmp.l (a3),d4
-        bne .done
-        move.l 1020(a4),d0
-        cmp.l 4(a3),d0
-        bne .done
-        movea.l a4,a0
-        bsr storage_validate
-        tst.l d0
+        move.w storage_slot(pc),d0
+        bsr storage_slot_track
+        ble .done
+        bsr storage_trak_load
+        tst.w d0
         beq .restore
         bsr validate_for_practice
         tst.w d0
         beq .restore
         move.w storage_slot(pc),records_slot-module_start(a5)
-        move.l d4,records_project_generation-module_start(a5)
-        move.l 1020(a4),records_project_crc-module_start(a5)
         bsr records_key_build
         bsr custom_compile
         beq .restore
@@ -261,14 +287,14 @@ custom_prepare:
 ; Game record and name from the checked practice_runtime. D0=1 and Z=0 on
 ; success, D0=0 and Z=1 when the crane exclusions do not fit.
 custom_compile:
-        move.l editor_track+24(pc),custom_geometry_revision-module_start(a5)
+        move.l editor_track+SCTR_REVISION(pc),custom_geometry_revision-module_start(a5)
         lea practice_runtime(pc),a0
         lea custom_record(pc),a1
         move.b 3(a0),(a1)+
         move.b 5(a0),(a1)+
         move.b 7(a0),(a1)+
         move.b 9(a0),(a1)+
-        move.w editor_track+32(pc),d0
+        move.w editor_track+SCTR_HEIGHT(pc),d0
         move.b d0,(a1)+
         lsr.w #8,d0
         move.b d0,(a1)+
@@ -295,7 +321,7 @@ custom_compile:
         movea.l a1,a2
         clr.b (a1)+
         lea practice_runtime+16(pc),a0
-        move.w editor_track+28(pc),d7
+        move.w editor_track+SCTR_COUNT(pc),d7
         subq.w #1,d7
         moveq #0,d6
 .exclusions:
@@ -309,9 +335,9 @@ custom_compile:
         addq.w #1,d6
         adda.w #16,a0
         dbra d7,.exclusions
-        lea editor_track+40(pc),a0
+        lea editor_track+SCTR_NAME(pc),a0
         lea custom_track_name(pc),a1
-        moveq #24,d0
+        moveq #SCTR_NAME_BYTES,d0
         bsr storage_copy
         moveq #1,d0
         rts
@@ -332,13 +358,15 @@ custom_menu_row:
         movem.l d0-d7/a0-a6,-(sp)
         moveq #0,d0
         move.b $1bb18,d0
-        cmpi.w #1,custom_menu(pc)
+        cmpi.w #IMPORT_MENU_ASK,custom_menu(pc)
+        bhs .import
+        cmpi.w #CUSTOM_MENU_DIVISION,custom_menu(pc)
         beq.s .division
-        cmpi.w #5,custom_menu(pc)
+        cmpi.w #CUSTOM_MENU_MODE,custom_menu(pc)
         beq .mode
-        cmpi.w #4,custom_menu(pc)
+        cmpi.w #CUSTOM_MENU_RECORDS,custom_menu(pc)
         beq.s .record_error
-        cmpi.w #3,custom_menu(pc)
+        cmpi.w #CUSTOM_MENU_ERROR,custom_menu(pc)
         beq .error
         cmpi.w #3,d0
         beq.s .cancel
@@ -350,11 +378,22 @@ custom_menu_row:
         add.w d0,d0
         lea custom_slots(pc),a0
         move.w (a0,d0.w),d0
-        lsl.w #6,d0
-        lea storage_catalog+8(pc),a0
+        lsl.w #CATALOG_ROW_SHIFT,d0
+        lea module_start(pc),a0
+        adda.l #STORAGE_CATALOG+CATALOG_NAME,a0
         adda.w d0,a0
         bra.s .text
 .division:
+        tst.w import_practise(pc)
+        beq.s .division_row
+        cmpi.w #3,d0
+        blo.s .division_row
+        bhi.s .division_cancel
+        lea import_row_text(pc),a0
+        bra.s .text
+.division_cancel:
+        moveq #3,d0
+.division_row:
         lea custom_division_names(pc),a0
         lsl.w #4,d0
         adda.w d0,a0
@@ -379,8 +418,11 @@ custom_menu_row:
         bra.s .text
 .empty: lea custom_empty_text(pc),a0
 .text:  bsr custom_print
-        movem.l (sp)+,d0-d7/a0-a6
+.done:  movem.l (sp)+,d0-d7/a0-a6
         rts
+.import:
+        bsr import_menu_row
+        bra.s .done
 .original: jmp $5a656
 custom_menu_name:
         tst.w custom_menu(pc)
@@ -401,13 +443,10 @@ custom_menu_enter:
         bsr records_commit
         tst.w d0
         beq.s .saved
-        move.w #4,custom_menu-module_start(a5)
+        move.w #CUSTOM_MENU_RECORDS,custom_menu-module_start(a5)
         moveq #0,d0
         moveq #1,d2
-        moveq #28,d1
-        jsr $5b840
-        lea module_start(pc),a5
-        clr.w custom_menu-module_start(a5)
+        bsr custom_menu_run
         tst.b d0
         beq.s .save_records
         clr.w records_dirty-module_start(a5)
@@ -678,6 +717,11 @@ custom_error_text: dc.b 'Track unavailable',0
 custom_menu: dc.w 0
 custom_count: dc.w 0
 custom_page: dc.w 0
+; 1 while the editor shows the Custom Tracks list; the picked slot + 1 or 0,
+; and the row to open the list on.
+custom_pick: dc.w 0
+custom_picked: dc.w 0
+custom_index: dc.w 0
 custom_prepared: dc.w 0
 custom_active: dc.w 0
 custom_saved_road: dc.b 0
@@ -687,10 +731,10 @@ custom_last_mode: dc.w 0
 ; $1ca22, $1ca29, $5eb79 and $1c9cf around a Custom Race.
 custom_race_saved: dcb.b 4,0
 custom_opponent: dc.b 0,0
-custom_slots: dcb.w 32,0
+custom_slots: dcb.w STORAGE_SLOTS,0
 custom_original_times: dcb.b 32,0
 custom_session_times: dcb.b 32,0
-custom_track_name: dcb.b 24,0
+custom_track_name: dcb.b SCTR_NAME_BYTES,0
         dc.b 0,0
 custom_geometry_revision: dc.l 0
 ; Rounded to longs, so custom_runtime stays long aligned.

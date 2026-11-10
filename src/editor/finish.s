@@ -12,31 +12,36 @@
 ;
 ; The search borrows the depth buffer, which a full render clears before it
 ; reads it, and the render after the change is a full one.
-FINISH_SCRATCH equ $24000
+FINISH_SCRATCH equ DEPTH_BUFFER
 FINISH_MEMO_KEYS equ FINISH_SCRATCH
 FINISH_MEMO_G equ FINISH_MEMO_KEYS+FINISH_MEMO_SLOTS*4
 FINISH_NODES equ FINISH_MEMO_G+FINISH_MEMO_SLOTS
 FINISH_HEAP equ FINISH_NODES+FINISH_POOL*4
+; The grids hold a long per map cell.
+FINISH_GRID_BYTES equ MAP_CELLS*MAP_CELLS*4
 FINISH_ROOT_GRID equ FINISH_HEAP+FINISH_POOL*4
-FINISH_GRID equ FINISH_ROOT_GRID+1024
+FINISH_GRID equ FINISH_ROOT_GRID+FINISH_GRID_BYTES
 ; For each surface of a piece, the cells around it where it forbids others: a
 ; count word, then cell x and z offsets as words and the surfaces it forbids
 ; there as a long. building_collision_masks turned round.
 FINISH_SPREAD_STRIDE equ 2+25*8
-FINISH_SPREAD equ FINISH_GRID+1024
-; For each variant: its piece count, then surface, cell x and cell z of each.
+FINISH_SPREAD equ FINISH_GRID+FINISH_GRID_BYTES
+; For each variant, FINISH_LIST_BYTES: its piece count, then surface, cell x and
+; cell z of each.
+FINISH_LIST_SHIFT equ 5
+FINISH_LIST_BYTES equ 1<<FINISH_LIST_SHIFT
 FINISH_PIECES equ FINISH_SPREAD+EDITOR_SURFACE_COUNT*FINISH_SPREAD_STRIDE
-FINISH_PATH equ FINISH_PIECES+BLOCK_VARIANT_COUNT*32
+FINISH_PATH equ FINISH_PIECES+BLOCK_VARIANT_COUNT*FINISH_LIST_BYTES
 FINISH_SCRATCH_END equ FINISH_PATH+EDITOR_MAX_PIECES+2
-        ifgt FINISH_SCRATCH_END-FINISH_SCRATCH-92160
+        ifgt FINISH_SCRATCH_END-FINISH_SCRATCH-DEPTH_BUFFER_BYTES
         fail "Finish needs more than the depth buffer"
         endif
 
 ; F in Browse. Older tracks have no Finish, and a closed one has nothing to do.
 finish_key:
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .done
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .closed
         bsr editor_model_build
         tst.w d0
@@ -96,7 +101,7 @@ finish_search:
         move.l (a0)+,(a1)+
         move.l (a0)+,(a1)+
         move.l (a0)+,(a1)+
-        move.w editor_track+28(pc),finish_total-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),finish_total-module_start(a5)
         bsr editor_end
         move.w d0,finish_e0-module_start(a5)
         move.w d0,finish_e-module_start(a5)
@@ -108,23 +113,13 @@ finish_search:
         bne.s .done
         ; The next end: the section before this one goes, as Del takes it.
         move.w finish_e(pc),d0
-        subq.w #1,d0
-        bsr block_group_start
+        bsr section_before
         tst.w d0
         beq.s .none
         move.w d0,d3
-        move.w finish_e(pc),d2
-        sub.w d3,d2
-        subq.w #1,d2
-        move.w d3,d1
-        lsl.w #3,d1
-        lea editor_track+64(pc),a0
-        adda.w d1,a0
-        move.l editor_track+36(pc),d1
-.stays: cmp.l (a0),d1
+        move.w finish_e(pc),d1
+        bsr section_keeps_finish
         beq.s .none
-        addq.l #8,a0
-        dbra d2,.stays
         move.w d3,finish_e-module_start(a5)
         addq.w #1,finish_deleted-module_start(a5)
         bra.s .root
@@ -134,8 +129,7 @@ finish_search:
 ; The spread of the collision masks and the pieces of every variant.
 finish_prepare:
         lea building_collision_masks(pc),a0
-        movea.l a5,a1
-        adda.l #FINISH_SPREAD,a1
+        lea FINISH_SPREAD(a5),a1
         moveq #EDITOR_SURFACE_COUNT-1,d7
 .surface:
         movea.l a1,a3
@@ -170,8 +164,7 @@ finish_prepare:
         lea FINISH_SPREAD_STRIDE(a3),a1
         adda.w #EDITOR_SURFACE_COUNT*4,a0
         dbra d7,.surface
-        movea.l a5,a1
-        adda.l #FINISH_PIECES,a1
+        lea FINISH_PIECES(a5),a1
         moveq #0,d6
 .variant:
         move.w d6,d0
@@ -196,7 +189,7 @@ finish_prepare:
         move.b 7(a4),(a2)+
         addq.l #8,a4
         dbra d5,.piece
-        adda.w #32,a1
+        adda.w #FINISH_LIST_BYTES,a1
         addq.w #1,d6
         cmpi.w #BLOCK_VARIANT_COUNT,d6
         blo.s .variant
@@ -215,10 +208,9 @@ finish_root:
         move.l (a0)+,(a1)+
         move.l (a0)+,(a1)+
         move.l (a0)+,(a1)+
-        movea.l a5,a2
-        adda.l #FINISH_ROOT_GRID,a2
+        lea FINISH_ROOT_GRID(a5),a2
         movea.l a2,a0
-        move.w #255,d0
+        move.w #FINISH_GRID_BYTES/4-1,d0
 .clear: clr.l (a0)+
         dbra d0,.clear
         moveq #0,d6
@@ -229,16 +221,16 @@ finish_root:
         cmp.w finish_e0(pc),d6
         blo.s .next
 .take:  move.w d6,d0
-        lsl.w #3,d0
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a0
         adda.w d0,a0
         bsr building_variant
         bsr building_surface_variant
         moveq #0,d1
-        move.b 7(a0),d1
+        move.b PIECE_CELL(a0),d1
         move.w d1,d2
-        andi.w #15,d1
-        lsr.w #4,d2
+        andi.w #MAP_CELLS-1,d1
+        lsr.w #MAP_CELL_BITS,d2
         bsr finish_mark
 .next:  addq.w #1,d6
         bra.s .piece
@@ -251,8 +243,7 @@ finish_end:
         bsr finish_bound
         tst.w d0
         bmi .fail
-        movea.l a5,a0
-        adda.l #FINISH_NODES,a0
+        lea FINISH_NODES(a5),a0
         move.l #$0000ff00,(a0)
         move.w #1,finish_nodes_used-module_start(a5)
         clr.w finish_heap_size-module_start(a5)
@@ -264,8 +255,7 @@ finish_end:
         clr.w d1
         move.l d1,d0
         bsr finish_push
-        movea.l a5,a0
-        adda.l #FINISH_MEMO_KEYS,a0
+        lea FINISH_MEMO_KEYS(a5),a0
         move.w #FINISH_MEMO_SLOTS-1,d0
 .clear: clr.l (a0)+
         dbra d0,.clear
@@ -297,8 +287,7 @@ finish_end:
 ; The popped node's sections from the end into FINISH_PATH, and the grid, the
 ; tail and the piece count with them.
 finish_replay:
-        movea.l a5,a0
-        adda.l #FINISH_NODES,a0
+        lea FINISH_NODES(a5),a0
         move.w finish_index(pc),d1
         moveq #0,d2
 .count: move.w d1,d0
@@ -310,8 +299,7 @@ finish_replay:
         bra.s .count
 .counted:
         move.w d2,finish_depth-module_start(a5)
-        movea.l a5,a1
-        adda.l #FINISH_PATH,a1
+        lea FINISH_PATH(a5),a1
         adda.w d2,a1
         move.w finish_index(pc),d1
         bra.s .fill_next
@@ -321,12 +309,10 @@ finish_replay:
         move.w (a0,d0.w),d1
 .fill_next:
         dbra d2,.fill
-        movea.l a5,a0
-        adda.l #FINISH_ROOT_GRID,a0
-        movea.l a5,a2
-        adda.l #FINISH_GRID,a2
+        lea FINISH_ROOT_GRID(a5),a0
+        lea FINISH_GRID(a5),a2
         movea.l a2,a1
-        move.w #255,d0
+        move.w #FINISH_GRID_BYTES/4-1,d0
 .grid:  move.l (a0)+,(a1)+
         dbra d0,.grid
         lea finish_root_tail(pc),a0
@@ -335,8 +321,7 @@ finish_replay:
         move.l (a0)+,(a1)+
         move.l (a0)+,(a1)+
         move.w finish_root_count(pc),finish_count-module_start(a5)
-        movea.l a5,a4
-        adda.l #FINISH_PATH,a4
+        lea FINISH_PATH(a5),a4
         move.w finish_depth(pc),d7
         bra.s .section_next
 .section:
@@ -362,8 +347,7 @@ finish_replay:
 ; From the replayed tail: every section in socket order. D0 sections in
 ; FINISH_PATH when one closes, else 0 with the kept ones on the heap.
 finish_children:
-        movea.l a5,a0
-        adda.l #FINISH_NODES,a0
+        lea FINISH_NODES(a5),a0
         move.w finish_index(pc),d0
         lsl.w #2,d0
         moveq #0,d1
@@ -398,8 +382,7 @@ finish_children:
         bsr finish_shift
         bsr finish_inside
         beq .next
-        movea.l a5,a2
-        adda.l #FINISH_GRID,a2
+        lea FINISH_GRID(a5),a2
         move.w d6,d0
         bsr finish_clear
         beq .next
@@ -426,8 +409,7 @@ finish_children:
         move.w d4,d2
         bsr finish_memo_set
         ; The node: its parent, its section and its g.
-        movea.l a5,a0
-        adda.l #FINISH_NODES,a0
+        lea FINISH_NODES(a5),a0
         move.w finish_nodes_used(pc),d1
         move.w d1,d0
         lsl.w #2,d0
@@ -449,8 +431,7 @@ finish_children:
         moveq #0,d0
         rts
 .closes:
-        movea.l a5,a0
-        adda.l #FINISH_PATH,a0
+        lea FINISH_PATH(a5),a0
         move.w finish_depth(pc),d0
         move.b d6,(a0,d0.w)
         addq.w #1,d0
@@ -458,41 +439,44 @@ finish_children:
 
 ; D0 variant -> A1 its piece list. D0 destroyed.
 finish_piece_list:
-        lsl.w #5,d0
-        movea.l a5,a1
-        adda.l #FINISH_PIECES,a1
+        lsl.w #FINISH_LIST_SHIFT,d0
+        lea FINISH_PIECES(a5),a1
         adda.w d0,a1
         rts
 
-; D0 variant, A0 tail -> D1, D2 its shift in cells and A3 its record, the entry
-; on the tail's left point as block_make puts it. D0 destroyed.
+; D0 variant, A0 tail -> A3 its record, D1 and D2 its shift in cells as
+; entry_shift gives it. D0 destroyed.
 finish_shift:
-        lsl.w #5,d0
+        lsl.w #FINISH_RECORD_SHIFT,d0
         lea finish_records(pc),a3
         adda.w d0,a3
+; A0 tail row, A3 the entry's X and Z words -> D1 and D2 the shift in cells,
+; rounded, that puts the entry on the tail's left point. D0 destroyed, A0 and
+; A3 kept.
+entry_shift:
         moveq #0,d1
         move.w (a0),d1
         move.w (a3),d0
         ext.l d0
         sub.l d0,d1
-        addi.l #1024,d1
+        addi.l #MAP_CELL/2,d1
         asr.l #8,d1
-        asr.l #3,d1
+        asr.l #MAP_CELL_SHIFT-8,d1
         moveq #0,d2
         move.w 4(a0),d2
         move.w 2(a3),d0
         ext.l d0
         sub.l d0,d2
-        addi.l #1024,d2
+        addi.l #MAP_CELL/2,d2
         asr.l #8,d2
-        asr.l #3,d2
+        asr.l #MAP_CELL_SHIFT-8,d2
         rts
 
 ; A0 tail, A3 record, D1 and D2 the shift -> D0=1 when the section stays on the
 ; map and inside the height limits.
 finish_inside:
         movem.l d3-d4,-(sp)
-        moveq #11,d4
+        moveq #MAP_CELL_SHIFT,d4
         move.l d1,d3
         asl.l d4,d3
         move.w 20(a3),d0
@@ -502,7 +486,7 @@ finish_inside:
         move.w 22(a3),d0
         ext.l d0
         add.l d3,d0
-        cmpi.l #32768,d0
+        cmpi.l #MAP_SIZE,d0
         bgt.s .out
         move.l d2,d3
         asl.l d4,d3
@@ -513,7 +497,7 @@ finish_inside:
         move.w 26(a3),d0
         ext.l d0
         add.l d3,d0
-        cmpi.l #32768,d0
+        cmpi.l #MAP_SIZE,d0
         bgt.s .out
         move.w 2(a0),d3
         ext.l d3
@@ -550,7 +534,7 @@ finish_clear:
         move.b (a1)+,d5
         ext.w d5
         add.w d2,d5
-        lsl.w #4,d5
+        lsl.w #MAP_CELL_BITS,d5
         add.w d4,d5
         lsl.w #2,d5
         move.l (a2,d5.w),d4
@@ -594,8 +578,7 @@ finish_occupy:
 finish_mark:
         movem.l d0/d3-d5/a0,-(sp)
         mulu.w #FINISH_SPREAD_STRIDE,d0
-        movea.l a5,a0
-        adda.l #FINISH_SPREAD,a0
+        lea FINISH_SPREAD(a5),a0
         adda.l d0,a0
         move.w (a0)+,d3
         bra.s .next
@@ -604,11 +587,11 @@ finish_mark:
         move.w (a0)+,d5
         add.w d2,d5
         move.l (a0)+,d0
-        cmpi.w #15,d4
+        cmpi.w #MAP_CELLS-1,d4
         bhi.s .next
-        cmpi.w #15,d5
+        cmpi.w #MAP_CELLS-1,d5
         bhi.s .next
-        lsl.w #4,d5
+        lsl.w #MAP_CELL_BITS,d5
         add.w d4,d5
         lsl.w #2,d5
         or.l d0,(a2,d5.w)
@@ -620,7 +603,7 @@ finish_mark:
 ; section. A1 may be A0.
 finish_exit:
         movem.l d0/d3-d5,-(sp)
-        moveq #11,d0
+        moveq #MAP_CELL_SHIFT,d0
         move.w d1,d3
         lsl.w d0,d3
         move.w d2,d5
@@ -674,8 +657,7 @@ finish_bound_heading:
         or.w d0,d1
 ; D1 the field index of the row.
 finish_level:
-        movea.l a5,a0
-        adda.l #FIELD_OFFSET,a0
+        lea FIELD_OFFSET(a5),a0
         moveq #0,d0
         move.b (a0,d1.w),d0
         cmpi.w #FIELD_NO_ROUTE,d0
@@ -734,8 +716,7 @@ finish_hash:
 ; when it was not.
 finish_memo:
         move.l a0,-(sp)
-        movea.l a5,a0
-        adda.l #FINISH_MEMO_KEYS,a0
+        lea FINISH_MEMO_KEYS(a5),a0
         ; The low bits of a hash follow the low bits of the coordinates, which
         ; are much the same: the slot comes from the top bits of a product.
         move.l d0,d1
@@ -755,8 +736,7 @@ finish_memo:
 .empty: move.w #FINISH_NONE,d2
         movea.l (sp)+,a0
         rts
-.found: movea.l a5,a0
-        adda.l #FINISH_MEMO_G,a0
+.found: lea FINISH_MEMO_G(a5),a0
         moveq #0,d2
         move.b (a0,d1.w),d2
         movea.l (sp)+,a0
@@ -765,11 +745,9 @@ finish_memo:
 ; D0 hash, D1 slot, D2 sections: the slot keeps them.
 finish_memo_set:
         movem.l d1/a0,-(sp)
-        movea.l a5,a0
-        adda.l #FINISH_MEMO_G,a0
+        lea FINISH_MEMO_G(a5),a0
         move.b d2,(a0,d1.w)
-        movea.l a5,a0
-        adda.l #FINISH_MEMO_KEYS,a0
+        lea FINISH_MEMO_KEYS(a5),a0
         lsl.w #2,d1
         move.l d0,(a0,d1.w)
         movem.l (sp)+,d1/a0
@@ -778,8 +756,7 @@ finish_memo_set:
 ; D0 key onto the heap.
 finish_push:
         movem.l d1-d5/a0,-(sp)
-        movea.l a5,a0
-        adda.l #FINISH_HEAP,a0
+        lea FINISH_HEAP(a5),a0
         move.w finish_heap_size(pc),d1
         addq.w #1,finish_heap_size-module_start(a5)
 .up:    tst.w d1
@@ -805,8 +782,7 @@ finish_push:
 ; -> D0 the smallest key, taken off the heap.
 finish_pop:
         movem.l d1-d7/a0,-(sp)
-        movea.l a5,a0
-        adda.l #FINISH_HEAP,a0
+        lea FINISH_HEAP(a5),a0
         move.l (a0),d0
         subq.w #1,finish_heap_size-module_start(a5)
         move.w finish_heap_size(pc),d5
@@ -852,37 +828,10 @@ finish_commit:
         move.w finish_e0(pc),d3
         cmp.w d3,d4
         beq .add
-        ; Pieces after a gap move down to the new end of the road before it.
-        move.w finish_total(pc),d0
-        sub.w d3,d0
-        beq.s .count
-        lsl.w #3,d0
-        move.w d3,d1
-        lsl.w #3,d1
-        lea editor_track+64(pc),a0
-        adda.w d1,a0
-        move.w d4,d1
-        lsl.w #3,d1
-        lea editor_track+64(pc),a1
-        adda.w d1,a1
-        bsr storage_copy
-        move.w d4,editor_gap-module_start(a5)
-.count: move.w finish_total(pc),d0
-        sub.w d3,d0
-        add.w d4,d0
-        move.w d0,editor_track+28-module_start(a5)
-        ; Remove stale bytes, including the old CRC, as Del does.
-        lsl.w #3,d0
-        addi.w #68,d0
-        lea editor_track(pc),a0
-        move.w 6(a0),d1
-        move.w d0,6(a0)
-        sub.w d0,d1
-        lea -4(a0,d0.w),a0
-        lsr.w #2,d1
-.clear: clr.l (a0)+
-        dbra d1,.clear
-        clr.w editor_track+30-module_start(a5)
+        ; The sections go as Del takes them: pieces after a gap move down to
+        ; the new end of the road before it.
+        bsr track_cut
+        clr.w editor_track+SCTR_CLOSED-module_start(a5)
         bsr editor_model_refresh
         ; block_make keeps no register, so the step is counted in memory.
 .add:   clr.w finish_step-module_start(a5)
@@ -894,8 +843,7 @@ finish_commit:
         bsr block_context
         tst.w d0
         beq.s .mismatch
-        movea.l a5,a0
-        adda.l #FINISH_PATH,a0
+        lea FINISH_PATH(a5),a0
         move.w finish_step(pc),d0
         moveq #0,d1
         move.b (a0,d0.w),d1
@@ -909,9 +857,9 @@ finish_commit:
         clr.w building_mode-module_start(a5)
         ; As a placed section: the Add slot while the track stays open.
         move.w block_insert(pc),building_selected-module_start(a5)
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .selected
-        move.w editor_track+28(pc),building_selected-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),building_selected-module_start(a5)
 .selected:
         bsr editing_changed
         bsr finish_result_text
@@ -936,9 +884,9 @@ finish_result_text:
         tst.w finish_gap-module_start(a5)
         beq.s .first
         lea finish_filled_with_text(pc),a0
-.first: bsr.s .copy
+.first: bsr text_append
         move.w finish_found(pc),d0
-        bsr.s .number
+        bsr text_decimal
         lea finish_section_text(pc),a0
         tst.w finish_gap-module_start(a5)
         bne.s .plural
@@ -948,37 +896,21 @@ finish_result_text:
         tst.w finish_gap-module_start(a5)
         beq.s .off
         lea finish_filled_off_text(pc),a0
-.off:   bsr.s .copy
+.off:   bsr text_append
         move.w d1,d0
-        bsr.s .number
+        bsr text_decimal
         lea finish_added_text(pc),a0
-        bsr.s .copy
+        bsr text_append
         move.w finish_found(pc),d0
-        bsr.s .number
+        bsr text_decimal
         lea finish_section_text(pc),a0
 .plural:
-        bsr.s .copy
+        bsr text_append
         cmpi.w #1,finish_found-module_start(a5)
         beq.s .stop
         move.b #'s',(a1)+
 .stop:  move.b #'.',(a1)+
         clr.b (a1)
-        rts
-.copy:  move.b (a0)+,(a1)+
-        bne.s .copy
-        subq.l #1,a1
-        rts
-; D0 0-99 in decimal.
-.number:
-        ext.l d0
-        divu.w #10,d0
-        tst.w d0
-        beq.s .ones
-        addi.b #'0',d0
-        move.b d0,(a1)+
-.ones:  swap d0
-        addi.b #'0',d0
-        move.b d0,(a1)+
         rts
 
 finish_goal: dcb.w 6,0

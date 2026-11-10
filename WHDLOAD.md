@@ -30,6 +30,8 @@ to FAT-formatted media. It writes:
 | `StuntCarRacerPerf.slave` | The WHDLoad slave |
 | `StuntCarRacerPerf.disk` | The patched game disk image; WHDLoad only reads it |
 | `StuntCarRacerPerf.info` | Workbench icon |
+| `tracks` | Empty drawer for the Track Editor's files |
+| `tracks.info` | Drawer icon of `tracks`; its window lists all files by name |
 | `StuntCarRacerPerf.info` next to the directory | Drawer icon of the directory, named after it |
 
 The game's saves are created next to these files (see [Saving](#saving)).
@@ -46,7 +48,7 @@ it from a shell:
 
 ```sh
 cd Games/StuntCarRacerPerf
-WHDLoad StuntCarRacerPerf.slave PRELOAD NOWRITECACHE
+WHDLoad StuntCarRacerPerf.slave PRELOAD NOWRITECACHE WRITEDELAY=10
 ```
 
 **F10** quits back to the system (WHDLoad's `QuitKey` option changes it).
@@ -66,30 +68,32 @@ message that the data files are damaged or an unsupported version.
 
 ## Saving
 
-All saves are files in the install directory:
+All saves are files in the install directory. The Track Editor's files are
+in the drawer `tracks`, which the installer creates:
 
 | Saved by | File |
 | --- | --- |
-| Track Editor, slot 1..32 | `Track01.sct` .. `Track32.sct` |
-| Records of a custom track | `Track01.rec` .. `Track32.rec` |
-| Track Editor slot index | `TrackIndex` |
+| Track Editor, slot 1..512 | `tracks/Track001.sct` .. `tracks/Track512.sct` |
+| Records of a custom track | `tracks/Track001.rec` .. `tracks/Track512.rec` |
 | Season save index | `SaveIndex` |
 | Season saves 1..30 | `Save01` .. `Save30` |
 
-- Without a file, a track slot shows what the game disk holds: the tracks
-  BUILD, BUILD 2 and BUILD 3 in slots 1-3 and empty slots otherwise. Deleting
-  a track file brings that back.
-- A track file belongs to its slot. A file renamed to another slot number is
-  shown as UNREADABLE; move a track by loading it in the Track Editor and
-  saving it into another slot. Copy files between installs under the same
-  names.
-- Save files keep their names and format between versions: copy them from an
-  earlier install into the new one. An install made with version 1.6.0 used
-  `StuntCarRacer.slave`, `StuntCarRacer.info` and `Disk.1`, but its save files
-  have the same names as now.
-- If the index does not match the track files, for example after files were
-  copied, the Track Editor shows `INDEX RECOVERED FROM RECORDS` and writes a
-  new index with the next save.
+- Without a file, slots 1-3 hold the tracks BUILD, BUILD 2 and BUILD 3 and the
+  other slots are empty. Deleting a track file brings that back.
+- The slot is the file name: renaming a track file moves the track to that
+  slot. Copy the `tracks` drawer's files between installs under the same names.
+- Without the `tracks` drawer, the Track Editor saves nothing and says
+  `No tracks drawer. Nothing saved.`; create the drawer and start the game
+  again.
+- Track files of version 2.2.0 and earlier (`Track01.sct` .. `Track32.sct`,
+  `.rec` and `TrackIndex` in the install directory) are not read by the Track
+  Editor. Copied into the new install directory, they are imported into
+  `tracks` when the game starts; see
+  [Tracks from an older version](docs/track-editor.md#tracks-from-an-older-version).
+- Season save files keep their names and format between versions: copy them
+  from an earlier install into the new one. An install made with version 1.6.0
+  used `StuntCarRacer.slave`, `StuntCarRacer.info` and `Disk.1`, but its save
+  files have the same names as now.
 - Season Load and Save open the list of season saves directly; the game does
   not ask for a save disk. Without season save files, the list is empty.
   A season save file of the wrong size reads as empty; the next save
@@ -98,10 +102,13 @@ All saves are files in the install directory:
   loading writes to the install directory: keep it on a writable volume.
 
 The icon's tool types are `SLAVE=` the slave, `PRELOAD`, `NOWRITECACHE` and
-the disabled `(WRITEDELAY=25)`. With `NOWRITECACHE`, WHDLoad writes every save
-to the hard disk at once and then waits `WRITEDELAY` (default 150, that is
-3 seconds) so the file system can finish; the display is blanked during the
-write. A Track Editor save writes the track and the index.
+`WRITEDELAY=10`. With `NOWRITECACHE`, WHDLoad writes every save to the hard
+disk at once and then waits `WRITEDELAY` (in fiftieths of a second) so the
+file system can finish; the display is blanked during the write.
+`WRITEDELAY=10` waits 0.2 seconds instead of WHDLoad's default of 150, that is
+3 seconds. A Track Editor save writes one file. On a file
+system that finishes its writes later, a reset right after a save may lose
+that save; remove `WRITEDELAY=10` or raise its value to wait longer.
 
 Without `NOWRITECACHE`, WHDLoad keeps written files in memory and writes them
 to the hard disk only when it quits. Then **leave the game with the quit key**
@@ -113,8 +120,8 @@ disabled:
 
 | Tool types | Saving | Display during a save |
 | --- | --- | --- |
-| `PRELOAD` `NOWRITECACHE` (default) | At once | Blanked for a few seconds |
-| `PRELOAD` `NOWRITECACHE` `WRITEDELAY=25` | At once | Blanked for a shorter time; a reset right after a save may leave the file incomplete |
+| `PRELOAD` `NOWRITECACHE` `WRITEDELAY=10` (default) | At once | Blanked for a moment |
+| `PRELOAD` `NOWRITECACHE` `(WRITEDELAY=10)` | At once | Blanked for a few seconds |
 | `PRELOAD` `(NOWRITECACHE)` | When WHDLoad quits | No noticeable pause |
 
 While the display is blanked, the system has the keyboard: keys pressed
@@ -131,8 +138,9 @@ and `trackdisk.device`, and that boot code installs the performance runtime,
 the Track Editor and the Computer Link module: Chip memory comes from
 WHDLoad's base memory, Fast memory from its expansion memory. It skips
 the intro, and replaces the floppy driver of the game's loader and of the game
-with reads of `StuntCarRacerPerf.disk`. The disk areas the game and the Track Editor write are
-mapped to the files above; the Track Editor's two copies of each slot are one
-file. Other writes are refused, so the disk image never changes. The game's
+with reads of `StuntCarRacerPerf.disk`. The disk areas of the season saves are
+mapped to the files above, and the Track Editor reads and writes its files by
+name through the slave. Other writes are refused, so the disk image never
+changes. The game's
 request for a season save disk is skipped. Technical details:
 [Patch details](PATCH.md#whdload-install).

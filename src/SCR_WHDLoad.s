@@ -18,18 +18,18 @@
 ; driver is replaced with the same reads; after the loader has read the main
 ; program, the game's own floppy driver is replaced as well.
 ;
-; The disk areas the game and the track editor write are files in the install
-; directory itself (see file_map), as WHDLoad does not create subdirectories:
-; each custom track slot, its records, the track index, and the game's own
-; save index and saves. A file stands for its sectors in both copies the
-; editor keeps on floppy; without the file, the disk's original sectors are
-; read. Writes outside these areas are refused as on a write-protected disk,
-; so the image is never written. The game's request for a season save disk
-; before a season load or save, and its warning that a new save disk has not
-; been used for saving, are skipped; the keys still down are taken as the
-; request's key wait took them. A save file of the wrong size reads as empty.
-; Keys released while WHDLoad shows the system for a file access are marked
-; up when the game continues. The loading picture, which the fast load
+; The disk areas the game writes, its save index and saves, are files in
+; the install directory (see file_map). The track editor keeps its tracks and
+; their lap records as files of their own in the tracks directory, through
+; the slave's file service (file_service), which reads, writes, lists,
+; examines and deletes files by name. Writes outside the file_map areas are
+; refused as on a write-protected disk, so the image is never written.
+; The game's request for a season save disk before a season load or save,
+; and its warning that a new save disk has not been used for saving, are
+; skipped; the keys still down are taken as the request's key wait took
+; them. A save file of the wrong size reads as empty. Keys released while
+; WHDLoad shows the system for a file access are marked up when the game
+; continues. The loading picture, which the fast load
 ; would only flash, stays for 3 seconds or, with the ButtonWait option, until
 ; a button is pressed.
 ;
@@ -51,7 +51,7 @@
 
 BASEMEM         equ $200000             ; 2 MiB Chip, as the floppy game needs
 ANGLES_BYTES    equ $40000              ; performance runtime's optional tables
-EDITOR_BYTES    equ $60000              ; editor module
+EDITOR_BYTES    equ $68000              ; editor module
 SERIAL_BYTES    equ $8000               ; Computer Link module
 STACK_BYTES     equ $2000               ; slave stack during the boot
 EXPMEM_SIZE     equ ANGLES_BYTES+EDITOR_BYTES+SERIAL_BYTES+STACK_BYTES
@@ -97,7 +97,7 @@ base:
         rts
         dc.b "WHDLOADS"                 ; ws_ID
         dc.w 17                         ; ws_Version
-        dc.w WHDLF_NoError|WHDLF_EmulTrap|WHDLF_ClearMem
+        dc.w WHDLF_NoError|WHDLF_EmulTrap|WHDLF_ClearMem|WHDLF_Examine ; ws_Flags
         dc.l BASEMEM                    ; ws_BaseMemSize
         dc.l 0                          ; ws_ExecInstall
         dc.w start-base                 ; ws_GameLoader
@@ -117,7 +117,7 @@ expmem:
 
 name:   dc.b "Stunt Car Racer",0
 copy:   dc.b "1989 Geoff Crammond, MicroStyle",0
-info:   dc.b "Performance Patch 2.2.0",10
+info:   dc.b "Performance Patch 2.3.0",10
         dc.b "by Timo Heimonen",0
 config: dc.b "BW",0
 disk_name:
@@ -261,6 +261,12 @@ ERR_RANGE       equ 30                  ; the driver's errors
 ERR_NO_DISK     equ 29
 ERR_PROTECTED   equ 28
 
+; The file service's tag. The editor finds the service from the address in
+; the jump the slave puts at GAME_DRIVER: 'SCFS', the version and the offset
+; of file_service from disk_driver stand just before disk_driver.
+        dc.l $53434653                  ; 'SCFS'
+        dc.w FS_VERSION
+        dc.w file_service-disk_driver
 disk_driver:
         movem.l d1-d7/a0-a6,-(sp)
         andi.w #$8003,d0
@@ -375,7 +381,7 @@ disk_driver:
         jsr resload_LoadFileOffset(a5)
         bra.s .merge
 .blank: lea file_buffer(pc),a0
-        move.w #3*512/4-1,d0
+        move.w #FILE_BUFFER_BYTES/4-1,d0
 .empty: clr.l (a0)+
         dbra d0,.empty
         bra.s .merge
@@ -385,8 +391,7 @@ disk_driver:
         lea file_buffer(pc),a1
         jsr resload_LoadFile(a5)
         ; Each write of an existing file shows the system for a moment, so
-        ; an unchanged file is not written again (the editor writes the
-        ; index of both of its copies, which is one file here).
+        ; an unchanged file is not written again.
 .merge: lea file_buffer(pc),a1
         move.l d3,d0
         lsl.l #8,d0
@@ -548,29 +553,18 @@ map_sector:
 ; none), name prefix, name suffix and flags: FILE_NUMBER puts the file number
 ; (01..) between prefix and suffix; FILE_BLANK means the sectors are on a
 ; separate save disk, so a missing file reads as empty sectors instead of the
-; game disk's. The game saves its season on a formatted disk of its own;
-; the track editor keeps its slots on the game disk.
+; game disk's. The game saves its season on a formatted disk of its own.
 FILE_NUMBER     equ 1
 FILE_BLANK      equ 2
+FILE_BUFFER_BYTES equ 512               ; the largest file in file_map
 file_map:
         dc.w 22,1,1,1,0,save_index-file_map,no_suffix-file_map,FILE_BLANK
         dc.w 23,1,30,1,0,save_prefix-file_map,no_suffix-file_map,FILE_BLANK|FILE_NUMBER
-        dc.w 1210,2,32,4,132,track_prefix-file_map,track_suffix-file_map,FILE_NUMBER
-        dc.w 1212,2,32,4,132,track_prefix-file_map,records_suffix-file_map,FILE_NUMBER
-        dc.w 1474,3,1,3,11,track_index-file_map,no_suffix-file_map,0
         dc.w 0
 save_index:
         dc.b "SaveIndex",0
 save_prefix:
         dc.b "Save",0
-track_prefix:
-        dc.b "Track",0
-track_index:
-        dc.b "TrackIndex",0
-track_suffix:
-        dc.b ".sct",0
-records_suffix:
-        dc.b ".rec",0
 no_suffix:
         dc.b 0
         even
@@ -581,7 +575,100 @@ file_bytes:
 file_blank:
         dc.w 0
 file_buffer:
-        ds.b 3*512
+        ds.b FILE_BUFFER_BYTES
+
+;============================================================================
+; File service for the track editor, which keeps its tracks and records as
+; files of their own. D0 operation, A0 file name (a path in the install
+; directory), A1 buffer, D1 byte count. Returns D0 with the flags set from it
+; and preserves the other registers.
+;   FS_SIZE    D0 = the file's size, or 0 if there is no such file
+;   FS_LOAD    D0 = the file's size, or 0 if there is no such file. A file
+;              of at most D1 bytes is read to A1; a larger one is not read.
+;   FS_SAVE    writes the D1 bytes at A1 as the file; D0 = 1. WHDLoad does
+;              not create a missing directory and ends with an error, so
+;              the editor examines the directory first.
+;   FS_LIST    D0 = the number of files (not directories) in directory A0,
+;              "" for the install directory; their names, each ended by a
+;              zero byte, fill the D1 bytes at A1 as far as they fit. A
+;              listing that does not fit ends early without an error, so the
+;              caller checks the space left. WHDLoad takes the buffer only in
+;              ExpMem (from WHDLoad 16.9 on), where the editor's memory is.
+;   FS_DELETE  deletes the file; D0 = 1, or 0 if there is no such file
+;   FS_EXAMINE the 260 byte FileInfoBlock of file or directory A0 to A1
+;              (fib_DirEntryType at 4: above 0 a directory); D0 = -1, or 0 if
+;              there is no such file or directory. Needs WHDLF_Examine.
+;   other      D0 = 0
+; With WHDLF_NoError a failing read, write, delete or listing ends WHDLoad
+; with its error message instead of returning. The resload functions may
+; change D0-D1/A0-A1, so the names and buffers are kept in A3-A4.
+
+FS_VERSION      equ 2
+FS_SIZE         equ 1
+FS_LOAD         equ 2
+FS_SAVE         equ 3
+FS_LIST         equ 4
+FS_DELETE       equ 5
+FS_EXAMINE      equ 6
+
+file_service:
+        movem.l d1-d7/a1-a6,-(sp)
+        movea.l resload(pc),a5
+        movea.l a0,a4                   ; A4: name
+        movea.l a1,a3                   ; A3: buffer
+        move.l d1,d2                    ; D2: byte count
+        cmp.l #FS_SIZE,d0
+        beq.s .size
+        cmp.l #FS_LOAD,d0
+        beq.s .load
+        cmp.l #FS_SAVE,d0
+        beq.s .save
+        cmp.l #FS_LIST,d0
+        beq.s .list
+        cmp.l #FS_DELETE,d0
+        beq.s .delete
+        cmp.l #FS_EXAMINE,d0
+        beq.s .examine
+        moveq #0,d0
+        bra.s .done
+.size:  jsr resload_GetFileSize(a5)
+        bra.s .done
+.load:  jsr resload_GetFileSize(a5)
+        tst.l d0
+        beq.s .done
+        cmp.l d2,d0
+        bhi.s .done                     ; too large: the size, nothing read
+        movea.l a4,a0
+        movea.l a3,a1
+        jsr resload_LoadFile(a5)
+        bra.s .done
+.save:  move.l d2,d0
+        movea.l a4,a0
+        movea.l a3,a1
+        jsr resload_SaveFile(a5)
+        moveq #1,d0
+        bra.s .done
+.delete:
+        jsr resload_GetFileSize(a5)
+        tst.l d0
+        beq.s .done
+        movea.l a4,a0
+        jsr resload_DeleteFile(a5)
+        moveq #1,d0
+        bra.s .done
+.list:  move.l d2,d0
+        movea.l a4,a0
+        movea.l a3,a1
+        jsr resload_ListFiles(a5)
+        bra.s .done
+.examine:
+        movea.l a4,a0
+        movea.l a3,a1
+        jsr resload_Examine(a5)
+.done:  movea.l a4,a0
+        movem.l (sp)+,d1-d7/a1-a6
+        tst.l d0
+        rts
 
 ; The loader's driver ($44F8 after the copy). After the main program has
 ; been read, it is checked and the game's driver is replaced.

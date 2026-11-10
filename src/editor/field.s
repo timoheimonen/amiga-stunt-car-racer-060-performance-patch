@@ -7,23 +7,26 @@
 ; the far side of a gap. The field has a level for every heading and cell, $ff
 ; where no route is. It hangs on that goal piece only, so a new section or a Del
 ; at the end leaves it as it is.
-FIELD_OFFSET equ $1C960
-FIELD_BYTES equ 2048
 FIELD_NO_ROUTE equ 15
+; What the bar says of a candidate (field_value, block_info): NNNN C RRR, the
+; level N, C set when the section closes the track and the block_fail reason R.
+FIELD_INFO_REASON equ 7
+FIELD_INFO_CLOSES equ 3                 ; bit
+FIELD_INFO_LEVEL_SHIFT equ 4
+FIELD_INFO_NO_ROUTE equ FIELD_NO_ROUTE<<FIELD_INFO_LEVEL_SHIFT
 
 ; With the model of the track built.
 field_refresh:
         ; The goal piece's kind, rotation and cell fix its first row.
         move.w editor_gap(pc),d0
-        lsl.w #3,d0
-        lea editor_track+68(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES+PIECE_KIND(pc),a0
         move.l (a0,d0.w),d0
         cmp.l field_key(pc),d0
         beq field_done
         move.l d0,field_key-module_start(a5)
         movem.l d0-d7/a0-a2,-(sp)
-        movea.l a5,a0
-        adda.l #FIELD_OFFSET,a0
+        lea FIELD_OFFSET(a5),a0
         movea.l a0,a1
         moveq #-1,d0
         move.w #FIELD_BYTES/4-1,d1
@@ -127,8 +130,7 @@ field_end_level:
         or.w 4(a1),d0
         bmi.s .none
         bsr field_index
-        movea.l a5,a0
-        adda.l #FIELD_OFFSET,a0
+        lea FIELD_OFFSET(a5),a0
         moveq #0,d0
         move.b (a0,d1.w),d0
         cmpi.b #FIELD_NO_ROUTE,d0
@@ -142,24 +144,24 @@ field_end_level:
 field_info:
         movem.l d0-d3/a0-a1,-(sp)
         move.w block_fail(pc),d3
-        andi.w #7,d3
+        andi.w #FIELD_INFO_REASON,d3
         tst.w d0
         beq.s .store
         cmpi.w #1,block_mode-module_start(a5)
         bne.s .store
-        tst.w block_original_track+30-module_start(a5)
+        tst.w block_original_track+SCTR_CLOSED-module_start(a5)
         bne.s .store
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .closes
         tst.w block_original_track+EDITOR_TRACK_BYTES-module_start(a5)
         beq.s .open
         tst.w editor_gap-module_start(a5)
         bne.s .open
 .closes:
-        bset #3,d3
+        bset #FIELD_INFO_CLOSES,d3
         bra.s .store
 .open:  bsr field_end_level
-        lsl.w #4,d0
+        lsl.w #FIELD_INFO_LEVEL_SHIFT,d0
         or.w d0,d3
 .store: move.w d3,field_value-module_start(a5)
         movem.l (sp)+,d0-d3/a0-a1

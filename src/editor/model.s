@@ -13,19 +13,19 @@ editor_piece_geometry:
         tst.l (a0)
         beq .bad
         moveq #0,d0
-        move.b 4(a0),d0
+        move.b PIECE_KIND(a0),d0
         subq.w #1,d0
         cmpi.w #EDITOR_KIND_COUNT-1,d0
         bhi .bad
         cmpi.w #7,d0
         blo.s .kind_valid
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         bne .bad
         movem.l d0/a4,-(sp)
         bsr practice_catalog_entry
         move.b 3(a4),d0
         subq.b #2,d0
-        cmp.b 6(a0),d0
+        cmp.b PIECE_REV(a0),d0
         movem.l (sp)+,d0/a4
         bne .bad
 .kind_valid:
@@ -41,41 +41,41 @@ editor_piece_geometry:
         bhi .bad
         movea.l a2,a4
         move.w 4(a2),d0       ; signed relative height-array offset
-        tst.b 6(a0)
+        tst.b PIECE_REV(a0)
         beq.s .height_offset
         move.w 6(a2),d0
 .height_offset:
         adda.w d0,a4
         adda.w 2(a2),a2       ; shared immutable X/Z rows
 .height_revision:
-        cmpi.l #1,editor_track+24-module_start(a5)
+        cmpi.l #1,editor_track+SCTR_REVISION-module_start(a5)
         bne.s .height_ready
-        cmpi.b #2,4(a0)
+        cmpi.b #2,PIECE_KIND(a0)
         blo.s .height_ready
-        cmpi.b #3,4(a0)
+        cmpi.b #3,PIECE_KIND(a0)
         bhi.s .height_ready
         lea model_legacy_flat(pc),a4
 .height_ready:
         moveq #0,d5
-        move.b 5(a0),d5
+        move.b PIECE_ROT(a0),d5
         cmpi.w #3,d5
         bhi .bad
-        cmpi.b #1,6(a0)
+        cmpi.b #1,PIECE_REV(a0)
         bhi .bad
-        cmpi.l #32767,d7
+        cmpi.l #EDITOR_MAX_HEIGHT,d7
         bhi .bad
         moveq #0,d3
-        move.b 7(a0),d3
+        move.b PIECE_CELL(a0),d3
         moveq #0,d4
         move.w d3,d4
-        andi.w #15,d3
-        lsr.w #4,d4
+        andi.w #MAP_CELLS-1,d3
+        lsr.w #MAP_CELL_BITS,d4
         lsl.w #8,d3
-        lsl.w #3,d3
+        lsl.w #MAP_CELL_SHIFT-8,d3
         lsl.w #8,d4
-        lsl.w #3,d4
+        lsl.w #MAP_CELL_SHIFT-8,d4
         moveq #4,d2
-        tst.b 6(a0)
+        tst.b PIECE_REV(a0)
         beq.s .forward
         move.w d6,d0
         lsl.w #3,d0
@@ -99,32 +99,32 @@ editor_piece_geometry:
         cmpi.w #1,d5
         beq.s .quarter
         neg.w d0
-        addi.w #2048,d0
+        addi.w #MAP_CELL,d0
         bra.s .translated
 .quarter:
         neg.w d1
-        addi.w #2048,d1
+        addi.w #MAP_CELL,d1
         bra.s .translated
 .half:
         neg.w d0
         neg.w d1
-        addi.w #2048,d0
-        addi.w #2048,d1
+        addi.w #MAP_CELL,d0
+        addi.w #MAP_CELL,d1
 .translated:
         ext.l d0
         ext.l d1
         add.l d3,d0
         add.l d4,d1
-        cmpi.l #32768,d0
+        cmpi.l #MAP_SIZE,d0
         bhi.s .bad_map
-        cmpi.l #32768,d1
+        cmpi.l #MAP_SIZE,d1
         bhi.s .bad_map
         move.w d0,(a1)+
         move.w (a4)+,d0
         ext.l d0
         add.l d7,d0
         bmi.s .bad_below
-        cmpi.l #32767,d0
+        cmpi.l #EDITOR_MAX_HEIGHT,d0
         bhi.s .bad_height
         move.w d0,(a1)+
         move.w d1,(a1)+
@@ -154,9 +154,12 @@ editor_model_refresh:
         move.w #1,model_refresh-module_start(a5)
         bsr editor_model_build
         clr.w model_refresh-module_start(a5)
+; The CRC of editor_track renewed, over its header and pieces. Every register
+; is kept.
+editor_track_seal:
         movem.l d0-d3/a0,-(sp)
         lea editor_track(pc),a0
-        move.w 6(a0),d0
+        move.w SCTR_LENGTH(a0),d0
         subq.w #4,d0
         bsr storage_crc
         move.l d0,(a0)
@@ -168,49 +171,49 @@ editor_model_build:
         clr.w practice_class-module_start(a5)
         clr.w practice_runtime_valid-module_start(a5)
         lea editor_track(pc),a0
-        cmpi.l #$53435452,(a0)
+        cmpi.l #ID_SCTR,SCTR_ID(a0)
         bne .bad
-        cmpi.w #1,4(a0)
+        cmpi.w #1,SCTR_VERSION(a0)
         bne .bad
-        cmpi.l #1,24(a0)
+        cmpi.l #1,SCTR_REVISION(a0)
         blo .bad
-        cmpi.l #3,24(a0)
+        cmpi.l #SCTR_BLOCKS_REVISION,SCTR_REVISION(a0)
         bhi .bad
         moveq #0,d6
-        move.w 28(a0),d6
+        move.w SCTR_COUNT(a0),d6
         beq .bad
         cmpi.w #EDITOR_MAX_PIECES,d6
         bhi .bad
         move.w d6,d0
-        lsl.w #3,d0
-        addi.w #68,d0
-        cmp.w 6(a0),d0
+        lsl.w #PIECE_SHIFT,d0
+        addi.w #SCTR_FRAME_BYTES,d0
+        cmp.w SCTR_LENGTH(a0),d0
         bne .bad
-        cmpi.w #1,30(a0)
+        cmpi.w #1,SCTR_CLOSED(a0)
         bhi .bad
-        tst.w 34(a0)
+        tst.w SCTR_RESERVED(a0)
         bne .bad
         ; A gap lies inside an open track, after the start piece.
         move.w editor_gap(pc),d0
         beq.s .gap_ok
         cmp.w d6,d0
         bhs .bad
-        tst.w 30(a0)
+        tst.w SCTR_CLOSED(a0)
         bne .bad
 .gap_ok:
         moveq #0,d7
-        move.w 32(a0),d7
+        move.w SCTR_HEIGHT(a0),d7
         bmi .bad
-        move.l 8(a0),d0
-        or.l 12(a0),d0
-        or.l 16(a0),d0
-        or.l 20(a0),d0
+        move.l SCTR_IDENTITY(a0),d0
+        or.l SCTR_IDENTITY+4(a0),d0
+        or.l SCTR_IDENTITY+8(a0),d0
+        or.l SCTR_IDENTITY+12(a0),d0
         beq .bad
         ; Nonempty printable ASCII followed only by zero padding.
-        lea 40(a0),a2
+        lea SCTR_NAME(a0),a2
         tst.b (a2)
         beq .bad
-        moveq #23,d1
+        moveq #SCTR_NAME_BYTES-1,d1
         moveq #0,d2
 .name:
         move.b (a2)+,d0
@@ -228,36 +231,22 @@ editor_model_build:
         dbra d1,.name
         tst.w model_refresh-module_start(a5)
         bne .crc_ok
-        ; IEEE CRC32 over header and active piece bytes, excluding CRC itself.
-        moveq #0,d2
-        move.w 6(a0),d2
-        subq.w #5,d2
-        movea.l a0,a2
-        moveq #-1,d0
-.crc_byte:
-        moveq #0,d1
-        move.b (a2)+,d1
-        eor.l d1,d0
-        moveq #7,d3
-.crc_bit:
-        lsr.l #1,d0
-        bcc.s .crc_next
-        eori.l #$edb88320,d0
-.crc_next:
-        dbra d3,.crc_bit
-        dbra d2,.crc_byte
-        not.l d0
-        cmp.l (a2),d0
+        ; The CRC-32 over the header and the pieces, the CRC itself excluded.
+        move.w SCTR_LENGTH(a0),d0
+        subq.w #4,d0
+        bsr storage_crc
+        cmp.l (a0),d0
+        lea editor_track(pc),a0
         bne .bad
 .crc_ok:
-        lea 64(a0),a0
+        lea SCTR_PIECES(a0),a0
         lea model_geometry(pc),a1
         lea model_row_counts(pc),a4
         moveq #0,d4
         moveq #0,d5
 .piece:
         ; Stable IDs must be nonzero and unique. Finish ID must name a straight.
-        lea editor_track+64(pc),a2
+        lea editor_track+SCTR_PIECES(pc),a2
         move.w d4,d1
         beq.s .unique
         subq.w #1,d1
@@ -265,21 +254,21 @@ editor_model_build:
         move.l (a0),d0
         cmp.l (a2),d0
         beq .bad
-        addq.l #8,a2
+        addq.l #PIECE_BYTES,a2
         dbra d1,.id
 .unique:
         move.l (a0),d0
-        cmp.l editor_track+36(pc),d0
+        cmp.l editor_track+SCTR_FINISH(pc),d0
         bne.s .not_finish
-        cmpi.b #1,4(a0)
+        cmpi.b #1,PIECE_KIND(a0)
         bne .bad
         addq.w #1,d5
 .not_finish:
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .revision_ok
-        cmpi.b #2,4(a0)
+        cmpi.b #2,PIECE_KIND(a0)
         beq .bad
-        cmpi.b #3,4(a0)
+        cmpi.b #3,PIECE_KIND(a0)
         beq .bad
 .revision_ok:
         ; After a gap the pieces keep the height they had: no join is checked there.
@@ -320,7 +309,7 @@ editor_model_build:
         moveq #0,d0
         move.w 2(a3,d7.w),d0
         move.l d0,d7
-        addq.l #8,a0
+        addq.l #PIECE_BYTES,a0
         addq.w #1,d4
         cmp.w d6,d4
         blo .piece
@@ -341,9 +330,9 @@ editor_model_build:
 .joined:
         tst.w model_refresh-module_start(a5)
         beq.s .check_closed
-        move.w d0,editor_track+30-module_start(a5)
+        move.w d0,editor_track+SCTR_CLOSED-module_start(a5)
 .check_closed:
-        cmp.w editor_track+30(pc),d0
+        cmp.w editor_track+SCTR_CLOSED(pc),d0
         bne .bad
         move.w #1,model_valid-module_start(a5)
         bsr practice_classify

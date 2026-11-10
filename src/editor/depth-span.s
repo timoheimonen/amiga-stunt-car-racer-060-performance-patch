@@ -13,10 +13,10 @@ depth_span:
         move.w d3,depth_colour-module_start(a5)
         move.w d2,depth_y-module_start(a5)
         movea.l a5,a2
-        adda.l #$24000,a2
+        adda.l #DEPTH_BUFFER,a2
         move.w d2,d6
-        subi.w #32,d6
-        mulu.w #640,d6
+        subi.w #VIEW_TOP,d6
+        mulu.w #SCREEN_WIDTH*2,d6
         adda.l d6,a2
         moveq #0,d4
         move.w d0,d4

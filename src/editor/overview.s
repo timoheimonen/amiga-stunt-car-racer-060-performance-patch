@@ -6,7 +6,7 @@
 ; Whole-track orthographic view. V toggles once per press; dialogs consume V.
 editor_view_key:
         moveq #0,d0
-        cmpi.b #$b3,editor_input_keys+$34(a5)       ; V raw $34
+        cmpi.b #KEY_DOWN,editor_input_keys+$34(a5)       ; V raw $34
         bne.s .sample
         moveq #1,d0
 .sample:
@@ -30,14 +30,14 @@ editor_view_key:
 overview_fit:
         ; Always include all four ground-plane map corners.
         clr.l overview_min_x-module_start(a5)
-        move.l #-32768,overview_min_v-module_start(a5)
-        move.l #32768,overview_max_x-module_start(a5)
+        move.l #-MAP_SIZE,overview_min_v-module_start(a5)
+        move.l #MAP_SIZE,overview_max_x-module_start(a5)
         clr.l overview_max_v-module_start(a5)
         tst.w place_active-module_start(a5)
         bne .fit_ready
         lea model_geometry(pc),a0
         lea model_row_counts(pc),a1
-        move.w editor_track+28(pc),d6
+        move.w editor_track+SCTR_COUNT(pc),d6
         subq.w #1,d6
         clr.w render_piece-module_start(a5)
 .piece:
@@ -89,7 +89,7 @@ overview_fit:
         swap d0
         andi.l #$ffff,d0
         neg.l d0
-        addi.l #320,d0
+        addi.l #SCREEN_WIDTH,d0
         lsr.l #1,d0
         move.l d0,overview_left-module_start(a5)
         mulu.l d2,d1

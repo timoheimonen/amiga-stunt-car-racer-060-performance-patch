@@ -1,4 +1,4 @@
-# Patch details - 2.2.0
+# Patch details - 2.3.0
 
 This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
 with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
@@ -13,13 +13,14 @@ with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM
 - The patcher checks the disk image, not the machine configuration. WHDLoad
   provides the memory and stops if it cannot. See
   [Loader and memory](#loader-and-memory).
-- Keep the install directory on a writable volume for the editor's 32 track
-  slots and custom-track records.
+- Keep the install directory on a writable volume for the season saves and
+  for the `tracks` drawer, which holds the editor's 512 track slots and the
+  custom-track records.
 
 ## Physics and rendering
 
 Practice mode, computer-opponent and linked races use 50 Hz physics with a
-selectable 20–30 ms simulation step (100–150%) and rendering at up to 50 FPS.
+selectable 20-30 ms simulation step (100-150%) and rendering at up to 50 FPS.
 The achieved frame rate depends on the machine's Chip RAM access speed; see
 [Late frames](#late-frames).
 
@@ -60,8 +61,8 @@ PAL fields end at line 311/312, NTSC fields at 261/262. The game keeps the
 video standard the machine was started in.
 
 - On PAL the display windows are unchanged: the loading screen and the game
-  screens (menus, track preview, race, editor) use lines 60–259.
-- On NTSC the same 200 lines are shown at lines 44–243, the standard NTSC
+  screens (menus, track preview, race, editor) use lines 60-259.
+- On NTSC the same 200 lines are shown at lines 44-243, the standard NTSC
   area. The editor bootstrap sets the loading screen's window in the loader
   before it runs; a module hook at `0xedfc` sets the window and the sprite
   origin (`0x69ec4`) of the game screens. The Copper list is unchanged.
@@ -75,7 +76,7 @@ video standard the machine was started in.
 
 Smoke and small particles move and renew on the original 120 ms simulation
 step, with interpolated positions for drawing. Their clock, including smoke
-animation, advances by the selected 20–30 ms Game Speed step. At 50 physics
+animation, advances by the selected 20-30 ms Game Speed step. At 50 physics
 steps per second, effects update every 120 ms at 100% and every 80 ms at 150%.
 
 ## Settings
@@ -200,8 +201,8 @@ a 8192-byte Chip RAM reservation at `0x181000`. The editor extends the initial l
 the CPU caches before executing copied code.
 
 The runtime and optional 256 KiB Fast angle tables remain allocated for the
-session. The Track Editor and Computer Link modules need 384 KiB and 32 KiB of
-Fast RAM. All Fast RAM is allocated at boot, 672 KiB in total, from WHDLoad's
+session. The Track Editor and Computer Link modules need 416 KiB and 32 KiB of
+Fast RAM. All Fast RAM is allocated at boot, 704 KiB in total, from WHDLoad's
 expansion memory. Failure of a required game Chip allocation halts boot with a
 red screen. Restart with the documented memory configuration.
 
@@ -209,16 +210,44 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 106,586 bytes of code and data,
-loaded from ADF offset `0x76000` in a 123,392-byte transfer that also carries
-the link module. Its bootstrap is 762 bytes at ADF offset `0xd800`. It reserves
-384 KiB of Fast RAM and 131,584 bytes of persistent Chip RAM for loading, disk
+The editor is a separate relocatable module: 109,410 bytes of code and data,
+loaded from ADF offset `0x76000` in a 125,952-byte transfer that also carries
+the link module. Its bootstrap is 766 bytes at ADF offset `0xd800`. It reserves
+416 KiB of Fast RAM and 134,144 bytes of persistent Chip RAM for loading, file
 I/O and display support. It runs relocated in Fast RAM and addresses game memory
 with absolute operands only. The track preview marks the finish row with a small
 arrow. Use: [Track Editor manual](docs/track-editor.md).
-Track projects use two guarded storage banks with 32 slots each, which the
-install keeps as one file per slot. Draft/Ready state, names and custom-track
-records persist in those files.
+
+Custom tracks are files in the install's `tracks` drawer, 512 slots:
+`tracks/Track001.sct` to `tracks/Track512.sct`, and the records of a track in
+the `.rec` file of the same name. A track file is an IFF `FORM SCTF` with the
+chunks `TRAK` (the track model), `STAT` (the stored Draft/Ready class) and
+`CRC `; a records file is a `FORM SCTT` with `RKEY`, `NORM`, `SUPR` and `CRC `.
+A file has at most 4096 bytes, and a Save keeps chunks it does not know. The
+[Track File Format](docs/track-format.md) describes both byte by byte. The
+editor reads and writes each file whole through the slave's
+[file service](#whdload-install). One listing of `tracks` per session builds
+the slot list in Fast RAM, and only the listed files are read; a Save updates
+its row. Before the first write of a session the editor checks that `tracks`
+is a directory.
+
+The module carries the Ready tracks BUILD, BUILD 2 and BUILD 3 as track files
+(548, 724 and 676 bytes). Without a file in `tracks`, slots 1-3 hold them.
+
+Before the first title menu of a session one listing of the install directory
+looks for the files of versions 1.6.0 to 2.2.0: `Track01.sct` to
+`Track32.sct` (`SCES` versions 1 and 2, 1024 bytes), `Track01.rec` to
+`Track32.rec` (`SCER` version 1, 1024 bytes) and `TrackIndex`. Only this
+import reads them. Unless `tracks/Imported` says the question was answered,
+the game asks in its own menu; Practise offers the row Import Old Tracks while
+old files remain. An old track keeps its number unless its slot holds a track
+or records file, and then goes to the first free slot; a track already in
+`tracks` with the same identity and records key is not written again, and
+into existing records of the same track only the better old times go. Every
+written file is read back and compared, and a difference stops the import
+without the deletion question. The marker is written before a deletion, which
+takes only the old files whose tracks or records are now in `tracks`, and
+`TrackIndex`, and leaves delete-protected files.
 Practise shows Custom Tracks and Track Editor only in single-player games:
 with more drivers (`0x5eb76`) or a Computer Link role (`0x57c3c`) the original
 division menu remains.
@@ -240,10 +269,6 @@ A track has up to 78 road pieces. Tracks of up to 64 pieces are stored
 exactly as in 2.0.0. A record's track identity has 32 bytes and 4 per piece:
 the first 288 bytes keep their place, and the rest uses bytes 2.0.0 kept zero,
 so the records of a track of up to 64 pieces are unchanged.
-
-The disk image contains the Ready tracks BUILD, BUILD 2 and BUILD 3 in save
-slots 01-03, each written as a first save (one record, listed in both directory
-copies) without lap records.
 
 The 3D view shows rows 32-175 of its surface at the top of the screen. Below it
 a Copper tail shows the bar, a bitmap of its own in Chip RAM. Three moves at the
@@ -271,11 +296,12 @@ choices: map, height limits, the piece limit and the road already built. Its
 search state borrows the depth buffer, which the next full render clears. The
 sections taken off and added are one undo step.
 
-The bootstrap stores Exec `AttnFlags` and the measured video standard in the module. After installing its game
-hooks and around each editor disk transfer, the module pushes and invalidates
-the CPU caches with the instructions of the detected processor. After each
-transfer it queues the key changes its own input layer has not seen, so a key
-marked up while WHDLoad showed the system (see [WHDLoad install](#whdload-install))
+The bootstrap stores Exec `AttnFlags` and the measured video standard in the
+module. After installing its game hooks and after each file access, the module
+pushes and invalidates the CPU caches with the instructions of the detected
+processor. After each access it runs the game's CIA setup at `0xee8a` again
+and queues the key changes its own input layer has not seen, so a key marked
+up while WHDLoad showed the system (see [WHDLoad install](#whdload-install))
 ends its hold and its next press counts.
 
 
@@ -287,7 +313,7 @@ WHDLoad slave does not call it: the game starts at its loading picture.
 ## Player-name screen
 
 The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`, and its edition line names
-the version: `PERFORMANCE EDITION 2.2.0`. Fire, Return or the keypad Enter
+the version: `PERFORMANCE EDITION 2.3.0`. Fire, Return or the keypad Enter
 supplies `racer` when the name is empty and preserves a typed name.
 
 ## Keyboard acknowledge
@@ -307,14 +333,17 @@ The disk bytes at `0xee8a` are unchanged.
 `patch.py ORIGINAL [DIRECTORY]` (default: `StuntCarRacerPerf` beside the
 original ADF) writes the patched game as the disk image
 `StuntCarRacerPerf.disk` together with a WHDLoad slave, a Workbench project
-icon and a drawer icon for the directory. Use: [WHDLoad install](WHDLOAD.md). Slave source:
+icon, a drawer icon for the directory and the empty `tracks` drawer with its
+icon. Use: [WHDLoad install](WHDLOAD.md). Slave source:
 [src/SCR_WHDLoad.s](src/SCR_WHDLoad.s).
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 4716 | `42bda07b465f6e4c63758b0c6bab0ad2c3623db191749ab8521074d66b4944fc` |
-| `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 301 | `f4ecc86b29c2f349b47ead1038b0662a33016dae1fa683785a28f8452e0a08ca` |
-| `<directory>.info` (drawer) | 264 | `58b65ed8043f8bea23264176586f8023d27c9c0b413c657fcb1222b93512b636` |
+| `StuntCarRacerPerf.slave` | 3780 | `f1cef34d0a2806d36c28cc0b258635489b00b71ca2af74e9cf005c14ca5af50d` |
+| `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 299 | `ebeebfc42d86895c9ce954cf39e3329e99b191e2d4e501158bd6b81f19c31e5e` |
+| `<directory>.info` (drawer) | 264 | `c6695dc18210c72a672c2e20f1fba7b8f5036e6c2513e7f84772d7cd84072e88` |
+| `tracks` | | empty drawer |
+| `tracks.info` (drawer, window lists all files by name) | 264 | `dd3f7cb84a7aa483d9f9ea1d38db77b407f320c3fba70c1235576f9e68ee3809` |
 | `StuntCarRacerPerf.disk` | 901,120 | see [Checksums](#checksums) |
 
 The names differ from other WHDLoad installs of the game (`StuntCarRacer.slave`,
@@ -323,20 +352,20 @@ one directory. `resload_DiskLoad` reads only images named `Disk.N`, so the
 slave reads its image with `resload_LoadFileOffset`.
 
 The slave (WHDLoad slave version 17, base memory `0x200000`, expansion memory
-`0xaa000`, quit key F10) runs the disk's own boot block on a minimal
+`0xb2000`, quit key F10, flag `WHDLF_Examine`) runs the disk's own boot block on a minimal
 `exec.library` and `trackdisk.device`. The boot code, the runtime installer
 and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
 `AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
 `CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
 call ends WHDLoad with an operating system emulation error naming the call.
-WHDLoad's start window shows the slave's text `Performance Patch 2.2.0` and
+WHDLoad's start window shows the slave's text `Performance Patch 2.3.0` and
 `by Timo Heimonen`.
 
 - Chip memory comes from the base memory: ordinary allocations from
   `0x80000` below the boot block at `0x8c000`, `MEMF_REVERSE` allocations from
   the top down to `0x190000`, and `AllocAbs` reserves the runtime at
   `0x181000`. Fast memory comes from the expansion memory: 256 KiB angle
-  tables, the 384 KiB Track Editor and the 32 KiB Computer Link module. Its
+  tables, the 416 KiB Track Editor and the 32 KiB Computer Link module. Its
   last 8 KiB are the slave's stack during the boot, as the editor's Chip
   buffer takes the top of the base memory.
 - The slave checks the long-word sums of the boot block, the first load
@@ -353,10 +382,9 @@ WHDLoad's start window shows the slave's text `Performance Patch 2.2.0` and
 | `0x62754` | request for a formatted season save disk and a key, whose wait first takes the keys still held | the same taking of the keys (`JSR 0x5985c` / `BCC.S` back), then `BRA.S` over the request and the key |
 | `0x62c88` | warning that a new save disk has not been used for saving, and a key | `BRA.S` to the game's empty save index, as after the key |
 
-The slave driver keeps the original interface: D0 drive (bits 0–1) and
+The slave driver keeps the original interface: D0 drive (bits 0-1) and
 format (bit 15), D1 first sector, D2 sector count, D3 read or write, A0 data;
-D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range, or a
-Track Editor file of the wrong size). Only the game disk in DF0 in the standard format
+D0 returns 0 or error 28 (write-protected), 29 (no disk) or 30 (range). Only the game disk in DF0 in the standard format
 exists; DF1 returns 29. Reads of the image go through `resload_LoadFileOffset`.
 
 The loader shows the game's loading picture while it reads the main program.
@@ -366,18 +394,14 @@ ButtonWait option (`WHDLTAG_BUTTONWAIT_GET`; `ws_config` offers it in
 WHDLoad's start window) it waits for the left mouse button or the joystick
 fire (CIA-A `0xbfe001` bits 6 and 7) and their release.
 
-The disk areas the game and the Track Editor write are files in the install
-directory. The editor's two copies of each area are one file.
+The disk areas of the season saves are files in the install directory.
 
 | Disk area (sectors) | File | Size | Without the file |
 | --- | --- | ---: | --- |
-| Editor slot *n* = 0–31: track `1210+4n`, copy `1342+4n` | `TrackNN.sct` (NN = *n*+1) | 1024 | game disk sectors |
-| Records of slot *n*: `1212+4n`, copy `1344+4n` | `TrackNN.rec` | 1024 | game disk sectors |
-| Editor slot index: `1474`, copy `1485` | `TrackIndex` | 1536 | game disk sectors |
 | Season save index: `22` | `SaveIndex` | 512 | empty sectors |
-| Season save *k* = 0–29: `23+k` | `SaveNN` (NN = *k*+1) | 512 | empty sectors |
+| Season save *k* = 0-29: `23+k` | `SaveNN` (NN = *k*+1) | 512 | empty sectors |
 
-A write builds the whole file from its current contents, or from the disk
+A write builds the whole file from its current contents, or from empty sectors
 without a file, and saves it with `resload_SaveFile`; an unchanged file is not
 written again. Writes elsewhere return error 28, so the image is never written.
 The season saves were on a separate formatted disk on floppy, so without a
@@ -386,6 +410,17 @@ size reads as empty too. The game's request for that disk and its warning
 about a new save disk are skipped. Menus read keys without taking them, so
 the request's taking of the keys still held stays: otherwise the Return or
 fire that chose Load or Save would choose in the save list at once.
+
+The Track Editor's files go through the slave's file service by name: size,
+load, save, list (the file names of a directory), delete and examine, with
+`resload_GetFileSize`, `resload_LoadFile`, `resload_SaveFile`,
+`resload_ListFiles`, `resload_DeleteFile` and `resload_Examine`. The editor
+finds the service from the jump the slave installs for the game's driver:
+the tag `SCFS`, the service version (2) and the service's offset stand just
+before the driver. Names are paths in the install directory, such as
+`tracks/Track007.sct`. WHDLoad does not create a missing directory, so the
+patcher writes the empty `tracks` drawer, and the editor examines it before
+its first write.
 
 A write, or a read of a file WHDLoad has not cached, shows the system for a
 moment, and a key released meanwhile goes to the system. On each return to
@@ -425,7 +460,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| `StuntCarRacerPerf.disk` (2.2.0, up to 50 FPS Practice, computer-opponent and linked races) | `52c7040f2155923f5aaaf8831c20207babb374767c4d4ccba79adbf019ce724c` |
+| `StuntCarRacerPerf.disk` (2.3.0, up to 50 FPS Practice, computer-opponent and linked races) | `4cb6328d8f473c676033d331666acc26547959ef7d6e1ed99343a0e87f19c02b` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and the whole disk

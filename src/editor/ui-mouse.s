@@ -5,12 +5,11 @@
 
 ; Track Editor bar: the mouse. The VBL keeps the pointer and records one left
 ; press. The main loop acts on the press, so nothing here changes the track.
-UI_POINTER_BYTES equ 72
+; An image: the two control words, two words a line, two end words.
+UI_POINTER_BYTES equ (UI_POINTER_LINES+2)*4
 UI_POINTER_ARROW equ 0
 UI_POINTER_REFUSED equ 1
 UI_POINTER_DRAG equ 2
-UI_ORIGIN_PAL equ 60
-UI_ORIGIN_NTSC equ 44
 UI_MAX_X equ 319
 UI_MAX_Y equ 199
 UI_MS_PAL equ 20

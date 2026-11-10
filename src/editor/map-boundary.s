@@ -3,14 +3,17 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Ground grid and outline of the actual X/Z domain, 0..32768, Y=0.
+; Ground grid and outline of the actual X/Z domain, 0..MAP_SIZE, Y=0.
 ; Paint before the road, without depth writes: road surfaces cover the guide.
-; 2048-unit subdivisions bound near-plane intersection products on 68060.
+; MAP_CELL subdivisions bound near-plane intersection products on 68060.
+; The grid: MAP_CELLS-1 inner lines each way, of a segment per cell.
+MAP_BORDER_SEGMENTS equ 4*MAP_CELLS
+MAP_SEGMENTS equ 2*(MAP_CELLS-1)*MAP_CELLS+MAP_BORDER_SEGMENTS
 editor_map_boundary:
-        move.w #543,d7       ; 30 inner lines * 16 segments + 64 border segments
+        move.w #MAP_SEGMENTS-1,d7
         cmpi.w #FREE_WIRE_OUTLINE,free_wire-module_start(a5)
         bne.s .segment
-        moveq #63,d7
+        moveq #MAP_BORDER_SEGMENTS-1,d7
 .segment:
         tst.b ui_yield_flag(pc)
         beq.s .segment_go
@@ -46,10 +49,10 @@ editor_map_boundary:
         move.l 4(a0),d2
         muls.l #FREE_FOCAL,d0
         divs.l d2,d0
-        addi.l #160,d0
+        addi.l #VIEW_CX,d0
         muls.l #FREE_FOCAL,d1
         divs.l d2,d1
-        addi.l #100,d1
+        addi.l #VIEW_CY,d1
 .store:
         move.l d0,(a1)+
         move.l d1,(a1)+
@@ -61,46 +64,46 @@ editor_map_boundary:
         dbra d7,.segment
         rts
 
-; D7 descending 543..0. Grid first (color 3), then gold perimeter (15).
+; D7 descending MAP_SEGMENTS-1..0. Grid first (color 3), then gold perimeter (15).
 ; A4 points at two adjacent world X/Z word pairs. No camera fit dependency.
 map_boundary_segment:
-        cmpi.w #64,d7
+        cmpi.w #MAP_BORDER_SEGMENTS,d7
         blo.s .border
         move.w #3,map_boundary_color-module_start(a5)
-        move.w #543,d0
+        move.w #MAP_SEGMENTS-1,d0
         sub.w d7,d0
         move.w d0,d1
-        andi.w #15,d1
+        andi.w #MAP_CELLS-1,d1
         lsl.w #8,d1
-        lsl.w #3,d1
-        lsr.w #4,d0
+        lsl.w #MAP_CELL_SHIFT-8,d1
+        lsr.w #MAP_CELL_BITS,d0
         move.w d0,d2
-        cmpi.w #15,d0
+        cmpi.w #MAP_CELLS-1,d0
         blo.s .coordinate
-        subi.w #15,d0
+        subi.w #MAP_CELLS-1,d0
 .coordinate:
         addq.w #1,d0
         lsl.w #8,d0
-        lsl.w #3,d0
+        lsl.w #MAP_CELL_SHIFT-8,d0
         lea map_boundary_world(pc),a4
-        cmpi.w #15,d2
+        cmpi.w #MAP_CELLS-1,d2
         bhs.s .horizontal
         move.w d0,(a4)
         move.w d1,2(a4)
         move.w d0,4(a4)
-        addi.w #2048,d1
+        addi.w #MAP_CELL,d1
         move.w d1,6(a4)
         rts
 .horizontal:
         move.w d1,(a4)
         move.w d0,2(a4)
-        addi.w #2048,d1
+        addi.w #MAP_CELL,d1
         move.w d1,4(a4)
         move.w d0,6(a4)
         rts
 .border:
         move.w #15,map_boundary_color-module_start(a5)
-        moveq #63,d0
+        moveq #MAP_BORDER_SEGMENTS-1,d0
         sub.w d7,d0
         lsl.w #2,d0
         lea map_boundary_points(pc),a4
@@ -255,7 +258,7 @@ map_boundary_clip:
         moveq #0,d3
         btst #0,d4
         bne.s .vertical
-        move.l #319,d3
+        move.l #SCREEN_WIDTH-1,d3
 .vertical:
         move.l d3,d0
         sub.l (a0),d0
@@ -268,10 +271,10 @@ map_boundary_clip:
         add.l d0,4(a0)
         move.l d3,(a0)
         bra.s .next
-.top:   moveq #32,d3
+.top:   moveq #VIEW_TOP,d3
         bra.s .horizontal
 .bottom:
-        move.l #175,d3
+        move.l #VIEW_BOTTOM-1,d3
 .horizontal:
         move.l d3,d0
         sub.l 4(a0),d0
@@ -290,14 +293,14 @@ map_boundary_outcode:
         tst.l d0
         bge.s .right
         bset #0,d2
-.right: cmpi.l #319,d0
+.right: cmpi.l #SCREEN_WIDTH-1,d0
         ble.s .top
         bset #1,d2
-.top:   cmpi.l #32,d1
+.top:   cmpi.l #VIEW_TOP,d1
         bge.s .bottom
         bset #2,d2
 .bottom:
-        cmpi.l #175,d1
+        cmpi.l #VIEW_BOTTOM-1,d1
         ble.s .done
         bset #3,d2
 .done:  rts
@@ -352,7 +355,7 @@ map_boundary_pixel:
         movea.l d2,a2
         movea.l d3,a3
         move.l d1,d2
-        mulu.w #40,d2
+        mulu.w #SCREEN_ROW_BYTES,d2
         move.l d0,d3
         lsr.l #3,d3
         add.l d3,d2
@@ -364,30 +367,30 @@ map_boundary_pixel:
         beq.s .refused
         cmpi.w #PLACE_ON,map_boundary_color-module_start(a5)
         beq.s .ghost
-        bset d3,8000(a1)
+        bset d3,SCREEN_PLANE_BYTES(a1)
         cmpi.w #15,map_boundary_color-module_start(a5)
         beq.s .border
-        bclr d3,24000(a1)
+        bclr d3,3*SCREEN_PLANE_BYTES(a1)
         move.l a2,d2
         move.l a3,d3
         rts
 .border:
-        bset d3,16000(a1)
-        bset d3,24000(a1)
+        bset d3,2*SCREEN_PLANE_BYTES(a1)
+        bset d3,3*SCREEN_PLANE_BYTES(a1)
         move.l a2,d2
         move.l a3,d3
         rts
 ; Lines of the start page cross the grid, so these set every plane.
 .refused:
-        bclr d3,8000(a1)
-        bset d3,16000(a1)
-        bset d3,24000(a1)
+        bclr d3,SCREEN_PLANE_BYTES(a1)
+        bset d3,2*SCREEN_PLANE_BYTES(a1)
+        bset d3,3*SCREEN_PLANE_BYTES(a1)
         move.l a2,d2
         move.l a3,d3
         rts
-.ghost: bclr d3,8000(a1)
-        bclr d3,16000(a1)
-        bclr d3,24000(a1)
+.ghost: bclr d3,SCREEN_PLANE_BYTES(a1)
+        bclr d3,2*SCREEN_PLANE_BYTES(a1)
+        bclr d3,3*SCREEN_PLANE_BYTES(a1)
         move.l a2,d2
         move.l a3,d3
         rts
@@ -396,69 +399,26 @@ map_boundary_world: dcb.w 4,0
 map_boundary_color: dc.w 0
 map_boundary_view: dcb.l 6,0
 map_boundary_screen: dcb.l 4,0
+; The perimeter from the origin round to it, a point per cell.
 map_boundary_points:
-        dc.w 0,0
-        dc.w 2048,0
-        dc.w 4096,0
-        dc.w 6144,0
-        dc.w 8192,0
-        dc.w 10240,0
-        dc.w 12288,0
-        dc.w 14336,0
-        dc.w 16384,0
-        dc.w 18432,0
-        dc.w 20480,0
-        dc.w 22528,0
-        dc.w 24576,0
-        dc.w 26624,0
-        dc.w 28672,0
-        dc.w 30720,0
-        dc.w 32768,0
-        dc.w 32768,2048
-        dc.w 32768,4096
-        dc.w 32768,6144
-        dc.w 32768,8192
-        dc.w 32768,10240
-        dc.w 32768,12288
-        dc.w 32768,14336
-        dc.w 32768,16384
-        dc.w 32768,18432
-        dc.w 32768,20480
-        dc.w 32768,22528
-        dc.w 32768,24576
-        dc.w 32768,26624
-        dc.w 32768,28672
-        dc.w 32768,30720
-        dc.w 32768,32768
-        dc.w 30720,32768
-        dc.w 28672,32768
-        dc.w 26624,32768
-        dc.w 24576,32768
-        dc.w 22528,32768
-        dc.w 20480,32768
-        dc.w 18432,32768
-        dc.w 16384,32768
-        dc.w 14336,32768
-        dc.w 12288,32768
-        dc.w 10240,32768
-        dc.w 8192,32768
-        dc.w 6144,32768
-        dc.w 4096,32768
-        dc.w 2048,32768
-        dc.w 0,32768
-        dc.w 0,30720
-        dc.w 0,28672
-        dc.w 0,26624
-        dc.w 0,24576
-        dc.w 0,22528
-        dc.w 0,20480
-        dc.w 0,18432
-        dc.w 0,16384
-        dc.w 0,14336
-        dc.w 0,12288
-        dc.w 0,10240
-        dc.w 0,8192
-        dc.w 0,6144
-        dc.w 0,4096
-        dc.w 0,2048
+MAP_POINT set 0
+        rept MAP_CELLS
+        dc.w MAP_POINT,0
+MAP_POINT set MAP_POINT+MAP_CELL
+        endr
+MAP_POINT set 0
+        rept MAP_CELLS
+        dc.w MAP_SIZE,MAP_POINT
+MAP_POINT set MAP_POINT+MAP_CELL
+        endr
+MAP_POINT set MAP_SIZE
+        rept MAP_CELLS
+        dc.w MAP_POINT,MAP_SIZE
+MAP_POINT set MAP_POINT-MAP_CELL
+        endr
+MAP_POINT set MAP_SIZE
+        rept MAP_CELLS
+        dc.w 0,MAP_POINT
+MAP_POINT set MAP_POINT-MAP_CELL
+        endr
         dc.w 0,0

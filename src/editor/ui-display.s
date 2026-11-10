@@ -3,17 +3,16 @@
 ; SPDX-License-Identifier: MIT
 ; Licensed under the MIT License; see LICENSE.
 
-; Track Editor bar: the display split. The 3D view shows rows 32-175 of its
-; surface at the top of the screen. Below it a copper tail shows the bar, a
-; bitmap of its own in Chip. The original list runs to $e82e, where three
-; moves jump to the tail: the copper reads them only at the top of a frame, so
-; they change only after line 250 or, going back, after the top of the list.
-VIEW_FIRST_ROW equ 32
+; Track Editor bar: the display split. The 3D view shows rows 32-175 (VIEW_TOP
+; to VIEW_BOTTOM-1) of its surface at the top of the screen. Below it a copper
+; tail shows the bar, a bitmap of its own in Chip. The original list runs to
+; $e82e, where three moves jump to the tail: the copper reads them only at the
+; top of a frame, so they change only after line 250 or, going back, after the
+; top of the list.
 COPPER_LIST equ $e74e
 COPPER_LIST_BYTES equ 236
 COPPER_SPRITES equ $e7f0
 COPPER_JUMP equ $e82e
-SAVED_COPPER_FULL equ $23980
 UI_CHIP_BAR equ $6000
 UI_CHIP_TAIL equ $8400
 UI_CHIP_SPRITE equ $8600

@@ -22,7 +22,7 @@ test_drive:
         clr.w test_request-module_start(a5)
         tst.w editor_gap-module_start(a5)
         beq.s .whole
-        lea ui_text_gap(pc),a0
+        lea ui_reason_gap(pc),a0
         bra ui_refuse
 .whole: bsr validate_for_practice
         tst.w d0
@@ -30,7 +30,7 @@ test_drive:
         bsr custom_compile
         bne.s .start
 .not_ready:
-        move.w #11,storage_status-module_start(a5)
+        move.w #STORAGE_SAY_TEST_READY,storage_status-module_start(a5)
         rts
 .start:
         clr.w editor_input_enabled-module_start(a5)
@@ -94,7 +94,7 @@ test_drive:
         move.w #EDITOR_INPUT_HOLDOFF,editor_input_holdoff-module_start(a5)
         clr.w editor_view_valid-module_start(a5)
         bsr ui_display_enter
-        move.w #13,storage_status-module_start(a5)
+        move.w #STORAGE_SAY_DRIVEN,storage_status-module_start(a5)
         rts
 
 test_request: dc.w 0

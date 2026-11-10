@@ -7,16 +7,19 @@
 ; Two private Fast caches, outside the loaded module and screen backup.
 ; BLOCK_CACHE_BYTES: a row count word per piece, then the geometry of every
 ; piece. It, BLOCK_ORIGINAL_CACHE and BLOCK_PREVIEW_CACHE come from the builder.
+; The pieces of a section share the high 24 bits of their IDs; IDs below
+; BLOCK_GROUP_STEP are single pieces.
+BLOCK_GROUP_MASK equ $ffffff00
+BLOCK_GROUP_STEP equ 256
 
 ; The track goes with its gap words.
 block_save:
         lea editor_track(pc),a0
         lea block_original_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
         lea model_row_counts(pc),a0
-        movea.l a5,a1
-        adda.l #BLOCK_ORIGINAL_CACHE,a1
+        lea BLOCK_ORIGINAL_CACHE(a5),a1
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         lea practice_class(pc),a0
@@ -26,10 +29,9 @@ block_restore:
         move.w #1,model_valid-module_start(a5)
         lea block_original_track(pc),a0
         lea editor_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
-        movea.l a5,a0
-        adda.l #BLOCK_ORIGINAL_CACHE,a0
+        lea BLOCK_ORIGINAL_CACHE(a5),a0
         lea model_row_counts(pc),a1
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
@@ -122,14 +124,14 @@ block_context:
         move.w d0,block_suffix-module_start(a5)
         bra.s .ready
 .append:
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne .done
 .ready:
         move.w building_mode(pc),block_mode-module_start(a5)
         move.w building_selected(pc),block_selected-module_start(a5)
         ; Fresh group identifier above every existing identifier.
-        lea editor_track+64(pc),a0
-        move.w editor_track+28(pc),d1
+        lea editor_track+SCTR_PIECES(pc),a0
+        move.w editor_track+SCTR_COUNT(pc),d1
         subq.w #1,d1
         moveq #0,d0
 .max_id:
@@ -137,19 +139,19 @@ block_context:
         bhs.s .next_id
         move.l (a0),d0
 .next_id:
-        addq.l #8,a0
+        addq.l #PIECE_BYTES,a0
         dbra d1,.max_id
-        andi.l #$ffffff00,d0
-        addi.l #256,d0
+        andi.l #BLOCK_GROUP_MASK,d0
+        addi.l #BLOCK_GROUP_STEP,d0
         beq .done
         move.l d0,block_group-module_start(a5)
         cmpi.w #2,block_mode-module_start(a5)
         bne.s .group_ready
         move.w block_insert(pc),d0
-        lsl.w #3,d0
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a0
         move.l (a0,d0.w),d0
-        andi.l #$ffffff00,d0
+        andi.l #BLOCK_GROUP_MASK,d0
         beq.s .group_ready
         move.l d0,block_group-module_start(a5)
 .group_ready:
@@ -212,40 +214,28 @@ block_make:
         move.w (a4),d0
         move.w d0,block_count-module_start(a5)
         add.w block_insert(pc),d0
-        add.w block_original_track+28(pc),d0
+        add.w block_original_track+SCTR_COUNT(pc),d0
         sub.w block_suffix(pc),d0
         cmpi.w #EDITOR_MAX_PIECES,d0
         bhi .bad_limit
-        move.w d0,editor_track+28-module_start(a5)
-        lsl.w #3,d0
-        addi.w #68,d0
-        move.w d0,editor_track+6-module_start(a5)
-        clr.w editor_track+30-module_start(a5)
+        move.w d0,editor_track+SCTR_COUNT-module_start(a5)
+        lsl.w #PIECE_SHIFT,d0
+        addi.w #SCTR_FRAME_BYTES,d0
+        move.w d0,editor_track+SCTR_LENGTH-module_start(a5)
+        clr.w editor_track+SCTR_CLOSED-module_start(a5)
         ; A gap after the insert moves with the new section.
         bsr block_moved_gap
         move.w d0,editor_gap-module_start(a5)
         move.w block_original_track+EDITOR_TRACK_BYTES+2(pc),editor_gap_height-module_start(a5)
         ; Align the entry to the actual predecessor's left endpoint.
         bsr block_tail_row
-        moveq #0,d2
-        move.w (a0),d2
-        move.w 4(a4),d0
-        ext.l d0
-        sub.l d0,d2
-        addi.l #1024,d2
-        asr.l #8,d2
-        asr.l #3,d2
-        moveq #0,d3
-        move.w 4(a0),d3
-        move.w 6(a4),d0
-        ext.l d0
-        sub.l d0,d3
-        addi.l #1024,d3
-        asr.l #8,d3
-        asr.l #3,d3
+        lea 4(a4),a3
+        bsr entry_shift
+        move.l d2,d3
+        move.l d1,d2
         move.w block_insert(pc),d0
-        lsl.w #3,d0
-        lea editor_track+64(pc),a1
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a1
         adda.w d0,a1
         move.l block_group(pc),d5
         move.w block_count(pc),d6
@@ -271,13 +261,13 @@ block_make:
         move.b d0,(a1)+
         dbra d6,.piece
         move.w block_suffix(pc),d0
-        lsl.w #3,d0
-        lea block_original_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea block_original_track+SCTR_PIECES(pc),a0
         adda.w d0,a0
-        move.w block_original_track+28(pc),d0
+        move.w block_original_track+SCTR_COUNT(pc),d0
         sub.w block_suffix(pc),d0
         beq.s .built
-        lsl.w #3,d0
+        lsl.w #PIECE_SHIFT,d0
         bsr storage_copy
 .built:
         bsr editor_model_refresh
@@ -290,19 +280,17 @@ block_make:
         tst.w d0
         beq .bad_low
         ; Replacement must not move the unchanged suffix vertically.
-        move.w block_original_track+28(pc),d6
+        move.w block_original_track+SCTR_COUNT(pc),d6
         sub.w block_suffix(pc),d6
         beq.s .suffix_done
         subq.w #1,d6
-        movea.l a5,a4
-        adda.l #BLOCK_ORIGINAL_CACHE,a4
+        lea BLOCK_ORIGINAL_CACHE(a5),a4
         move.w block_suffix(pc),d0
         add.w d0,d0
         adda.w d0,a4
         move.w block_suffix(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        movea.l a5,a2
-        adda.l #BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES,a2
+        lea BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES(a5),a2
         adda.w d0,a2
         move.w block_insert(pc),d0
         add.w block_count(pc),d0
@@ -323,22 +311,8 @@ block_make:
         adda.w #EDITOR_GEOMETRY_STRIDE,a3
         dbra d6,.suffix_piece
 .suffix_done:
-        move.w #2,building_mode-module_start(a5)
-        clr.w building_selected-module_start(a5)
-.collision:
-        move.w building_selected(pc),d0
-        lsl.w #3,d0
-        lea editor_track+64(pc),a0
-        move.l (a0,d0.w),building_probe-module_start(a5)
-        move.l 4(a0,d0.w),building_probe+4-module_start(a5)
-        bsr building_collision
-        tst.w d0
+        bsr model_self_clear
         beq .bad_overlap
-        addq.w #1,building_selected-module_start(a5)
-        move.w editor_track+28(pc),d0
-        cmp.w building_selected(pc),d0
-        bhi.s .collision
-        moveq #1,d0
         rts
 ; Reason codes for the HUD, see block_fail_texts.
 .bad_limit:
@@ -424,11 +398,10 @@ block_preview:
 .valid:
         lea editor_track(pc),a0
         lea block_preview_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
         lea model_row_counts(pc),a0
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE,a1
+        lea BLOCK_PREVIEW_CACHE(a5),a1
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         move.w #1,block_preview_valid-module_start(a5)
@@ -459,15 +432,8 @@ block_commit:
         bne.s .changed
         lea editor_track(pc),a0
         lea block_preview_track(pc),a1
-        move.w 6(a0),d0
-        cmp.w 6(a1),d0
+        bsr track_same
         bne.s .changed
-        lsr.w #2,d0
-        subq.w #1,d0
-.compare:
-        cmpm.l (a0)+,(a1)+
-        bne.s .changed
-        dbra d0,.compare
         clr.w building_mode-module_start(a5)
         clr.w block_preview_valid-module_start(a5)
         rts
@@ -475,15 +441,15 @@ block_commit:
         bsr editing_backup
         lea block_preview_track(pc),a0
         lea editor_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
         move.w block_insert(pc),building_selected-module_start(a5)
         ; An open-track append leaves Space ready to add the next block.
         cmpi.w #1,building_mode-module_start(a5)
         bne.s .selected
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne.s .selected
-        move.w editor_track+28(pc),building_selected-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),building_selected-module_start(a5)
 .selected:
         clr.w building_mode-module_start(a5)
         clr.w block_preview_valid-module_start(a5)
@@ -493,7 +459,7 @@ block_commit:
 
 block_render_enter:
         clr.w block_render_active-module_start(a5)
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo .done
         tst.w building_mode-module_start(a5)
         beq .done
@@ -505,16 +471,14 @@ block_render_enter:
         move.w building_selected(pc),block_render_selected-module_start(a5)
         lea block_preview_track(pc),a0
         lea editor_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
-        movea.l a5,a0
-        adda.l #BLOCK_PREVIEW_CACHE,a0
+        lea BLOCK_PREVIEW_CACHE(a5),a0
         lea model_row_counts(pc),a1
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         move.w building_candidate_count(pc),block_render_count-module_start(a5)
-        clr.w building_candidate_count-module_start(a5)
-        clr.w building_mode-module_start(a5)
+        bsr ui_choose_end
         move.w block_insert(pc),building_selected-module_start(a5)
         move.w #1,block_render_active-module_start(a5)
 .done:
@@ -530,24 +494,89 @@ block_render_exit:
 .done:
         rts
 
+; Pieces D0 to D1-1: Z set when one of them is the piece of the start line,
+; which always stays. D0, D2 and A0 change.
+section_keeps_finish:
+        move.w d1,d2
+        sub.w d0,d2
+        subq.w #1,d2
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a0
+        adda.w d0,a0
+        move.l editor_track+SCTR_FINISH(pc),d0
+.piece: cmp.l (a0),d0
+        beq.s .done
+        addq.l #PIECE_BYTES,a0
+        dbra d2,.piece
+.done:  rts
+
+; Pieces D4 to D3-1 go, D4 < D3 <= the count. Mid-track the pieces after them
+; stay where they are: a gap opens at D4, and they keep their height. The
+; stale bytes after the new end go, the old CRC with them. D0 = the new
+; count; D3 and D4 are kept, D1, A0 and A1 change.
+track_cut:
+        move.w editor_track+SCTR_COUNT(pc),d0
+        sub.w d3,d0
+        beq.s .count
+        tst.w editor_gap-module_start(a5)
+        bne.s .height_kept
+        move.w d3,d1
+        mulu.w #EDITOR_GEOMETRY_STRIDE,d1
+        lea model_geometry(pc),a0
+        adda.l d1,a0
+        move.w 2(a0),editor_gap_height-module_start(a5)
+.height_kept:
+        move.w d4,editor_gap-module_start(a5)
+        lsl.w #PIECE_SHIFT,d0
+        move.w d3,d1
+        lsl.w #PIECE_SHIFT,d1
+        lea editor_track+SCTR_PIECES(pc),a0
+        adda.w d1,a0
+        move.w d4,d1
+        lsl.w #PIECE_SHIFT,d1
+        lea editor_track+SCTR_PIECES(pc),a1
+        adda.w d1,a1
+        bsr storage_copy
+.count: move.w editor_track+SCTR_COUNT(pc),d0
+        sub.w d3,d0
+        add.w d4,d0
+        move.w d0,editor_track+SCTR_COUNT-module_start(a5)
+        move.w d0,-(sp)
+        lsl.w #PIECE_SHIFT,d0
+        addi.w #SCTR_FRAME_BYTES,d0
+        lea editor_track(pc),a0
+        move.w SCTR_LENGTH(a0),d1
+        move.w d0,SCTR_LENGTH(a0)
+        sub.w d0,d1
+        lea -4(a0,d0.w),a0
+        lsr.w #2,d1
+.clear: clr.l (a0)+
+        dbra d1,.clear
+        move.w (sp)+,d0
+        rts
+
+; D0 a piece -> D0 the first piece of the section before it. D1, D2 and A0
+; destroyed.
+section_before:
+        subq.w #1,d0
 ; D0 index -> start of its persisted group. IDs <256 remain single pieces.
 block_group_start:
         tst.w d0
         beq .done
         move.w d0,d1
-        lsl.w #3,d1
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d1
+        lea editor_track+SCTR_PIECES(pc),a0
         adda.w d1,a0
         move.l (a0),d2
-        cmpi.l #256,d2
+        cmpi.l #BLOCK_GROUP_STEP,d2
         blo .done
-        andi.l #$ffffff00,d2
+        andi.l #BLOCK_GROUP_MASK,d2
 .loop:
-        move.l -8(a0),d1
-        andi.l #$ffffff00,d1
+        move.l -PIECE_BYTES(a0),d1
+        andi.l #BLOCK_GROUP_MASK,d1
         cmp.l d2,d1
         bne.s .done
-        subq.l #8,a0
+        subq.l #PIECE_BYTES,a0
         subq.w #1,d0
         bne.s .loop
 .done: rts
@@ -564,7 +593,7 @@ block_group_end:
 editor_end:
         move.w editor_gap(pc),d0
         bne.s .done
-        move.w editor_track+28(pc),d0
+        move.w editor_track+SCTR_COUNT(pc),d0
 .done:  rts
 
 ; D0 selection, D4 direction -> what Browse selects next. With a gap the Add
@@ -577,9 +606,9 @@ block_browse_ui:
         bsr.s block_browse_step
         cmp.w editor_gap(pc),d0
         blo.s .done
-        move.w editor_track+28(pc),d0
+        move.w editor_track+SCTR_COUNT(pc),d0
 .done:  rts
-.back:  cmp.w editor_track+28(pc),d0
+.back:  cmp.w editor_track+SCTR_COUNT(pc),d0
         blo.s block_browse_step
         move.w d1,d0
         bra.s block_browse_step
@@ -588,23 +617,23 @@ block_browse_ui:
 block_browse_step:
         tst.w d4
         bmi.s .back
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .done
         move.w d0,d1
-        lsl.w #3,d1
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d1
+        lea editor_track+SCTR_PIECES(pc),a0
         adda.w d1,a0
         move.l (a0),d2
-        cmpi.l #256,d2
+        cmpi.l #BLOCK_GROUP_STEP,d2
         blo.s .single
-        andi.l #$ffffff00,d2
+        andi.l #BLOCK_GROUP_MASK,d2
 .forward:
         addq.w #1,d0
-        addq.l #8,a0
-        cmp.w editor_track+28(pc),d0
+        addq.l #PIECE_BYTES,a0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .done
         move.l (a0),d1
-        andi.l #$ffffff00,d1
+        andi.l #BLOCK_GROUP_MASK,d1
         cmp.l d2,d1
         beq.s .forward
         rts
@@ -621,7 +650,7 @@ block_text:
         bne.s .choosing
         lea building_add_text(pc),a0
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .draw
         bsr hud_section_line
         bra.s .draw
@@ -657,14 +686,39 @@ block_render_mode: dc.w 0
 block_render_selected: dc.w 0
 block_candidates: dcb.w BLOCK_VARIANT_COUNT,0
 
-; The model also accepts old Drafts down to zero. New building choices must
-; keep every edge above the game's fixed side-wall bottom (Y=512).
-; The model has already checked the upper bound, using longword arithmetic.
+; Every piece of the model against all the others, by building_collision in
+; replace mode. D0 (flags set) = 1 when none overlaps another, else 0. It
+; leaves building_mode 2 and building_selected at the piece that overlapped,
+; or at the count; the probe holds that piece. D1-D7 and A0-A4 change as
+; building_collision changes them.
+model_self_clear:
+        move.w #2,building_mode-module_start(a5)
+        clr.w building_selected-module_start(a5)
+.piece: move.w building_selected(pc),d0
+        lsl.w #PIECE_SHIFT,d0
+        lea editor_track+SCTR_PIECES(pc),a0
+        move.l (a0,d0.w),building_probe-module_start(a5)
+        move.l PIECE_KIND(a0,d0.w),building_probe+PIECE_KIND-module_start(a5)
+        bsr building_collision
+        tst.w d0
+        beq.s .done
+        addq.w #1,building_selected-module_start(a5)
+        move.w editor_track+SCTR_COUNT(pc),d0
+        cmp.w building_selected(pc),d0
+        bhi.s .piece
+        moveq #1,d0
+.done:  rts
+
+; The model also accepts old Drafts down to zero. New building choices and a
+; Ready track must keep every edge above the game's fixed side-wall bottom
+; (Y=512): a road below it gets inverted walls and stray edge lines. The model
+; has already checked the upper bound, using longword arithmetic. D0 (flags
+; set) = 1 if they do; the other registers are kept.
 block_height_valid:
         movem.l d1-d3/a0-a2,-(sp)
         lea model_geometry(pc),a0
         lea model_row_counts(pc),a1
-        move.w editor_track+28(pc),d1
+        move.w editor_track+SCTR_COUNT(pc),d1
         subq.w #1,d1
 .piece:
         movea.l a0,a2
@@ -672,7 +726,7 @@ block_height_valid:
         add.w d2,d2
         subq.w #1,d2
 .point:
-        cmpi.w #513,2(a2)
+        cmpi.w #EDITOR_MIN_ROAD,2(a2)
         blo.s .bad
         addq.l #6,a2
         dbra d2,.point
@@ -686,29 +740,29 @@ block_height_valid:
         movem.l (sp)+,d1-d3/a0-a2
         rts
 ; Each with editor_gap and editor_gap_height after the track.
-block_original_track: dcb.b EDITOR_TRACK_BYTES+4,0
-block_preview_track: dcb.b EDITOR_TRACK_BYTES+4,0
+block_original_track: dcb.b EDITOR_STATE_BYTES,0
+block_preview_track: dcb.b EDITOR_STATE_BYTES,0
 
 
 block_highlight:
         movem.l d0-d1/a0,-(sp)
         moveq #0,d2
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .done
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .done
         move.w render_piece(pc),d1
-        cmp.w editor_track+28(pc),d1
+        cmp.w editor_track+SCTR_COUNT(pc),d1
         bhs.s .done
-        lsl.w #3,d0
-        lsl.w #3,d1
-        lea editor_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lsl.w #PIECE_SHIFT,d1
+        lea editor_track+SCTR_PIECES(pc),a0
         move.l (a0,d0.w),d0
-        andi.l #$ffffff00,d0
+        andi.l #BLOCK_GROUP_MASK,d0
         beq.s .done
         move.l (a0,d1.w),d1
-        andi.l #$ffffff00,d1
+        andi.l #BLOCK_GROUP_MASK,d1
         cmp.l d0,d1
         seq d2
 .done:
@@ -724,44 +778,28 @@ block_ghost:
         move.w (a4),d6
         move.w d6,block_count-module_start(a5)
         add.w block_insert(pc),d6
-        add.w block_original_track+28(pc),d6
+        add.w block_original_track+SCTR_COUNT(pc),d6
         sub.w block_suffix(pc),d6
         cmpi.w #EDITOR_MAX_PIECES,d6
         bhi .bad
         lea block_original_track(pc),a0
         lea block_preview_track(pc),a1
-        move.w #EDITOR_TRACK_BYTES+4,d0
+        move.w #EDITOR_STATE_BYTES,d0
         bsr storage_copy
-        move.w d6,block_preview_track+28-module_start(a5)
+        move.w d6,block_preview_track+SCTR_COUNT-module_start(a5)
         bsr block_moved_gap
         move.w d0,block_preview_track+EDITOR_TRACK_BYTES-module_start(a5)
-        movea.l a5,a0
-        adda.l #BLOCK_ORIGINAL_CACHE,a0
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE,a1
+        lea BLOCK_ORIGINAL_CACHE(a5),a0
+        lea BLOCK_PREVIEW_CACHE(a5),a1
         move.w #BLOCK_CACHE_BYTES,d0
         bsr storage_copy
         ; Predecessor endpoint in the authoritative cache.
         bsr block_tail_row
         move.l a0,block_ghost_join-module_start(a5)
-        moveq #0,d2
-        move.w (a0),d2
-        move.w 4(a4),d0
-        ext.l d0
-        sub.l d0,d2
-        addi.l #1024,d2
-        asr.l #8,d2
-        asr.l #3,d2
-        move.w d2,block_ghost_x-module_start(a5)
-        moveq #0,d3
-        move.w 4(a0),d3
-        move.w 6(a4),d0
-        ext.l d0
-        sub.l d0,d3
-        addi.l #1024,d3
-        asr.l #8,d3
-        asr.l #3,d3
-        move.w d3,block_ghost_z-module_start(a5)
+        lea 4(a4),a3
+        bsr entry_shift
+        move.w d1,block_ghost_x-module_start(a5)
+        move.w d2,block_ghost_z-module_start(a5)
         moveq #0,d7
         move.w 2(a0),d7
         move.l d7,block_ghost_y-module_start(a5)
@@ -782,22 +820,21 @@ block_ghost:
         subq.w #7,d0
         ext.l d0
         lsl.l #8,d0
-        lsl.l #3,d0
+        lsl.l #MAP_CELL_SHIFT-8,d0
         move.l d0,(a2)
         move.w 6(a4),d0
         add.w block_ghost_z(pc),d0
         subq.w #7,d0
         ext.l d0
         lsl.l #8,d0
-        lsl.l #3,d0
+        lsl.l #MAP_CELL_SHIFT-8,d0
         move.l d0,8(a2)
         move.l block_ghost_y(pc),d0
         subi.l #10000,d0
         move.l d0,4(a2)
         move.w block_ghost_index(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES,a1
+        lea BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES(a5),a1
         adda.w d0,a1
         move.l a1,block_ghost_rows-module_start(a5)
         lea building_probe(pc),a0
@@ -815,8 +852,7 @@ block_ghost:
         move.l d7,block_ghost_y-module_start(a5)
         move.w block_ghost_index(pc),d1
         add.w d1,d1
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE,a1
+        lea BLOCK_PREVIEW_CACHE(a5),a1
         move.w d0,(a1,d1.w)
         ; Only offer the rotation whose ordered entrance joins both edges.
         move.w block_ghost_index(pc),d1
@@ -845,47 +881,43 @@ block_ghost:
         beq .bad
 .metadata:
         move.w block_ghost_index(pc),d0
-        lsl.w #3,d0
-        lea block_preview_track+64(pc),a1
+        lsl.w #PIECE_SHIFT,d0
+        lea block_preview_track+SCTR_PIECES(pc),a1
         move.l block_group(pc),(a1,d0.w)
-        move.l building_probe+4(pc),4(a1,d0.w)
+        move.l building_probe+PIECE_KIND(pc),PIECE_KIND(a1,d0.w)
         addq.l #8,a4
         addq.w #1,block_ghost_index-module_start(a5)
         dbra d6,.piece
         ; Preserve unchanged suffix geometry and metadata when replacing.
         move.w block_suffix(pc),d6
 .suffix:
-        cmp.w block_original_track+28(pc),d6
+        cmp.w block_original_track+SCTR_COUNT(pc),d6
         bhs.s .good
         move.w d6,d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        movea.l a5,a0
-        adda.l #BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES,a0
+        lea BLOCK_ORIGINAL_CACHE+2*EDITOR_MAX_PIECES(a5),a0
         adda.w d0,a0
         move.w block_ghost_index(pc),d0
         mulu.w #EDITOR_GEOMETRY_STRIDE,d0
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES,a1
+        lea BLOCK_PREVIEW_CACHE+2*EDITOR_MAX_PIECES(a5),a1
         adda.w d0,a1
         move.w #EDITOR_GEOMETRY_STRIDE,d0
         bsr storage_copy
         move.w d6,d0
         add.w d0,d0
-        movea.l a5,a0
-        adda.l #BLOCK_ORIGINAL_CACHE,a0
+        lea BLOCK_ORIGINAL_CACHE(a5),a0
         move.w (a0,d0.w),d1
         move.w block_ghost_index(pc),d0
         add.w d0,d0
-        movea.l a5,a1
-        adda.l #BLOCK_PREVIEW_CACHE,a1
+        lea BLOCK_PREVIEW_CACHE(a5),a1
         move.w d1,(a1,d0.w)
         move.w d6,d0
-        lsl.w #3,d0
-        lea block_original_track+64(pc),a0
+        lsl.w #PIECE_SHIFT,d0
+        lea block_original_track+SCTR_PIECES(pc),a0
         adda.w d0,a0
         move.w block_ghost_index(pc),d0
-        lsl.w #3,d0
-        lea block_preview_track+64(pc),a1
+        lsl.w #PIECE_SHIFT,d0
+        lea block_preview_track+SCTR_PIECES(pc),a1
         adda.w d0,a1
         moveq #8,d0
         bsr storage_copy

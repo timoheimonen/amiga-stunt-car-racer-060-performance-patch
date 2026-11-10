@@ -8,6 +8,11 @@
 ; free_open_step, and nothing in the editor moves the camera after that.
 ; Angles are 512 steps a turn. Pitch 0 is level, a positive pitch looks down.
 FREE_TURN_MASK equ 511
+; A turn of FREE_TURN_MASK+1 steps: free_sin takes the sign from the half turn
+; and the value from the quarter.
+FREE_HALF_BIT equ 8
+FREE_HALF equ 1<<FREE_HALF_BIT
+FREE_QUARTER equ FREE_HALF/2
 FREE_PITCH_MIN equ -28
 FREE_PITCH_MAX equ 128
 FREE_DRAG_COUNTS equ 16
@@ -27,13 +32,6 @@ FREE_OPEN_BACK equ 2560         ; eye behind the start piece
 FREE_OPEN_HIGH equ 2048         ; and above it
 FREE_OPEN_PITCH equ 38          ; atan(1/2)
 FREE_PAGES equ UI_PAGE_BROWSE|UI_PAGE_CHOOSE
-RAW_W equ $11
-RAW_S equ $21
-RAW_A equ $20
-RAW_D equ $22
-RAW_Q equ $10
-RAW_Z equ $31
-RAW_V equ $34
 
 ; Each pass, before the request of the pass: the right button and the held keys.
 ui_camera_step:
@@ -137,10 +135,10 @@ free_drag_distance:
 free_axis:
         moveq #0,d0
         lea editor_input_keys(a5),a0
-        cmpi.b #$b3,(a0,d1.w)
+        cmpi.b #KEY_DOWN,(a0,d1.w)
         bne.s .minus
         addq.w #1,d0
-.minus: cmpi.b #$b3,(a0,d2.w)
+.minus: cmpi.b #KEY_DOWN,(a0,d2.w)
         bne.s .done
         subq.w #1,d0
 .done:  rts
@@ -153,7 +151,7 @@ free_fly:
         bsr free_sin
         move.l d0,d1
         move.w free_yaw(pc),d0
-        addi.w #128,d0
+        addi.w #FREE_QUARTER,d0
         bsr free_sin
         ext.l d3
         ext.l d7
@@ -230,11 +228,8 @@ free_release:
 .click: bsr free_drag_distance
         cmpi.w #FREE_DRAG_COUNTS,d0
         bhs.s .done
-        move.w editor_input_blocked(pc),d0
-        or.w editor_input_holdoff(pc),d0
-        bne.s .done
-        bsr ui_page_now
-        cmp.w ui_rmb_page(pc),d0
+        move.w ui_rmb_page(pc),d1
+        bsr ui_press_live
         bne.s .done
         cmpi.w #UI_PAGE_PLACE,d0
         beq.s .turn
@@ -248,7 +243,7 @@ free_release:
         bne.s .close
         lea ui_text_look(pc),a0
         bra ui_say
-.close: move.w #UI_REQUEST_KEY<<8|UI_RAW_ESC,ui_request-module_start(a5)
+.close: move.w #UI_REQUEST_KEY<<8|RAW_ESC,ui_request-module_start(a5)
 .done:  rts
 .turn:  move.w #UI_REQUEST_KEY<<8|RAW_T,ui_request-module_start(a5)
         rts
@@ -339,14 +334,14 @@ free_camera_apply:
         neg.w d0
         move.w d0,camera_right_z-module_start(a5)
         move.w free_yaw(pc),d0
-        addi.w #128,d0
+        addi.w #FREE_QUARTER,d0
         bsr free_sin
         move.w d0,camera_right_x-module_start(a5)
         move.w free_pitch(pc),d0
         bsr free_sin
         move.l d0,view_pitch_sin-module_start(a5)
         move.w free_pitch(pc),d0
-        addi.w #128,d0
+        addi.w #FREE_QUARTER,d0
         bsr free_sin
         move.l d0,view_pitch_cos-module_start(a5)
         rts
@@ -364,7 +359,7 @@ free_angle:
         muls.l d2,d0
         move.l d0,d4
         move.w d3,d0
-        addi.w #128,d0
+        addi.w #FREE_QUARTER,d0
         bsr free_sin
         muls.l d1,d0
         add.l d4,d0
@@ -381,17 +376,17 @@ free_angle:
 free_sin:
         move.l d1,-(sp)
         move.w d0,d1
-        andi.w #255,d1
-        cmpi.w #128,d1
+        andi.w #FREE_HALF-1,d1
+        cmpi.w #FREE_QUARTER,d1
         bls.s .quarter
-        subi.w #256,d1
+        subi.w #FREE_HALF,d1
         neg.w d1
 .quarter:
         add.w d1,d1
         lea free_table(pc),a0
         move.w (a0,d1.w),d1
         ext.l d1
-        btst #8,d0
+        btst #FREE_HALF_BIT,d0
         beq.s .plus
         neg.l d1
 .plus:  move.l d1,d0
@@ -405,7 +400,7 @@ free_wire_draw:
         move.w #15,map_boundary_color-module_start(a5)
         clr.w render_piece-module_start(a5)
 .piece: move.w render_piece(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs.s .ahead
         cmpi.w #2,building_mode-module_start(a5)
         bne.s .model
@@ -471,10 +466,10 @@ free_wire_line:
         move.l 4(a0),d2
         muls.l #FREE_FOCAL,d0
         divs.l d2,d0
-        addi.l #160,d0
+        addi.l #VIEW_CX,d0
         muls.l #FREE_FOCAL,d1
         divs.l d2,d1
-        addi.l #100,d1
+        addi.l #VIEW_CY,d1
         move.l d0,(a1)+
         move.l d1,(a1)+
         adda.w #12,a0

@@ -5,13 +5,9 @@
 
 ; Track Editor bar: the Choose page picks a section by Turn, Slope and word.
 ; A cell of pal_cell is class<<6 | turn<<4 | slope<<2 | place.
-UI_INFO_NO_ROUTE equ $f0
-UI_CLICK_SLOPE equ 3
-UI_CLICK_WORD equ 7
+; UI_CALL_SECTION, UI_CALL_WORD, UI_CLICK_SLOPE and UI_CLICK_WORD: the calls of
+; the rows, and UI_SLOTS, the word rows, come from the builder.
 UI_CELL_AXES equ $fc
-UI_CALL_SECTION equ 11
-UI_CALL_WORD equ 18
-UI_SLOTS equ 4
 BLOCK_MAX_PIECES equ EDITOR_MAX_PIECES
 
 ; D3 cell, D4 mask of the cell, D5 mask of the place -> D0 best candidate, -1 for
@@ -36,9 +32,9 @@ ui_best:
         bne.s .next
         and.w d5,d1
         move.b (a1,d7.w),d2
-        cmpi.b #UI_INFO_NO_ROUTE,d2
+        cmpi.b #FIELD_INFO_NO_ROUTE,d2
         beq.s .no_route
-        andi.b #7,d2
+        andi.b #FIELD_INFO_REASON,d2
         beq.s .key
         moveq #8,d2
         bra.s .key
@@ -181,7 +177,7 @@ ui_axes:
         move.w building_candidate_count(pc),d1
         subq.w #1,d1
 .green: move.w (a0)+,d0
-        btst #3,(a1)+
+        btst #FIELD_INFO_CLOSES,(a1)+
         beq.s .green_next
         lsr.w #2,d0
         move.b (a2,d0.w),d0
@@ -246,14 +242,14 @@ ui_choose_state:
         lea block_info(pc),a0
         move.b (a0,d6.w),d2
         moveq #UI_NORMAL,d0
-        btst #3,d2
+        btst #FIELD_INFO_CLOSES,d2
         beq.s .fits
         moveq #UI_STATE_GREEN,d0
 .fits:  cmp.w building_choice(pc),d6
         bne.s .other
         addq.b #UI_ACTIVE,d0
         bra.s .state
-.other: andi.b #7,d2
+.other: andi.b #FIELD_INFO_REASON,d2
         beq.s .state
         moveq #UI_DISABLED,d0
 .state: or.b d0,d3
@@ -282,7 +278,7 @@ ui_slot_reason:
         bsr.s ui_slot_candidate
         bmi.s .unlisted
         lea block_info(pc),a0
-        moveq #7,d1
+        moveq #FIELD_INFO_REASON,d1
         and.b (a0,d0.w),d1
         bra.s .text
 .unlisted:
@@ -297,7 +293,7 @@ ui_slot_reason:
         bsr block_descriptor
         move.w (a4),d0
         add.w block_insert(pc),d0
-        add.w block_original_track+28(pc),d0
+        add.w block_original_track+SCTR_COUNT(pc),d0
         sub.w block_suffix(pc),d0
         moveq #0,d1
         cmpi.w #BLOCK_MAX_PIECES,d0

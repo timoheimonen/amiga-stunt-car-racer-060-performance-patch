@@ -4,39 +4,26 @@
 ; Licensed under the MIT License; see LICENSE.
 
 ; Track Editor bar: pages and buttons. ui_paint works out what every row of the
-; table should look like and draws only the rows that changed.
-UI_ENTRY_BYTES equ 14
-UI_ENTRY_Y equ 2
-UI_ENTRY_W equ 3
-UI_ENTRY_H equ 4
-UI_ENTRY_FLAGS equ 5
-UI_ENTRY_PAGES equ 6
-UI_ENTRY_ACTION equ 8
-UI_ENTRY_PRED equ 9
-UI_ENTRY_LABEL equ 10
-UI_ENTRY_HINT equ 12
-UI_KIND_MASK equ $c0
-UI_KIND_LIST equ $80
-UI_KIND_INFO equ $c0
-UI_BIT_HOLD equ 3
-UI_BIT_PLACE_GUARD equ 2
-UI_LIST_WIDTH equ 288
-UI_VIEW_LINES equ 144
-UI_FLAG_RED equ $20
-UI_FLAG_FRAMED equ $10
-UI_BAR_TOP equ 145
+; table should look like and draws only the rows that changed. The row layout
+; UI_ENTRY_*, the kinds UI_KIND_*, the flags UI_FLAG_* and their bits UI_BIT_*,
+; UI_LIST_WIDTH and UI_BAR_TOP come from the builder.
+UI_VIEW_LINES equ VIEW_BOTTOM-VIEW_TOP  ; the 3D view, from the top of the screen
 UI_HIDDEN equ $ff
 ; A row state: word<<4 | green<<3 | button state.
 UI_STATE_MASK equ 7
-UI_STATE_GREEN equ 8
-UI_LIST_SLOT_PREVIOUS equ 32
-UI_LIST_SLOT_NEXT equ 33
+UI_BIT_GREEN equ 3
+UI_STATE_GREEN equ 1<<UI_BIT_GREEN
+; The list's Prev and Next as selections: values that are not slots.
+UI_LIST_SLOT_PREVIOUS equ STORAGE_SLOTS
+UI_LIST_SLOT_NEXT equ STORAGE_SLOTS+1
 
 ; The page the state shows now -> D0.
 ui_page_now:
         move.w storage_modal(pc),d0
         beq.s .prompt
-        cmpi.w #3,d0
+        cmpi.w #STORAGE_CUSTOM_LIST,d0
+        beq.s .list
+        cmpi.w #STORAGE_MODAL_NAME,d0
         blo.s .list
         beq.s .name
         move.w #UI_PAGE_REPLACE,d0
@@ -62,7 +49,7 @@ ui_page_now:
         tst.w building_mode-module_start(a5)
         beq.s .main
         move.w #UI_PAGE_CHOOSE|UI_PAGE_CHOOSE_NEW,d0
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         bhs.s .done
         move.w #UI_PAGE_CHOOSE|UI_PAGE_CHOOSE_OLD,d0
         rts
@@ -366,9 +353,9 @@ ui_pred_word:
         rts
 ; Finish: hidden on an older track, dimmed on a closed one.
 ui_pred_finish:
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo ui_pred_word
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne ui_dim
         bra ui_pred_plain
 ui_pred_placed:
@@ -401,7 +388,7 @@ ui_pred_redo:
 ui_pred_delete:
         tst.w editor_gap-module_start(a5)
         bne ui_pred_word
-        cmpi.w #1,editor_track+28-module_start(a5)
+        cmpi.w #1,editor_track+SCTR_COUNT-module_start(a5)
         bls ui_dim
         bsr ui_cut_here
         bne ui_pred_word
@@ -431,13 +418,13 @@ ui_pred_cut:
 ui_cut_here:
         cmpi.w #UI_PAGE_BROWSE,ui_page-module_start(a5)
         bne.s .no
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .no
         move.w building_selected(pc),d0
         beq.s .no
         moveq #1,d4
         bsr block_browse_step
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         blo.s .yes
 .no:    moveq #0,d0
         rts
@@ -446,37 +433,37 @@ ui_cut_here:
 ui_pred_test:
         cmpi.w #UI_PAGE_BROWSE,ui_page-module_start(a5)
         bne ui_dim
-        cmpi.w #2,practice_class-module_start(a5)
+        cmpi.w #PRACTICE_READY,practice_class-module_start(a5)
         bne ui_dim
         bra ui_pred_default
 ui_pred_direction:
         cmpi.w #UI_PAGE_BROWSE,ui_page-module_start(a5)
         bne ui_dim
 ui_pred_add_slot:
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne ui_pred_word
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         blo ui_pred_word
         bra ui_pred_plain
 ui_pred_add:
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         blo ui_pred_word
-        tst.w editor_track+30-module_start(a5)
+        tst.w editor_track+SCTR_CLOSED-module_start(a5)
         bne ui_dim
         bra ui_pred_default
 ui_pred_edit:
         move.w building_selected(pc),d0
-        cmp.w editor_track+28(pc),d0
+        cmp.w editor_track+SCTR_COUNT(pc),d0
         bhs ui_pred_word
-        cmpi.w #2,practice_class-module_start(a5)
+        cmpi.w #PRACTICE_READY,practice_class-module_start(a5)
         beq ui_pred_plain
         bra ui_pred_default
 ui_pred_place:
         tst.w building_candidate_count-module_start(a5)
         beq ui_dim
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo ui_pred_default
         tst.w block_preview_valid-module_start(a5)
         beq ui_dim
@@ -484,14 +471,14 @@ ui_pred_place:
 ui_pred_next:
         move.w building_selected(pc),d0
         moveq #1,d4
-        cmpi.l #3,editor_track+24-module_start(a5)
+        cmpi.l #SCTR_BLOCKS_REVISION,editor_track+SCTR_REVISION-module_start(a5)
         blo.s .single
         bsr block_browse_ui
         bra.s .end
 .single:
         addq.w #1,d0
-.end:   move.w editor_track+28(pc),d1
-        sub.w editor_track+30(pc),d1
+.end:   move.w editor_track+SCTR_COUNT(pc),d1
+        sub.w editor_track+SCTR_CLOSED(pc),d1
         cmp.w d1,d0
         bhi ui_dim
         cmp.w building_selected(pc),d0
@@ -550,7 +537,7 @@ ui_row_rect:
 ; below the glyphs, which on a low button (Finish) is the row under it.
 ui_erase_row:
         bsr ui_row_rect
-        btst #4,UI_ENTRY_FLAGS(a3)
+        btst #UI_BIT_FRAMED,UI_ENTRY_FLAGS(a3)
         beq.s .plain
         subq.w #1,d1
         subq.w #1,d2
@@ -612,10 +599,10 @@ ui_draw_row:
         move.w #UI_END,(a0)
         lea ui_commands(pc),a0
         lea ui_bar_target(pc),a1
-        btst #5,UI_ENTRY_FLAGS(a3)
+        btst #UI_BIT_RED,UI_ENTRY_FLAGS(a3)
         beq.s .green
         lea ui_bar_target_red(pc),a1
-.green: btst #3,d4
+.green: btst #UI_BIT_GREEN,d4
         beq.s .draw
         lea ui_bar_target_green(pc),a1
 .draw:  moveq #0,d1
