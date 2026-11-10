@@ -19,6 +19,7 @@
 ;   $5d5a6 jsr $5d9dc  -> auto_pause       pause check; paused time excluded
 ;   $64f80 move.b #$80,d0 / move.b d0,$1bc14 -> auto_render_gate (JMP)
 ;   $60e88 move.b d1,$1bbe4 -> auto_effect_draw (JMP)
+;   $5db2e jmp display_swap -> defer_swap; $650b4, $64ee4 jsr $67888 -> defer_fill
 ; Smoke and sparks keep their per-step clock, motion and PRNG in logic-only
 ; iterations; only their drawing into the hidden buffer is skipped.
 ; The VBL count comes from editor_vbl (the game's VBL call at $f0e4).
@@ -37,6 +38,7 @@ auto_max: dc.w 0                ; longest drawn frame in VBLs
 auto_crane_late: dc.l 0         ; late crane frames eligible for catch-up
 auto_crane_primed: dc.b 0       ; first regular drawn frame only anchors time
 auto_nodraw: dc.b 0             ; set from the render gate to the loop end
+defer_active: dc.b 0            ; the swap in progress is the race loop's
         even
 
 ; Race loop pacing. Logic-only iteration: no wait, no swap.
@@ -53,10 +55,12 @@ auto_pace:
         movem.l (sp)+,d0-d1/a0
         rts
 .drawn:
+        st defer_active-auto_state(a0)
         movem.l (sp)+,d0-d1/a0
         jsr $5dac0
         movem.l d0-d1/a0,-(sp)
         lea auto_state(pc),a0
+        clr.b defer_active-auto_state(a0)
         addq.l #1,auto_frames-auto_state(a0)
         move.w auto_vbl_count-auto_state(a0),d0
         move.w d0,d1
@@ -88,6 +92,26 @@ auto_pace:
         st auto_skip-auto_state(a0)
 .done:  movem.l (sp)+,d0-d1/a0
         rts
+
+; The race loop does not wait for the VBL to publish its swap.
+; The next frame's logic and geometry do not write the hidden buffer, so the
+; wait moves to the first drawing into it, the background fill $67888.
+; Every other user of $5dac0 waits as before.
+;   $5db2e jmp display_swap (runtime) -> defer_swap
+;   $650b4, $64ee4 jsr $67888         -> defer_fill
+defer_swap:
+        jsr $1b7b6.l
+        move.w sr,-(sp)
+        tst.b defer_active(pc)
+        bne.s .done
+.wait:  tst.b $1b816
+        bne.s .wait
+.done:  move.w (sp)+,ccr
+        rts
+defer_fill:
+        tst.b $1b816
+        bne.s defer_fill
+        jmp $67888
 
 ; Race end: a logic-only iteration keeps the last drawn frame on screen.
 auto_pace_end:

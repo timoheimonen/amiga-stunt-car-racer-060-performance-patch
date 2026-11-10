@@ -117,7 +117,7 @@ expmem:
 
 name:   dc.b "Stunt Car Racer",0
 copy:   dc.b "1989 Geoff Crammond, MicroStyle",0
-info:   dc.b "Performance Patch 2.3.0",10
+info:   dc.b "Performance Patch 2.3.1",10
         dc.b "by Timo Heimonen",0
 config: dc.b "BW",0
 disk_name:
@@ -178,6 +178,14 @@ start:
 
         lea control_tags(pc),a0
         jsr resload_Control(a5)
+
+        ; WHDLoad leaves BaseMem out of both caches unless the slave asks:
+        ; the game's code and data are all there. Write-through keeps the
+        ; display memory current for the bitplane DMA; only the CPU writes
+        ; to BaseMem (no blitter, and the disk goes through resload).
+        move.l #WCPUF_Base_WT|WCPUF_IC|WCPUF_DC,d0
+        move.l #WCPUF_Base|WCPUF_IC|WCPUF_DC,d1
+        jsr resload_SetCPU(a5)
         lea exec_base(pc),a6
         move.w attn_flags+2(pc),ATTNFLAGS(a6)
         move.l a6,($4).w

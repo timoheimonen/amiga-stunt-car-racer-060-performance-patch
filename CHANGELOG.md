@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.1 - 2026-11-10
+
+- **Higher frame rate in races.** The race loop no longer waits for the
+  vertical blank after each display swap: the next frame's game logic and
+  geometry run during that time, and the wait is made before the frame's first
+  drawing. Race time stays real as before.
+  ([details](PATCH.md#late-frames))
+- The game's stack is in Fast RAM instead of Chip RAM.
+- The WHDLoad slave makes the game's memory cacheable (write-through) and
+  enables the instruction and data caches with `resload_SetCPU`.
+
 ## 2.3.0 - 2026-11-10
 
 - **Custom tracks are files in the `tracks` drawer.** The installer creates the
