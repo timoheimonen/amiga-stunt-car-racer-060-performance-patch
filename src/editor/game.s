@@ -18,8 +18,7 @@ custom_verify_hooks:
         bne.s .bad
         dbra d6,.bytes
         dbra d7,.loop
-        moveq #1,d0
-        rts
+        bra proj_clip_verify    ; the clip patches (projection.s) set D0
 .bad:   moveq #0,d0
         rts
 custom_install_hooks:
@@ -39,7 +38,7 @@ custom_install_hooks:
         subq.w #2,d6
         bne.s .pad
 .next:  dbra d7,.loop
-        rts
+        bra proj_install
 
 ; The game's CIA setup ($ee8a) stops CIA-B timer B, whose interrupt ends a
 ; keyboard acknowledge and clears its busy flag $f0a8. A key acknowledged

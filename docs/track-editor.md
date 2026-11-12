@@ -1,6 +1,6 @@
 # Track Editor manual
 
-For Stunt Car Racer Performance version 2.3.1.
+For Stunt Car Racer Performance version 2.3.2.
 
 The Track Editor lets you build your own circuits inside the game, from complete
 sections taken from the original tracks: banked corners with their entry and exit,

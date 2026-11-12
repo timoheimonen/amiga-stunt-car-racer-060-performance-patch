@@ -117,7 +117,7 @@ expmem:
 
 name:   dc.b "Stunt Car Racer",0
 copy:   dc.b "1989 Geoff Crammond, MicroStyle",0
-info:   dc.b "Performance Patch 2.3.1",10
+info:   dc.b "Performance Patch 2.3.2",10
         dc.b "by Timo Heimonen",0
 config: dc.b "BW",0
 disk_name:

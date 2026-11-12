@@ -1,6 +1,6 @@
 # Track File Format
 
-For Stunt Car Racer Performance version 2.3.1.
+For Stunt Car Racer Performance version 2.3.2.
 
 This document describes the files in which the game keeps custom tracks and their lap
 records: their bytes, the track model they hold and the rules the game applies when it reads

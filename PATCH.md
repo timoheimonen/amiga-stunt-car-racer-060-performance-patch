@@ -1,4 +1,4 @@
-# Patch details - 2.3.1
+# Patch details - 2.3.2
 
 This release is a [WHDLoad install](#whdload-install), primarily intended for emulation
 with PAL or NTSC timing, a 68060 CPU, 2 MiB Chip RAM and at least 2 MiB Fast RAM.
@@ -49,7 +49,9 @@ checks run on every step. On extra steps, smoke and particles advance their
 motion, renewal and random numbers but are not drawn; the next drawn frame
 shows them. The HUD and cockpit images are not drawn on extra steps either;
 wheel heights and the turbo animation still advance, and the next drawn frame
-draws the images before its display swap. Crane lifts are caught up the same way with their
+draws the images before its display swap. The crane chains are skipped in the
+same way: their length still advances, and the next drawn frame draws them
+again. Crane lifts are caught up the same way with their
 fixed 20 ms step; race setup drawing is complete and does not add steps to
 catch up. Time spent paused is not caught up. The vertical blank count is kept by
 the editor module's interrupt call.
@@ -190,6 +192,31 @@ nearest pixel. Projection angles and distances interpolate between lookup-table
 entries. Projection distances are rounded and saturate at 32767. The shared
 physics angle and distance routines keep their existing arithmetic.
 
+In races the projection keeps the bits the game drops before it takes a
+point's two view angles. Six module hooks (`0x601f0`, `0x6249c`, `0x624c2`,
+`0x65f90`, `0x65fb4`, `0x66044`) replace that step for near and far points:
+
+- The point's X/Z distance to the camera includes four bits of the camera
+  position's fraction, 1/16 of a unit; the game uses whole units.
+- The vertical angle comes from the whole height difference and a distance in
+  1/16 units; the game drops the two low bits of the difference, three for far
+  points.
+- Each angle is rounded to its quarter pixel instead of truncated.
+
+The code is in [src/editor/projection.s](src/editor/projection.s) and runs in
+Fast RAM with copies of the game's two projection tables, 4,098 and 4,096
+bytes inside the module's Fast RAM allocation. The values the game keeps
+have their meaning unchanged: the stored distance is still in whole units, half
+units for far points. The track preview's projection runs the game's own code;
+it shares the edge clipper below.
+
+Where an edge crosses the screen border, the clipper at `0x668a8` computes the
+crossing point as distance * other / this. The game divides first and
+multiplies by the truncated quotient; eight 36-byte patches multiply first and
+round. The module checks the game's code at each of the eight places and
+writes the patches in memory, so the disk bytes there are unchanged.
+`editor.projection` in `src/patches.json` lists them.
+
 ## Loader and memory
 
 The patcher modifies the game's raw-loader ADF at fixed offsets. The result is
@@ -217,10 +244,10 @@ The code uses integer instructions and requires neither an FPU nor an MMU.
 
 ## In-game track editor
 
-The editor is a separate relocatable module: 109,590 bytes of code and data,
-loaded from ADF offset `0x76000` in a 126,464-byte transfer that also carries
+The editor is a separate relocatable module: 110,738 bytes of code and data,
+loaded from ADF offset `0x76000` in a 127,488-byte transfer that also carries
 the link module. Its bootstrap is 766 bytes at ADF offset `0xd800`. It reserves
-416 KiB of Fast RAM and 134,656 bytes of persistent Chip RAM for loading, file
+416 KiB of Fast RAM and 135,680 bytes of persistent Chip RAM for loading, file
 I/O and display support. It runs relocated in Fast RAM and addresses game memory
 with absolute operands only. The track preview marks the finish row with a small
 arrow. Use: [Track Editor manual](docs/track-editor.md).
@@ -320,7 +347,7 @@ WHDLoad slave does not call it: the game starts at its loading picture.
 ## Player-name screen
 
 The prompt reads `NAME? OR FIRE/RETURN TO PROCEED`, and its edition line names
-the version: `PERFORMANCE EDITION 2.3.1`. Fire, Return or the keypad Enter
+the version: `PERFORMANCE EDITION 2.3.2`. Fire, Return or the keypad Enter
 supplies `racer` when the name is empty and preserves a typed name.
 
 ## Keyboard acknowledge
@@ -346,7 +373,7 @@ icon. Use: [WHDLoad install](WHDLOAD.md). Slave source:
 
 | File | Size | SHA-256 |
 | --- | ---: | --- |
-| `StuntCarRacerPerf.slave` | 3796 | `56acab88871acfb50aaf5a48e1459cf184a809164c796c06ee09d9cb9e8baeb2` |
+| `StuntCarRacerPerf.slave` | 3796 | `ff3e1a96e73d18684237d9e6e41f0f56f59388ff25ac091f368e0450ab4f1a0b` |
 | `StuntCarRacerPerf.info` (project, default tool `WHDLoad`) | 299 | `ebeebfc42d86895c9ce954cf39e3329e99b191e2d4e501158bd6b81f19c31e5e` |
 | `<directory>.info` (drawer) | 264 | `c6695dc18210c72a672c2e20f1fba7b8f5036e6c2513e7f84772d7cd84072e88` |
 | `tracks` | | empty drawer |
@@ -365,7 +392,7 @@ and the editor bootstrap run unchanged: `Forbid`, `Permit`, `SuperState`,
 `AllocMem`, `AllocAbs`, `FreeMem`, `DoIO` (`CMD_READ`, `TD_MOTOR`) and
 `CacheClearU` are provided, and `AttnFlags` comes from WHDLoad. Any other
 call ends WHDLoad with an operating system emulation error naming the call.
-WHDLoad's start window shows the slave's text `Performance Patch 2.3.1` and
+WHDLoad's start window shows the slave's text `Performance Patch 2.3.2` and
 `by Timo Heimonen`. At start the slave calls `resload_SetCPU`: the base memory,
 which holds the game's code and data, becomes cacheable in write-through mode,
 and the instruction and data caches are enabled. Only the CPU writes to the
@@ -470,7 +497,7 @@ the track introduction; support is limited to the exact checksum below.
 | File | SHA-256 |
 | --- | --- |
 | Supported Stunt Car Racer ADF (Quartex-crack) | `548fd106cd62f2d80159d48ddd5293d8b22b6b17f80c17a84a61d75f5c8a9e06` |
-| `StuntCarRacerPerf.disk` (2.3.1, up to 50 FPS Practice, computer-opponent and linked races) | `a7c6f7d409336ac8772ce22af9fa184fec063f46af670c3f6c4aff6d010bd101` |
+| `StuntCarRacerPerf.disk` (2.3.2, up to 50 FPS Practice, computer-opponent and linked races) | `74d2799f61395866254f9e5d9dbb7a72d3c1e52020cb00157c12d73aee2e8093` |
 
 The patcher verifies the whole original disk, displaced instructions,
 embedded payloads, loader-tail contents, boot checksum and the whole disk
