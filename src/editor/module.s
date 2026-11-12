@@ -398,6 +398,7 @@ saved_pending: dc.b 0
         include "src/editor/preview-arrow.s"
         include "src/editor/auto-frame.s"
         include "src/editor/hud-copy.s"
+        include "src/editor/projection.s"
         include "src/editor/video.s"
 
 ; Port 2 JOY1DAT quadrature decoding, matching original read.joystick.

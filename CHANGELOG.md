@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.2 - 2026-11-12
+
+- **More precise drawing in races.** The projection of race points uses the
+  fraction of the camera position, the whole height difference and rounded
+  angles, and edges cut at the screen border are rounded. The physics code is
+  unchanged.
+  ([details](PATCH.md#rendering-precision))
+- The crane chains no longer show over the engine at the start of a race when
+  frames are late.
+  ([details](PATCH.md#late-frames))
+
 ## 2.3.1 - 2026-11-10
 
 - **Higher frame rate in races.** The race loop no longer waits for the

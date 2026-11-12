@@ -187,9 +187,22 @@ hud_build:
 ; On a skip D0 keeps its low word, D3 = $0000ffff and D4.w = $ffff as after
 ; the copy; the block reloads D0 before each call, $5e778 sets all it
 ; reads and $5e508 reads only D1, which the copy preserves.
+;
+; The crane chains $662b4 run on the same path just before the block: four
+; calls per link pair with the images $13..$16. Since the race loop's swap
+; is published only at the next frame's background fill (defer_swap), the
+; draw buffer of a logic-only iteration is still on screen, and the chains
+; drawn there showed over the engine of the finished frame. They are skipped
+; like the block: the next drawn frame clears the 3D view and draws the
+; chains again before the engine. $662b4 itself still runs, with the chain
+; length and its retraction after the release. It reloads D0, D3 and A3
+; after every call and keeps the length in D2, which the copy preserves.
 HUD_GATE_FIRST equ $65112       ; return address of jsr $69f42 at $6510c
 HUD_GATE_LAST equ $651b0        ; return address of jsr $69f42 at $651aa
+CHAIN_GATE_FIRST equ $66318     ; return address of jsr $69f42 at $66312
+CHAIN_GATE_LAST equ $6633e      ; return address of jsr $69f42 at $66338
 hud_gate_skips: dc.l 0          ; skipped logic-step block calls
+chain_gate_skips: dc.l 0        ; skipped logic-step chain calls
 
 hud_gate:
         tst.b auto_nodraw(pc)
@@ -197,10 +210,17 @@ hud_gate:
         cmpi.l #HUD_GATE_FIRST,(sp)
         blo hud_copy
         cmpi.l #HUD_GATE_LAST,(sp)
+        bls.s .block
+        cmpi.l #CHAIN_GATE_FIRST,(sp)
+        blo hud_copy
+        cmpi.l #CHAIN_GATE_LAST,(sp)
         bhi hud_copy
         move.l a0,-(sp)
+        lea chain_gate_skips(pc),a0
+        bra.s .skip
+.block: move.l a0,-(sp)
         lea hud_gate_skips(pc),a0
-        addq.l #1,(a0)
+.skip:  addq.l #1,(a0)
         movea.l (sp)+,a0
         andi.l #$ffff,d0
         move.l #$ffff,d3
